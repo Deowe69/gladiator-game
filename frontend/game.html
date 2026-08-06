@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gladiátor - Aréna</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+
+<canvas id="particles" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.3;"></canvas>
+
+<!-- ===== TOP NAVBAR ===== -->
+<nav class="navbar">
+  <div class="nav-left">
+    <span class="nav-logo">⚔ GLADIÁTOR</span>
+  </div>
+  <div class="nav-center">
+    <div class="nav-stat">
+      <span class="nav-stat-icon">❤️</span>
+      <div class="nav-stat-bar">
+        <div class="bar-fill health-fill" id="navHealthBar"></div>
+      </div>
+      <span class="nav-stat-val" id="navHealth">100/100</span>
+    </div>
+    <div class="nav-stat">
+      <span class="nav-stat-icon">⭐</span>
+      <div class="nav-stat-bar">
+        <div class="bar-fill exp-fill" id="navExpBar"></div>
+      </div>
+      <span class="nav-stat-val" id="navExp">0 XP</span>
+    </div>
+  </div>
+  <div class="nav-right">
+    <span class="gold-display">💰 <span id="navGold">0</span></span>
+    <span class="nav-username" id="navUsername">Hrdina</span>
+    <button class="btn-logout" onclick="logout()">Odhlásit</button>
+  </div>
+</nav>
+
+<!-- ===== MAIN LAYOUT ===== -->
+<div class="game-layout">
+
+  <!-- LEFT SIDEBAR - Character -->
+  <aside class="sidebar-left">
+    <div class="panel">
+      <div class="panel-header">👤 Tvůj Hrdina</div>
+      <div class="panel-body">
+        <div class="char-avatar" id="charAvatar">⚔</div>
+        <div class="char-name" id="charName">-</div>
+        <div class="char-class" id="charClass">-</div>
+        <div class="char-level">
+          <span>Úroveň</span>
+          <span class="level-badge" id="charLevel">1</span>
+        </div>
+        <div class="divider-gold"></div>
+        <div class="stats-list">
+          <div class="stat-row">
+            <span class="stat-icon">❤️</span>
+            <span class="stat-name">Zdraví</span>
+            <span class="stat-val" id="statHealth">100</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-icon">⚔️</span>
+            <span class="stat-name">Síla</span>
+            <span class="stat-val" id="statStr">10</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-icon">🛡️</span>
+            <span class="stat-name">Obrana</span>
+            <span class="stat-val" id="statDef">10</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-icon">💨</span>
+            <span class="stat-name">Hbitost</span>
+            <span class="stat-val" id="statAgi">10</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-icon">🔮</span>
+            <span class="stat-name">Intelekt</span>
+            <span class="stat-val" id="statInt">10</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('overview')">🏛 Přehled</button>
+      <button class="tab" onclick="switchTab('arena')">⚔ Aréna</button>
+      <button class="tab" onclick="switchTab('quests')">📜 Úkoly</button>
+      <button class="tab" onclick="switchTab('shop')">🏪 Obchod</button>
+      <button class="tab" onclick="switchTab('inventory')">🎒 Inventář</button>
+    </div>
+
+    <!-- TAB: OVERVIEW -->
+    <div class="tab-content active" id="tab-overview">
+      <div class="welcome-banner">
+        <h2>Vítej v Aréně, <span id="welcomeName">Hrdino</span>!</h2>
+        <p>Tvoje legenda teprve začíná. Bojuj, sbírej zlato a staň se nejslavnějším gladiátorem Říma.</p>
+      </div>
+      <div class="overview-grid">
+        <div class="overview-card" onclick="switchTab('arena')">
+          <div class="ov-icon">⚔️</div>
+          <div class="ov-title">Aréna</div>
+          <div class="ov-desc">Bojuj s nepřáteli a získej zkušenosti</div>
+        </div>
+        <div class="overview-card" onclick="switchTab('quests')">
+          <div class="ov-icon">📜</div>
+          <div class="ov-title">Úkoly</div>
+          <div class="ov-desc">Plň mise a získávej odměny</div>
+        </div>
+        <div class="overview-card" onclick="switchTab('shop')">
+          <div class="ov-icon">🏪</div>
+          <div class="ov-title">Obchod</div>
+          <div class="ov-desc">Nakup zbroj a zbraně</div>
+        </div>
+        <div class="overview-card" onclick="switchTab('inventory')">
+          <div class="ov-icon">🎒</div>
+          <div class="ov-title">Inventář</div>
+          <div class="ov-desc">Spravuj své vybavení</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: ARENA -->
+    <div class="tab-content" id="tab-arena">
+      <div class="panel">
+        <div class="panel-header">⚔ Aréna - Vyber nepřítele</div>
+        <div class="panel-body">
+          <div class="enemy-grid" id="enemyGrid">
+            <!-- Enemies dynamically inserted -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Combat Log -->
+      <div class="panel" id="combatPanel" style="display:none;">
+        <div class="panel-header">⚔ Průběh boje</div>
+        <div class="panel-body">
+          <div class="vs-display">
+            <div class="fighter player-fighter">
+              <div class="fighter-avatar" id="playerFighterAvatar">⚔</div>
+              <div class="fighter-name" id="playerFighterName">Ty</div>
+              <div class="fighter-hp">
+                <div class="hp-bar">
+                  <div class="hp-fill player-hp" id="playerHpBar" style="width:100%"></div>
+                </div>
+                <span id="playerHpText">100/100</span>
+              </div>
+            </div>
+            <div class="vs-text">VS</div>
+            <div class="fighter enemy-fighter">
+              <div class="fighter-avatar" id="enemyFighterAvatar">💀</div>
+              <div class="fighter-name" id="enemyFighterName">Nepřítel</div>
+              <div class="fighter-hp">
+                <div class="hp-bar">
+                  <div class="hp-fill enemy-hp" id="enemyHpBar" style="width:100%"></div>
+                </div>
+                <span id="enemyHpText">100/100</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="combat-log" id="combatLog"></div>
+
+          <div class="combat-buttons" id="combatButtons">
+            <button class="btn-attack" onclick="doAttack()">⚔ Útočit</button>
+            <button class="btn-flee" onclick="fleeCombat()">🏃 Utéct</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: QUESTS -->
+    <div class="tab-content" id="tab-quests">
+      <div class="panel">
+        <div class="panel-header">📜 Dostupné úkoly</div>
+        <div class="panel-body">
+          <div class="quest-list" id="questList">
+            <!-- Quests dynamically inserted -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: SHOP -->
+    <div class="tab-content" id="tab-shop">
+      <div class="panel">
+        <div class="panel-header">🏪 Obchod</div>
+        <div class="panel-body">
+          <div class="shop-grid" id="shopGrid">
+            <!-- Shop items dynamically inserted -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: INVENTORY -->
+    <div class="tab-content" id="tab-inventory">
+      <div class="panel">
+        <div class="panel-header">🎒 Inventář</div>
+        <div class="panel-body">
+          <div class="inventory-grid" id="inventoryGrid">
+            <div class="empty-msg">Inventář je prázdný. Nakup vybavení v obchodě!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- RIGHT SIDEBAR -->
+  <aside class="sidebar-right">
+    <div class="panel">
+      <div class="panel-header">📰 Novinky</div>
+      <div class="panel-body">
+        <div class="news-item">
+          <span class="news-icon">🏆</span>
+          <span>Vítej v aréně, gladiátore!</span>
+        </div>
+        <div class="news-item">
+          <span class="news-icon">⚔</span>
+          <span>Poraz prvního nepřítele a získej XP</span>
+        </div>
+        <div class="news-item">
+          <span class="news-icon">💰</span>
+          <span>Za každý boj dostaneš zlato</span>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">🏆 Žebříček</div>
+      <div class="panel-body">
+        <div class="leaderboard" id="leaderboard">
+          <div class="lb-row">
+            <span class="lb-rank">1.</span>
+            <span class="lb-name">Marcus</span>
+            <span class="lb-level">Lv. 42</span>
+          </div>
+          <div class="lb-row">
+            <span class="lb-rank">2.</span>
+            <span class="lb-name">Spartacus</span>
+            <span class="lb-level">Lv. 38</span>
+          </div>
+          <div class="lb-row">
+            <span class="lb-rank">3.</span>
+            <span class="lb-name">Maximus</span>
+            <span class="lb-level">Lv. 35</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- LEVEL UP MODAL -->
+<div class="modal-overlay" id="levelUpModal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header">🌟 LEVEL UP! 🌟</div>
+    <div class="modal-body">
+      <div class="levelup-anim">⭐</div>
+      <p>Gratulujeme! Dosáhl jsi úrovně <strong id="newLevel">2</strong>!</p>
+      <p class="levelup-bonus">+10 Zdraví &nbsp; +2 Síla &nbsp; +1 Obrana</p>
+    </div>
+    <button onclick="closeLevelUp()">⚔ Pokračovat v boji!</button>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/game.js"></script>
+<script>
+  // Particles
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+  const pts = Array.from({length:40}, () => ({
+    x: Math.random()*canvas.width, y: Math.random()*canvas.height,
+    r: Math.random()*1.5+0.5, dx: (Math.random()-.5)*.3,
+    dy: -Math.random()*.5-.1, a: Math.random()*.5+.1
+  }));
+  function drawPts() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pts.forEach(p => {
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(212,175,55,${p.a})`; ctx.fill();
+      p.x+=p.dx; p.y+=p.dy; p.a-=.001;
+      if(p.y<0||p.a<=0){p.x=Math.random()*canvas.width;p.y=canvas.height+5;p.a=Math.random()*.5+.1;p.dy=-Math.random()*.5-.1;}
+    });
+    requestAnimationFrame(drawPts);
+  }
+  drawPts();
+</script>
+</body>
+</html>
