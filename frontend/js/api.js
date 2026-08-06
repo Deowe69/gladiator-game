@@ -1,5 +1,5 @@
 // API Configuration
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://gladiator-game-778y.onrender.com/api';
 
 class API {
   static async request(endpoint, method = 'GET', data = null) {
