@@ -4,124 +4,179 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gladiátor - Aréna Bohů</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/game.css">
 </head>
 <body>
 
-<!-- TOP MENU BAR -->
-<div class="top-menu">
-  <div class="top-menu-left">
-    <div class="game-title">⚔ OLYMPUS ⚔</div>
-  </div>
-  <nav class="top-nav">
-    <a class="top-nav-item active" onclick="openView('city')">🏛 Město</a>
-    <a class="top-nav-item" onclick="openView('arena')">⚔ Aréna</a>
-    <a class="top-nav-item" onclick="openView('dungeon')">🏰 Dungeon</a>
-    <a class="top-nav-item" onclick="openView('quests')">📜 Úkoly</a>
-    <a class="top-nav-item" onclick="openView('shop')">🏪 Obchod</a>
-    <a class="top-nav-item" onclick="openView('tavern')">🍺 Taverna</a>
-    <a class="top-nav-item" onclick="openView('inventory')">🎒 Inventář</a>
-    <a class="top-nav-item" onclick="openView('profile')">👤 Profil</a>
-  </nav>
-  <div class="top-menu-right">
-    <div class="gold-display">💰 <span id="navGold">0</span></div>
-    <button class="btn-logout" onclick="logout()">Odhlásit</button>
+<!-- ===== HORNÍ TMAVÝ PRUH ===== -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="topbar-link" onclick="openView('tavern')">Podpora</a>
+    <a class="topbar-link" onclick="openView('profile')">Profil</a>
+    <a class="topbar-link" onclick="openView('quests')">Poznámky</a>
+    <a class="topbar-link" onclick="openView('guild')">Fórum</a>
+    <a class="topbar-link gold" onclick="openView('forge')">Klenotník</a>
+    <a class="topbar-link" onclick="openView('city')">Pravidla</a>
+    <span class="topbar-date" id="topDate"></span>
+    <a class="topbar-link" onclick="logout()">Odhlásit</a>
   </div>
 </div>
 
-<!-- MAIN CONTAINER -->
+<!-- ===== HLAVIČKA S RESOURCE BOXY ===== -->
+<div class="headerband">
+  <div class="hb-inner">
+
+    <!-- Ikonky -->
+    <div class="hb-box hb-icons">
+      <div class="hb-icon"><span>📜</span><i class="badge">1</i></div>
+      <div class="hb-icon"><span>⚔️</span><i class="badge">31</i></div>
+      <div class="hb-icon"><span>✉️</span><i class="badge">77</i></div>
+      <div class="hb-icon"><span>🏆</span><i class="badge">4</i></div>
+    </div>
+
+    <!-- Zdroje + pruhy -->
+    <div class="hb-box hb-res">
+      <div class="hb-res-row">
+        <span class="res"><i>🪙</i><b id="navGold">0</b></span>
+        <span class="res"><i>💎</i><b id="navRuby">0</b></span>
+      </div>
+      <div class="hb-res-row">
+        <span class="res"><i>❤️</i><b id="hpVal">0/0</b></span>
+        <span class="res"><i>⭐</i><b id="navLevel">1</b></span>
+      </div>
+      <div class="hb-bars">
+        <div class="gbar gbar-hp"><div class="gbar-fill" id="hpBar" style="width:0%"></div></div>
+        <div class="gbar gbar-xp"><div class="gbar-fill" id="xpBar" style="width:0%"></div><span class="gbar-txt" id="xpVal">0 XP</span></div>
+      </div>
+    </div>
+
+    <!-- Výpravy -->
+    <div class="hb-box hb-actions">
+      <div class="hb-act-row">
+        <span class="hb-act-icon">🗺️</span>
+        <span class="hb-act-count">12 / 12</span>
+        <button class="btn-green" onclick="openView('quests')">Jít na výpravu</button>
+      </div>
+      <div class="hb-act-row">
+        <span class="hb-act-icon">🏰</span>
+        <span class="hb-act-count">12 / 12</span>
+        <button class="btn-green" onclick="openView('dungeon')">Jít do bludiště</button>
+      </div>
+    </div>
+
+    <!-- Aréna -->
+    <div class="hb-box hb-actions">
+      <div class="hb-act-row">
+        <span class="hb-act-icon">🔥</span>
+        <span class="hb-act-count">56</span>
+        <button class="btn-green" onclick="openView('arena')">Jít do Arény</button>
+      </div>
+      <div class="hb-act-row">
+        <span class="hb-act-icon">🛡️</span>
+        <span class="hb-act-count">32</span>
+        <button class="btn-green" onclick="openView('guild')">Jít do Circus Turma</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== HLAVNÍ PLOCHA ===== -->
 <div class="game-container">
 
-  <!-- LEFT SIDEBAR -->
-  <aside class="sidebar left-sidebar">
-    <div class="sidebar-char">
-      <div class="char-avatar" id="charAvatarSm"></div>
-      <div class="char-name" id="charNameSm">-</div>
-      <div class="char-class" id="charClassSm">-</div>
-      <div class="char-level">Lv. <span id="charLevelSm">1</span></div>
-    </div>
+  <!-- ===== LEVÝ ČERVENÝ BANNER ===== -->
+  <aside class="left-banner">
+    <div class="banner-top">🦅</div>
 
-    <div class="sidebar-stats">
-      <div class="stat-row">
-        <span class="stat-icon">❤️</span>
-        <span class="stat-name">Zdraví</span>
-        <span class="stat-val" id="sHealth">-</span>
+    <div class="banner-body">
+      <div class="menu-list">
+        <a class="menu-btn active" id="menu-city"    onclick="openView('city')">Přehled</a>
+        <a class="menu-btn"        id="menu-quests"  onclick="openView('quests')">Mise</a>
+        <a class="menu-btn"        id="menu-guild"   onclick="openView('guild')">Gilda</a>
+        <a class="menu-btn"        id="menu-hall"    onclick="openView('hall')">Síň slávy</a>
+        <a class="menu-btn premium" id="menu-premium" onclick="openView('premium')"><span class="gem">💠</span>Prémium</a>
       </div>
-      <div class="stat-row">
-        <span class="stat-icon">⚔️</span>
-        <span class="stat-name">Síla</span>
-        <span class="stat-val" id="sStr">-</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-icon">🛡️</span>
-        <span class="stat-name">Obrana</span>
-        <span class="stat-val" id="sDef">-</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-icon">💨</span>
-        <span class="stat-name">Hbitost</span>
-        <span class="stat-val" id="sAgi">-</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-icon">🔮</span>
-        <span class="stat-name">Intelekt</span>
-        <span class="stat-val" id="sInt">-</span>
-      </div>
-    </div>
 
-    <div class="sidebar-divider"></div>
-
-    <div class="sidebar-info">
-      <div class="info-label">Zkušenosti</div>
-      <div class="xp-bar-container">
-        <div class="xp-bar-bg">
-          <div class="xp-bar-fill" id="xpBar" style="width: 0%"></div>
+      <div class="submenu">
+        <div class="submenu-tabs">
+          <div class="sub-tab active" onclick="subTab(this,0)">🏛️</div>
+          <div class="sub-tab" onclick="subTab(this,1)">🗺️</div>
         </div>
-        <div class="xp-text" id="xpVal">0 XP</div>
+        <div class="submenu-body">
+          <a class="sub-item" id="menu-work"      onclick="openView('work')">Práce</a>
+          <a class="sub-item" id="menu-arena"     onclick="openView('arena')">Aréna</a>
+          <a class="sub-item" id="menu-training"  onclick="openView('training')">Cvičiště</a>
+          <a class="sub-item" id="menu-shop"      onclick="openView('shop')">Zbrojíř</a>
+          <a class="sub-item" id="menu-forge"     onclick="openView('forge')">Platnéř</a>
+          <a class="sub-item" id="menu-junk"      onclick="openView('junk')">Vetešník</a>
+          <a class="sub-item" id="menu-alchemy"   onclick="openView('alchemy')">Alchymista</a>
+          <a class="sub-item" id="menu-dungeon"   onclick="openView('dungeon')">Bludiště</a>
+          <a class="sub-item" id="menu-tavern"    onclick="openView('tavern')">Taverna</a>
+          <a class="sub-item" id="menu-auction"   onclick="openView('auction')">Aukční síň</a>
+          <a class="sub-item" id="menu-inventory" onclick="openView('inventory')">Tržiště</a>
+        </div>
       </div>
     </div>
+
+    <div class="banner-bottom"></div>
   </aside>
 
-  <!-- CENTER CONTENT -->
-  <main class="center-content" id="centerContent">
-    <!-- Dynamically loaded views -->
+  <!-- ===== OBSAH ===== -->
+  <main class="content-area">
+    <!-- Folder taby -->
+    <div class="folder-tabs" id="folderTabs">
+      <div class="ftab active" onclick="openView('profile')">Přehled</div>
+      <div class="ftab" onclick="openView('stats')">Statistiky</div>
+      <div class="ftab" onclick="openView('achievements')">Úspěchy</div>
+      <div class="ftab" onclick="openView('guild')">Familia</div>
+    </div>
+
+    <div class="parchment" id="centerContent"></div>
   </main>
-
-  <!-- RIGHT SIDEBAR -->
-  <aside class="sidebar right-sidebar">
-    <div class="sidebar-widget">
-      <div class="widget-title">🏆 Leaderboard</div>
-      <div class="leaderboard" id="leaderboard"></div>
-    </div>
-
-    <div class="sidebar-divider"></div>
-
-    <div class="sidebar-widget">
-      <div class="widget-title">🎁 Denní odměna</div>
-      <button class="btn-daily" id="dailyBtn" onclick="claimDaily()">Převzít odměnu</button>
-    </div>
-  </aside>
 
 </div>
 
-<!-- MODALS -->
-<div class="modal-overlay" id="levelUpModal" style="display: none;">
+<!-- skryté prvky které používá updateUI() -->
+<div style="display:none">
+  <span id="navName"></span>
+  <span id="charNameSm"></span>
+  <span id="charClassSm"></span>
+  <span id="charAvatarSm"></span>
+  <span id="sHealth"></span><span id="sStr"></span><span id="sDef"></span>
+  <span id="sAgi"></span><span id="sInt"></span>
+  <button id="dailyBtn" onclick="claimDaily()"></button>
+  <div id="leaderboard"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="levelUpModal" style="display:none;">
   <div class="modal-content">
     <div class="modal-icon">⭐</div>
     <h2>POSTOUPIL JSI!</h2>
     <p>Dosáhl jsi úrovně <strong id="newLevel">2</strong>!</p>
     <p class="modal-rewards">+10 Zdraví · +2 Síla · +1 Obrana · +1 Hbitost</p>
-    <button onclick="document.getElementById('levelUpModal').style.display='none'" class="modal-btn">⚔ Sláva Olympu!</button>
+    <button onclick="document.getElementById('levelUpModal').style.display='none'" class="btn-green big">Sláva Olympu!</button>
   </div>
 </div>
 
-<!-- SCRIPTS -->
 <script src="js/api.js"></script>
 <script src="js/avatars.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/character.js"></script>
 <script src="js/game.js"></script>
+
+<script>
+  // datum v horním pruhu
+  (function(){
+    const d = new Date();
+    const p = n => String(n).padStart(2,'0');
+    document.getElementById('topDate').textContent =
+      `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  })();
+
+  function subTab(el, idx) {
+    document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+</script>
 
 </body>
 </html>

@@ -237,16 +237,31 @@ function updateUI() {
 
 // ========== VIEWS ==========
 let viewCache = {}; // Cache rendered views to avoid regeneration
+// který folder tab patří ke které view
+const TAB_OF_VIEW = { profile:0, inventory:0, city:0, stats:1, achievements:2, guild:3 };
+
 function openView(view) {
-  document.querySelectorAll('.side-item').forEach(i => i.classList.remove('active'));
+  // zvýraznění v levém banneru
+  document.querySelectorAll('.menu-btn, .sub-item').forEach(i => i.classList.remove('active'));
   const m = document.getElementById('menu-' + view);
   if (m) m.classList.add('active');
 
+  // folder taby nad pergamenem
+  const tabs = document.querySelectorAll('.ftab');
+  tabs.forEach(t => t.classList.remove('active'));
+  const ti = TAB_OF_VIEW[view];
+  if (ti !== undefined && tabs[ti]) tabs[ti].classList.add('active');
+
   const cc = document.getElementById('centerContent');
-  const views = { city, arena, dungeon, quests, shop, inventory: inventoryView, profile: profileView, guild, tavern, forge };
-  const viewFn = views[view] || (() => `<div class="panel"><div class="panel-header">🚧 Brzy</div><div class="panel-body" style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">Tato sekce bude brzy dostupná!</div></div>`);
+  const views = { city, arena, dungeon, quests, shop, inventory: profileView, profile: profileView, guild, tavern, forge };
+  const viewFn = views[view] || (() => `
+    <div class="coming-soon">
+      <div class="cs-icon">🚧</div>
+      <h2>Brzy dostupné</h2>
+      <p>Tato část Říma se teprve staví.</p>
+    </div>`);
   cc.innerHTML = viewFn();
-  viewCache[view] = true; // Mark view as rendered
+  viewCache[view] = true;
 }
 
 // ===== CITY =====
@@ -782,174 +797,306 @@ function profTab(el, tabId) {
   document.getElementById(tabId).classList.add('active');
 }
 
+// ===== PŘEHLED (Gladiatus styl) =====
+const DOLL = [
+  { key:'weapon', cls:'wpn'   },
+  { key:'helmet', cls:'helm'  },
+  { key:'amulet', cls:'amul'  },
+  { key:'chest',  cls:'body'  },
+  { key:'shield', cls:'shld'  },
+  { key:'gloves', cls:'glov'  },
+  { key:'boots',  cls:'boots' },
+];
+
+// Do jakého slotu předmět patří (podle id z obchodu)
+function slotForItem(item) {
+  const id = (item && item.id) || '';
+  if (/^w/.test(id)) return 'weapon';
+  if (id === 'a3')   return 'shield';
+  if (/^a/.test(id)) return 'chest';
+  if (/^h/.test(id)) return 'helmet';
+  if (/^g/.test(id)) return 'gloves';
+  if (id === 'b3')   return 'belt';
+  if (/^b/.test(id)) return 'boots';
+  if (id === 'm2' || id === 'm5') return 'ring';
+  if (/^m/.test(id)) return 'amulet';
+  return null; // lektvary a neznámé
+}
+
 function profileView() {
   const c = character;
-  const totalStr  = Object.values(equipped).filter(e=>e&&e.key==='strength').reduce((a,e)=>a+e.val,0);
-  const totalDef  = Object.values(equipped).filter(e=>e&&e.key==='defense').reduce((a,e)=>a+e.val,0);
-  const totalAgi  = Object.values(equipped).filter(e=>e&&e.key==='agility').reduce((a,e)=>a+e.val,0);
-  const totalInt  = Object.values(equipped).filter(e=>e&&e.key==='intelligence').reduce((a,e)=>a+e.val,0);
-  const totalDmg  = Math.floor((c.strength + totalStr) * 1.5);
-  const totalArmor= (c.defense + totalDef) * 3;
-  const xpNeeded = c.level * 100;
-  const xpPct = Math.min(100, (c.experience / xpNeeded * 100)).toFixed(1);
+  const bonus = k => Object.values(equipped).filter(e => e && e.key === k).reduce((a,e) => a + e.val, 0);
+  const str = c.strength     + bonus('strength');
+  const def = c.defense      + bonus('defense');
+  const agi = c.agility      + bonus('agility');
+  const int = c.intelligence + bonus('intelligence');
 
-  function statRow(icon, name, base, bonus, color, maxVal) {
-    const total = base + bonus;
-    const pct = Math.min(100, (total / maxVal * 100));
+  const dmgMax  = Math.floor(str * 1.5);
+  const dmgMin  = Math.max(1, Math.floor(str * 1.1));
+  const armor   = def * 3;
+  const xpNeed  = c.level * 100;
+  const xpPct   = Math.min(100, c.experience / xpNeed * 100);
+  const hpPct   = Math.max(0, c.health / c.max_health * 100);
+
+  const bar = (cls, pct) => `<div class="sbar ${cls}"><i style="width:${pct}%"></i></div>`;
+  const rowBar   = (label, cls, pct, val) =>
+    `<div class="strow"><span class="sl">${label}</span>${bar(cls, pct)}<span class="sv">${val}</span></div>`;
+  const rowPlain = (label, val) =>
+    `<div class="strow plain"><span class="sl">${label}</span><span class="sv">${val}</span></div>`;
+
+  const avatar = getAvatar(c.class, c.gender);
+  const avatarHTML = /^\s*</.test(avatar) ? avatar : `<span class="emoji">${avatar}</span>`;
+
+  // --- sloty vybavení ---
+  function slotHTML(key, cls) {
+    const def = SLOT_DEFS[key];
+    const eq  = equipped[key];
     return `
-      <div class="stat-row-adv">
-        <div class="stat-info">
-          <span class="stat-icon">${icon}</span>
-          <span class="stat-name">${name}</span>
-        </div>
-        <div class="stat-bar-container">
-          <div class="stat-bar-bg">
-            <div class="stat-bar-fill" style="width:${pct}%;background:${color};"></div>
-          </div>
-        </div>
-        <div class="stat-val-adv"><span style="color:${color};">${total}</span> <span class="stat-bonus">${bonus>0?'+'+bonus:''}</span></div>
+      <div class="slot ${cls} ${eq ? '' : 'empty'}"
+           draggable="${eq ? 'true' : 'false'}"
+           ondragstart="dragStart(event,'slot','${key}')"
+           ondragend="dragEnd(event)"
+           ondragover="dragOver(event)"
+           ondragleave="dragLeave(event)"
+           ondrop="dropOn(event,'slot','${key}')"
+           onclick="unequip('${key}')"
+           title="${eq ? eq.name + ' — klikni pro sundání' : def.label}">
+        <span class="s-ico">${eq ? eq.icon : def.icon}</span>
+        ${eq ? `<span class="s-nm">${eq.name}</span>` : `<span class="s-lbl">${def.label}</span>`}
+      </div>`;
+  }
+
+  const dollHTML = DOLL.map(s => slotHTML(s.key, s.cls)).join('') + `
+    <div class="slot rings">
+      ${['ring','belt'].map(k => {
+        const eq = equipped[k];
+        return `<div class="slot-sm ${eq ? '' : 'empty'}"
+                     draggable="${eq ? 'true' : 'false'}"
+                     ondragstart="dragStart(event,'slot','${k}')"
+                     ondragend="dragEnd(event)"
+                     ondragover="dragOver(event)"
+                     ondragleave="dragLeave(event)"
+                     ondrop="dropOn(event,'slot','${k}')"
+                     onclick="unequip('${k}')"
+                     title="${eq ? eq.name : SLOT_DEFS[k].label}">${eq ? eq.icon : SLOT_DEFS[k].icon}</div>`;
+      }).join('')}
+    </div>`;
+
+  // --- batoh ---
+  const BAG_SIZE = 24;
+  let bagHTML = '';
+  for (let i = 0; i < BAG_SIZE; i++) {
+    const it = inventory[i];
+    bagHTML += `
+      <div class="bag-slot ${it ? '' : 'empty'}"
+           draggable="${it ? 'true' : 'false'}"
+           ondragstart="dragStart(event,'inv','${i}')"
+           ondragend="dragEnd(event)"
+           ondragover="dragOver(event)"
+           ondragleave="dragLeave(event)"
+           ondrop="dropOn(event,'inv','${i}')"
+           onclick="${it ? `useItem(${i})` : ''}"
+           title="${it ? it.name + ' (' + it.stat + ')' : ''}">
+        ${it ? `<span>${it.icon}</span><span class="b-nm">${it.name.split(' ')[0]}</span>` : ''}
       </div>`;
   }
 
   return `
-  <div class="panel">
-    <div class="panel-header">👤 Profil ${c.name}</div>
-    <div class="panel-body" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px;">
+  <div class="gl-profile">
 
-      <!-- LEVÁ ČÁST -->
-      <div>
-        <div style="text-align:center;margin-bottom:20px;">
-          <div style="font-size:60px;margin-bottom:10px;">${getAvatar(c.class, c.gender)}</div>
-          <h2 style="margin:5px 0;">${c.name}</h2>
-          <p style="color:var(--text-dim);margin:0;">Úroveň ${c.level} · ${c.class}</p>
-        </div>
-
-        <div style="background:var(--bg-secondary);padding:15px;border-radius:8px;margin-bottom:15px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <span style="font-size:12px;color:var(--text-dim);">ZKUŠENOSTI</span>
-            <span style="font-size:12px;">${c.experience}/${xpNeeded}</span>
-          </div>
-          <div class="xp-bar-bg" style="height:20px;">
-            <div class="xp-bar-fill" style="width:${xpPct}%;"></div>
-          </div>
-        </div>
-
-        <div style="background:var(--bg-secondary);padding:15px;border-radius:8px;">
-          <h3 style="margin:0 0 10px 0;font-size:14px;">💰 Zlato</h3>
-          <div style="font-size:24px;color:var(--gold);font-weight:bold;">${c.gold}</div>
-        </div>
+    <div class="gl-left">
+      <div class="nameplate">
+        <div class="np-name">${c.name}</div>
+        <div class="np-title">${c.class}</div>
       </div>
 
-      <!-- PRAVÁ ČÁST -->
-      <div>
-        <h3 style="margin:0 0 15px 0;font-size:14px;">⚔ Bojové statistiky</h3>
-        ${statRow('⚔️','Síla',    c.strength, totalStr, '#DD3333', 150)}
-        ${statRow('🛡️','Obrana',  c.defense,  totalDef, '#3333DD', 100)}
-        ${statRow('💨','Hbitost', c.agility,  totalAgi, '#33DD33', 100)}
-        ${statRow('🔮','Intelekt',c.intelligence,totalInt,'#DD33DD',100)}
+      <div class="portrait"><div class="portrait-inner">${avatarHTML}</div></div>
 
-        <div style="margin-top:20px;padding:15px;background:var(--bg-secondary);border-radius:8px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div style="text-align:center;">
-              <div style="font-size:20px;color:#DD3333;font-weight:bold;">${Math.max(1,c.strength-5)}-${totalDmg}</div>
-              <div style="font-size:11px;color:var(--text-dim);">Poškození</div>
-            </div>
-            <div style="text-align:center;">
-              <div style="font-size:20px;color:#3333DD;font-weight:bold;">${totalArmor}</div>
-              <div style="font-size:11px;color:var(--text-dim);">Zbroj</div>
-            </div>
-          </div>
-        </div>
+      <div class="stattable">
+        ${rowPlain('Úroveň', c.level)}
+        ${rowBar('Životy',     'hp', hpPct, c.health + '/' + c.max_health)}
+        ${rowBar('Zkušenost',  'xp', xpPct, xpPct.toFixed(1) + ' %')}
+        ${rowBar('Síla',       'st', Math.min(100, str / 3), str)}
+        ${rowBar('Obratnost',  'st', Math.min(100, agi / 3), agi)}
+        ${rowBar('Odolnost',   'st', Math.min(100, def / 3), def)}
+        ${rowBar('Inteligence','st', Math.min(100, int / 3), int)}
+        ${rowPlain('Zbroj', armor)}
+        ${rowPlain('Poškození', dmgMin + ' - ' + dmgMax)}
+        ${rowPlain('Zlato', c.gold)}
       </div>
     </div>
+
+    <div class="eq-wrap">
+      <div class="eq-frame">
+        <div class="eq-doll">${dollHTML}</div>
+        <div class="eq-side">
+          ${[0,1,2,3].map(() => `<div class="slot empty" title="Zamčeno"><span class="s-ico">🔒</span></div>`).join('')}
+        </div>
+      </div>
+
+      <div class="bag">
+        <div class="bag-tabs">
+          <div class="bag-tab active">I</div>
+          <div class="bag-tab">II</div>
+          <div class="bag-tab">III</div>
+          <div class="bag-tab">IV</div>
+        </div>
+        <div class="bag-grid">${bagHTML}</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="profile-link">
+    <div class="pl-title">Odkaz na tvůj profil</div>
+    <input class="pl-input" readonly onclick="this.select()"
+           value="${location.origin}${location.pathname}?hrdina=${encodeURIComponent(c.name)}">
   </div>`;
 }
 
-// ========== DRAG-DROP SYSTEM ==========
-function onDragStart(e, fromType, fromIdx) {
-  const item = fromType === 'inv' ? inventory[fromIdx] : equipped[SLOT_DEFS_KEYS[fromIdx]];
+// ========== DRAG & DROP ==========
+let dragSrc = null; // {type:'inv'|'slot', ref}
+
+function dragStart(e, type, ref) {
+  const item = type === 'inv' ? inventory[+ref] : equipped[ref];
   if (!item) { e.preventDefault(); return; }
-  draggedItem = item;
-  draggedFrom = { type: fromType, index: fromIdx };
+  dragSrc = { type, ref: type === 'inv' ? +ref : ref };
   e.dataTransfer.effectAllowed = 'move';
-  e.target.closest('.inv-slot, .equip-slot').classList.add('dragging');
+  e.dataTransfer.setData('text/plain', item.name);
+  e.currentTarget.classList.add('dragging');
 }
 
-function onDragOver(e) {
+function dragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+
+function dragOver(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
-  e.target.closest('.inv-slot, .equip-slot')?.classList.add('drag-over');
+  e.currentTarget.classList.add('drag-over');
 }
 
-function onDragLeave(e) {
-  if (e.target === e.currentTarget) {
-    e.target.closest('.inv-slot, .equip-slot')?.classList.remove('drag-over');
-  }
+function dragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
 }
 
-function onDrop(e, toType, toIdx) {
+function applyBonus(item, sign) {
+  if (item && item.key && item.key !== 'health') character[item.key] += sign * item.val;
+}
+
+function dropOn(e, type, ref) {
   e.preventDefault();
-  e.target.closest('.inv-slot, .equip-slot').classList.remove('drag-over');
+  e.currentTarget.classList.remove('drag-over');
+  if (!dragSrc) return;
 
-  if (!draggedItem || !draggedFrom) return;
+  const src = dragSrc;
+  dragSrc = null;
 
-  if (toType === 'slot') {
-    const slotKey = Object.keys(SLOT_DEFS).find((k, i) => i === toIdx);
-    if (!slotKey) return;
+  const item = src.type === 'inv' ? inventory[src.ref] : equipped[src.ref];
+  if (!item) return;
 
-    const slotMap = {
-      'w1':'weapon','w2':'weapon','w3':'weapon','w4':'weapon',
-      'a1':'chest','a2':'chest','a3':'chest','a4':'chest',
-      'p1':null,'p2':null,'p3':null,
-      'm1':'ring','m2':'amulet','m3':'weapon',
-    };
-    const targetSlot = slotMap[draggedItem.id];
-    if (!targetSlot) return;
-
-    // Lektvar - použít okamžitě
-    if (!targetSlot) {
-      if (draggedItem.key === 'health') {
-        character.health = Math.min(character.max_health, character.health + draggedItem.val);
-        if (draggedFrom.type === 'inv') inventory.splice(draggedFrom.index, 1);
-        localStorage.setItem('inv', JSON.stringify(inventory));
-        saveChar(); updateUI();
-        alert(`🧪 Použil jsi ${draggedItem.name}! +${draggedItem.val} HP`);
-        openView('inventory');
-      }
+  // --- do slotu vybavení ---
+  if (type === 'slot') {
+    const want = slotForItem(item);
+    if (want !== ref) {
+      toast(`${item.name} sem nepatří — patří do slotu „${SLOT_DEFS[want] ? SLOT_DEFS[want].label : 'žádný'}".`);
       return;
     }
 
-    // Swap or equip
-    if (equipped[targetSlot]) {
-      const old = equipped[targetSlot];
-      if (old.key && old.key !== 'health') character[old.key] -= old.val;
-      inventory.push(old);
-    }
-    equipped[targetSlot] = draggedItem;
-    if (draggedFrom.type === 'inv') {
-      inventory.splice(draggedFrom.index, 1);
-    } else {
-      delete equipped[draggedFrom.index];
-    }
-    if (draggedItem.key && draggedItem.key !== 'health') character[draggedItem.key] += draggedItem.val;
+    const previous = equipped[ref] || null;
 
-  } else if (toType === 'inv') {
-    // Move from slot to inv
-    if (draggedFrom.type === 'slot') {
-      const slotKey = draggedFrom.index;
-      inventory.push(equipped[slotKey]);
-      if (draggedItem.key && draggedItem.key !== 'health') character[draggedItem.key] -= draggedItem.val;
-      delete equipped[slotKey];
+    if (src.type === 'inv') {
+      inventory.splice(src.ref, 1);
+      if (previous) inventory.push(previous);
+    } else {
+      delete equipped[src.ref];
+      if (previous) equipped[src.ref] = previous;
     }
-    // Inv to inv is no-op
+
+    if (previous) applyBonus(previous, -1);
+    equipped[ref] = item;
+    applyBonus(item, +1);
   }
 
-  localStorage.setItem('eqp', JSON.stringify(equipped));
+  // --- do batohu ---
+  else if (type === 'inv') {
+    if (src.type === 'slot') {
+      delete equipped[src.ref];
+      applyBonus(item, -1);
+      const target = +ref;
+      if (inventory[target]) inventory.push(item);
+      else inventory[target] = item;
+    } else {
+      // přehození v batohu
+      const a = src.ref, b = +ref;
+      const tmp = inventory[b];
+      inventory[b] = inventory[a];
+      if (tmp === undefined) delete inventory[a];
+      else inventory[a] = tmp;
+    }
+  }
+
+  persist();
+}
+
+// klik na slot = sundat
+function unequip(key) {
+  const item = equipped[key];
+  if (!item) return;
+  applyBonus(item, -1);
+  delete equipped[key];
+  inventory.push(item);
+  persist();
+}
+
+// klik na předmět v batohu = vybavit / vypít
+function useItem(i) {
+  const item = inventory[i];
+  if (!item) return;
+
+  if (item.key === 'health') {
+    character.health = Math.min(character.max_health, character.health + item.val);
+    inventory.splice(i, 1);
+    toast(`Vypil jsi ${item.name}. +${item.val} HP`);
+    persist();
+    return;
+  }
+
+  const slot = slotForItem(item);
+  if (!slot) return;
+
+  const previous = equipped[slot] || null;
+  inventory.splice(i, 1);
+  if (previous) { applyBonus(previous, -1); inventory.push(previous); }
+  equipped[slot] = item;
+  applyBonus(item, +1);
+  persist();
+}
+
+function persist() {
+  inventory = inventory.filter(x => x);
   localStorage.setItem('inv', JSON.stringify(inventory));
-  draggedItem = null;
-  draggedFrom = null;
-  saveChar(); updateUI();
-  openView('inventory');
+  localStorage.setItem('eqp', JSON.stringify(equipped));
+  saveChar();
+  updateUI();
+  openView('profile');
+}
+
+function toast(msg) {
+  let t = document.getElementById('glToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'glToast';
+    t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:5000;' +
+      'background:linear-gradient(180deg,#f8eed4,#e3d3ac);border:2px solid #8a6d16;border-radius:4px;' +
+      'padding:9px 18px;font:13px Georgia,serif;color:#4a3520;box-shadow:0 4px 14px rgba(0,0,0,.5);';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(t._h);
+  t._h = setTimeout(() => { t.style.display = 'none'; }, 2200);
 }
 
 const SLOT_DEFS_KEYS = Object.keys(SLOT_DEFS);
