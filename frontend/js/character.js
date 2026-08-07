@@ -22,6 +22,7 @@ function checkReady() {
   document.getElementById('createCharBtn').disabled = !(name && selectedGender && selectedClass);
 }
 
+document.addEventListener('DOMContentLoaded', () => {
 document.getElementById('charName').addEventListener('input', checkReady);
 
 document.getElementById('characterForm').addEventListener('submit', async e => {
@@ -48,6 +49,7 @@ document.getElementById('characterForm').addEventListener('submit', async e => {
     btn.disabled = false;
     btn.textContent = originalText;
   }
+  });
 });
 
 function updateAvatarPreview() {

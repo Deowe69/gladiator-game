@@ -14,6 +14,7 @@ function clearMsg(id) {
 }
 
 // ========== LOGIN ==========
+document.addEventListener('DOMContentLoaded', () => {
 document.getElementById('loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   const username = document.getElementById('loginUsername').value.trim();
@@ -47,7 +48,7 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
 });
 
 // ========== REGISTER ==========
-document.getElementById('registerForm').addEventListener('submit', async e => {
+  document.getElementById('registerForm').addEventListener('submit', async e => {
   e.preventDefault();
   const username = document.getElementById('regUsername').value.trim();
   const email    = document.getElementById('regEmail').value.trim();
@@ -76,4 +77,6 @@ document.getElementById('registerForm').addEventListener('submit', async e => {
     btn.disabled = false;
     btn.textContent = originalText;
   }
+  });
 });
+// End DOMContentLoaded

@@ -243,7 +243,7 @@ function openView(view) {
   if (m) m.classList.add('active');
 
   const cc = document.getElementById('centerContent');
-  const views = { city, arena, dungeon, quests, shop, inventory: inventoryView, profile: inventoryView, guild, tavern, forge };
+  const views = { city, arena, dungeon, quests, shop, inventory: inventoryView, profile: profileView, guild, tavern, forge };
   const viewFn = views[view] || (() => `<div class="panel"><div class="panel-header">🚧 Brzy</div><div class="panel-body" style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">Tato sekce bude brzy dostupná!</div></div>`);
   cc.innerHTML = viewFn();
   viewCache[view] = true; // Mark view as rendered
@@ -780,6 +780,89 @@ function profTab(el, tabId) {
   el.classList.add('active');
   document.querySelectorAll('.ptab-content').forEach(c => c.classList.remove('active'));
   document.getElementById(tabId).classList.add('active');
+}
+
+function profileView() {
+  const c = character;
+  const totalStr  = Object.values(equipped).filter(e=>e&&e.key==='strength').reduce((a,e)=>a+e.val,0);
+  const totalDef  = Object.values(equipped).filter(e=>e&&e.key==='defense').reduce((a,e)=>a+e.val,0);
+  const totalAgi  = Object.values(equipped).filter(e=>e&&e.key==='agility').reduce((a,e)=>a+e.val,0);
+  const totalInt  = Object.values(equipped).filter(e=>e&&e.key==='intelligence').reduce((a,e)=>a+e.val,0);
+  const totalDmg  = Math.floor((c.strength + totalStr) * 1.5);
+  const totalArmor= (c.defense + totalDef) * 3;
+  const xpNeeded = c.level * 100;
+  const xpPct = Math.min(100, (c.experience / xpNeeded * 100)).toFixed(1);
+
+  function statRow(icon, name, base, bonus, color, maxVal) {
+    const total = base + bonus;
+    const pct = Math.min(100, (total / maxVal * 100));
+    return `
+      <div class="stat-row-adv">
+        <div class="stat-info">
+          <span class="stat-icon">${icon}</span>
+          <span class="stat-name">${name}</span>
+        </div>
+        <div class="stat-bar-container">
+          <div class="stat-bar-bg">
+            <div class="stat-bar-fill" style="width:${pct}%;background:${color};"></div>
+          </div>
+        </div>
+        <div class="stat-val-adv"><span style="color:${color};">${total}</span> <span class="stat-bonus">${bonus>0?'+'+bonus:''}</span></div>
+      </div>`;
+  }
+
+  return `
+  <div class="panel">
+    <div class="panel-header">👤 Profil ${c.name}</div>
+    <div class="panel-body" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px;">
+
+      <!-- LEVÁ ČÁST -->
+      <div>
+        <div style="text-align:center;margin-bottom:20px;">
+          <div style="font-size:60px;margin-bottom:10px;">${getAvatar(c.class, c.gender)}</div>
+          <h2 style="margin:5px 0;">${c.name}</h2>
+          <p style="color:var(--text-dim);margin:0;">Úroveň ${c.level} · ${c.class}</p>
+        </div>
+
+        <div style="background:var(--bg-secondary);padding:15px;border-radius:8px;margin-bottom:15px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span style="font-size:12px;color:var(--text-dim);">ZKUŠENOSTI</span>
+            <span style="font-size:12px;">${c.experience}/${xpNeeded}</span>
+          </div>
+          <div class="xp-bar-bg" style="height:20px;">
+            <div class="xp-bar-fill" style="width:${xpPct}%;"></div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg-secondary);padding:15px;border-radius:8px;">
+          <h3 style="margin:0 0 10px 0;font-size:14px;">💰 Zlato</h3>
+          <div style="font-size:24px;color:var(--gold);font-weight:bold;">${c.gold}</div>
+        </div>
+      </div>
+
+      <!-- PRAVÁ ČÁST -->
+      <div>
+        <h3 style="margin:0 0 15px 0;font-size:14px;">⚔ Bojové statistiky</h3>
+        ${statRow('⚔️','Síla',    c.strength, totalStr, '#DD3333', 150)}
+        ${statRow('🛡️','Obrana',  c.defense,  totalDef, '#3333DD', 100)}
+        ${statRow('💨','Hbitost', c.agility,  totalAgi, '#33DD33', 100)}
+        ${statRow('🔮','Intelekt',c.intelligence,totalInt,'#DD33DD',100)}
+
+        <div style="margin-top:20px;padding:15px;background:var(--bg-secondary);border-radius:8px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="text-align:center;">
+              <div style="font-size:20px;color:#DD3333;font-weight:bold;">${Math.max(1,c.strength-5)}-${totalDmg}</div>
+              <div style="font-size:11px;color:var(--text-dim);">Poškození</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:20px;color:#3333DD;font-weight:bold;">${totalArmor}</div>
+              <div style="font-size:11px;color:var(--text-dim);">Zbroj</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
 }
 
 // ========== DRAG-DROP SYSTEM ==========
