@@ -903,12 +903,313 @@ html, body {
   font-size:.7em; color:var(--text-dim); letter-spacing:.5px;
 }
 
-@media(max-width:900px) {
-  .prof-body { grid-template-columns:1fr; }
-  .prof-col-left { border-right:none; border-bottom:2px solid var(--border); }
-  .pinv-grid { grid-template-columns:repeat(5,1fr); }
-  .pslots-grid { grid-template-columns:repeat(3,70px); }
-  .pslot { width:70px; height:70px; }
-  .pslots-spacer { width:70px; height:70px; }
-  .prof-tabs2 { flex-wrap:wrap; }
+/* ===== NEW PROFILE WITH DRAG-DROP ===== */
+.profile-container {
+  padding:20px; max-width:1600px; margin:0 auto;
+}
+
+.profile-header {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:30px; padding-bottom:15px;
+  border-bottom:2px solid var(--border);
+}
+
+.profile-title {
+  display:flex; align-items:center; gap:15px;
+}
+
+.profile-icon { font-size:2.5em; }
+
+.profile-title h1 {
+  font-size:1.8em; color:var(--gold); margin:0;
+  text-shadow:0 0 10px rgba(212,175,55,.3);
+}
+
+.profile-class {
+  color:var(--text-dim); font-style:italic; font-size:.9em;
+}
+
+.profile-tabs {
+  display:flex; gap:10px;
+}
+
+.ptab {
+  background:rgba(0,0,0,.3); border:1px solid var(--border);
+  color:var(--text); padding:8px 16px; cursor:pointer;
+  font-family:'Cinzel',serif; font-size:.9em; border-radius:2px;
+  transition:all .2s;
+}
+
+.ptab:hover { background:rgba(212,175,55,.1); }
+
+.ptab.active {
+  background:var(--gold); color:var(--bg);
+  border-color:var(--gold); font-weight:bold;
+}
+
+.ptab-content { display:none; }
+
+.ptab-content.active { display:block; }
+
+/* MAIN PROFILE LAYOUT */
+.profile-main {
+  display:grid; grid-template-columns:250px 1fr 250px;
+  gap:30px; align-items:start;
+}
+
+/* CENTER: AVATAR + EQUIPMENT */
+.profile-center {
+  display:flex; flex-direction:column; align-items:center; gap:20px;
+}
+
+.avatar-section {
+  width:200px; text-align:center;
+}
+
+.avatar-frame {
+  position:relative; width:200px; height:200px;
+  border:3px solid var(--gold); border-radius:50%;
+  background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(212,175,55,.05));
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 30px rgba(212,175,55,.4), inset 0 0 30px rgba(0,0,0,.5);
+  overflow:hidden;
+}
+
+.avatar-inner {
+  font-size:4em; text-align:center; line-height:1;
+}
+
+.avatar-level {
+  position:absolute; bottom:0; right:0;
+  background:var(--gold); color:var(--bg);
+  width:50px; height:50px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.3em; font-weight:bold;
+  border:2px solid var(--bg); box-shadow:0 0 15px rgba(212,175,55,.6);
+}
+
+/* EQUIPMENT GRID */
+.equipment-grid {
+  display:flex; flex-direction:column; gap:8px; align-items:center;
+}
+
+.equip-row {
+  display:flex; gap:8px; justify-content:center;
+}
+
+.equip-spacer { width:80px; height:80px; }
+
+.equip-slot {
+  width:80px; height:80px;
+  border:2px solid var(--border); border-radius:4px;
+  background:rgba(0,0,0,.3);
+  padding:6px; cursor:grab; transition:all .2s;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; font-size:.75em; gap:3px;
+}
+
+.equip-slot:hover { background:rgba(212,175,55,.05); border-color:var(--gold); }
+
+.equip-slot:active { cursor:grabbing; }
+
+.equip-slot.dragging { opacity:.5; }
+
+.equip-slot.drag-over {
+  background:rgba(212,175,55,.15); border-color:var(--gold-light);
+  box-shadow:0 0 10px rgba(212,175,55,.3);
+}
+
+.equip-slot-empty {
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  color:var(--text-dim);
+}
+
+.equip-slot-icon { font-size:1.8em; }
+
+.equip-slot-name { font-size:.65em; }
+
+.equip-slot-item {
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+}
+
+.equip-icon { font-size:1.5em; }
+
+.equip-name { font-size:.6em; color:var(--text); }
+
+.equip-stat { font-size:.7em; font-weight:bold; }
+
+/* XP SECTION */
+.xp-section {
+  width:100%; margin-top:10px;
+}
+
+.xp-label { font-size:.8em; color:var(--text-dim); margin-bottom:4px; }
+
+.xp-bg {
+  width:100%; height:20px; background:rgba(0,0,0,.4);
+  border:1px solid var(--border); border-radius:3px; overflow:hidden;
+}
+
+.xp-fill {
+  height:100%; background:linear-gradient(90deg,var(--gold-dark),var(--gold));
+  transition:width .3s; box-shadow:0 0 6px rgba(212,175,55,.5);
+}
+
+.xp-text { font-size:.75em; color:var(--text-dim); margin-top:4px; text-align:center; }
+
+/* LEFT SIDEBAR: STATS */
+.profile-left {
+  display:flex; flex-direction:column; gap:15px;
+}
+
+.stat-panel {
+  background:rgba(0,0,0,.3); border:1px solid var(--border);
+  padding:15px; border-radius:4px;
+}
+
+.stat-panel h3 {
+  color:var(--gold); font-size:.95em;
+  margin-bottom:12px; border-bottom:1px solid var(--border);
+  padding-bottom:8px;
+}
+
+.stat-list {
+  display:flex; flex-direction:column; gap:8px;
+}
+
+.combat-stats {
+  background:rgba(0,0,0,.3); border:1px solid var(--border);
+  padding:12px; border-radius:4px;
+  display:flex; flex-direction:column; gap:8px;
+}
+
+.cstat {
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:.85em; padding:6px 0; border-bottom:1px solid rgba(212,175,55,.1);
+}
+
+.cstat:last-child { border:none; }
+
+.cstat-icon { font-size:1.1em; }
+
+.cstat-val { color:var(--gold); font-weight:bold; }
+
+/* RIGHT SIDEBAR: INVENTORY */
+.profile-right {
+  max-height:600px; overflow-y:auto;
+}
+
+.inventory-panel {
+  background:rgba(0,0,0,.3); border:1px solid var(--border);
+  padding:15px; border-radius:4px;
+}
+
+.inventory-panel h3 {
+  color:var(--gold); font-size:.95em;
+  margin-bottom:12px; border-bottom:1px solid var(--border);
+  padding-bottom:8px;
+}
+
+.inventory-grid {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:6px; margin-bottom:12px;
+}
+
+.inv-slot {
+  aspect-ratio:1; border:2px solid var(--border);
+  background:rgba(0,0,0,.2); border-radius:4px;
+  cursor:grab; transition:all .2s;
+  display:flex; align-items:center; justify-content:center;
+  padding:4px;
+}
+
+.inv-slot:hover { background:rgba(212,175,55,.05); }
+
+.inv-slot:active { cursor:grabbing; }
+
+.inv-slot.dragging { opacity:.5; }
+
+.inv-slot.drag-over {
+  background:rgba(212,175,55,.15); border-color:var(--gold-light);
+  box-shadow:0 0 8px rgba(212,175,55,.3);
+}
+
+.inv-empty { background:rgba(0,0,0,.1); }
+
+.inv-item {
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  text-align:center; font-size:.65em;
+}
+
+.inv-icon { font-size:1.3em; }
+
+.inv-val { font-size:.7em; font-weight:bold; }
+
+.inv-name { font-size:.6em; color:var(--text); }
+
+.inventory-hint {
+  font-size:.8em; color:var(--text-dim); font-style:italic;
+  text-align:center; padding:10px 0;
+}
+
+/* STATS TAB */
+.stats-grid {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(350px,1fr));
+  gap:20px;
+}
+
+.stats-block {
+  background:rgba(0,0,0,.3); border:1px solid var(--border);
+  padding:20px; border-radius:4px;
+}
+
+.stats-block h3 {
+  color:var(--gold); margin-bottom:15px; padding-bottom:10px;
+  border-bottom:1px solid var(--border);
+}
+
+.stat-cells {
+  display:grid; grid-template-columns:repeat(3,1fr); gap:12px;
+}
+
+.stat-cell {
+  background:rgba(0,0,0,.2); padding:12px; border-radius:3px;
+  border:1px solid rgba(212,175,55,.1); text-align:center;
+}
+
+.sc-val {
+  font-size:1.8em; font-weight:bold; color:var(--gold);
+  display:block; margin-bottom:4px;
+}
+
+.sc-name {
+  font-size:.75em; color:var(--text-dim);
+}
+
+/* COMING SOON */
+.coming-soon {
+  text-align:center; padding:80px 40px;
+}
+
+.cs-icon { font-size:4em; margin-bottom:20px; }
+
+.coming-soon h2 { color:var(--gold); margin-bottom:10px; }
+
+.coming-soon p { color:var(--text-dim); font-style:italic; }
+
+/* RESPONSIVE */
+@media(max-width:1200px) {
+  .profile-main {
+    grid-template-columns:1fr; gap:20px;
+  }
+  .profile-left, .profile-right { width:100%; max-height:none; }
+}
+
+@media(max-width:768px) {
+  .profile-header { flex-direction:column; gap:15px; align-items:flex-start; }
+  .profile-tabs { flex-wrap:wrap; }
+  .inventory-grid { grid-template-columns:repeat(4,1fr); }
+  .stat-cells { grid-template-columns:repeat(2,1fr); }
+  .avatar-frame { width:150px; height:150px; }
+  .avatar-inner { font-size:3em; }
 }

@@ -466,6 +466,9 @@ const QUALITY_CONFIG = {
   legendary: { color:'#D4AF37',label:'Legendární',glow:'0 0 14px rgba(212,175,55,.7)' },
 };
 
+let draggedItem = null;
+let draggedFrom = null;
+
 function inventoryView() {
   const c = character;
   const xpNeeded = c.level * 100;
@@ -484,17 +487,26 @@ function inventoryView() {
     const eq  = equipped[key];
     const qcfg = eq ? (QUALITY_CONFIG[eq.quality||'common']) : null;
     return `
-    <div class="pslot ${eq?'pslot-eq':''}"
-         style="${eq ? 'border-color:'+qcfg.color+';box-shadow:'+qcfg.glow : ''}"
-         onclick="handleSlotClick('${key}')"
-         data-tooltip="${eq ? eq.name+'\n'+eq.stat+'\nKlikni pro sundání' : def.label+' (prázdný)'}">
+    <div class="equip-slot"
+         data-slot="${key}"
+         draggable="true"
+         ondragstart="onDragStart(event, 'slot', '${key}')"
+         ondragover="onDragOver(event)"
+         ondrop="onDrop(event, 'slot', '${key}')"
+         ondragleave="onDragLeave(event)"
+         style="${eq ? 'border-color:'+qcfg.color+';box-shadow:'+qcfg.glow : ''}">
       ${eq ? `
-        <div class="pslot-icon">${eq.icon}</div>
-        <div class="pslot-stat" style="color:${qcfg.color}">+${eq.val}</div>
+        <div class="equip-slot-item">
+          <div class="equip-icon">${eq.icon}</div>
+          <div class="equip-name">${eq.name}</div>
+          <div class="equip-stat" style="color:${qcfg.color}">+${eq.val}</div>
+        </div>
       ` : `
-        <div class="pslot-empty-icon">${def.icon}</div>
+        <div class="equip-slot-empty">
+          <div class="equip-slot-icon">${def.icon}</div>
+          <div class="equip-slot-name">${def.label}</div>
+        </div>
       `}
-      <div class="pslot-label">${def.label}</div>
     </div>`;
   }
 
@@ -522,174 +534,172 @@ function inventoryView() {
 
   const invHTML = Array.from({length:20}, (_,i) => {
     const item = inventory[i];
-    if (!item) return `<div class="pinv-slot pinv-empty"></div>`;
+    if (!item) return `<div class="inv-slot inv-empty" data-inv="${i}" ondragover="onDragOver(event)" ondrop="onDrop(event, 'inv', ${i})" ondragleave="onDragLeave(event)"></div>`;
     const qcfg = QUALITY_CONFIG[item.quality||'common'];
     return `
-    <div class="pinv-slot pinv-filled"
+    <div class="inv-slot inv-filled"
+         data-inv="${i}"
+         draggable="true"
+         ondragstart="onDragStart(event, 'inv', ${i})"
+         ondragover="onDragOver(event)"
+         ondrop="onDrop(event, 'inv', ${i})"
+         ondragleave="onDragLeave(event)"
          style="border-color:${qcfg.color};box-shadow:${qcfg.glow}"
-         onclick="handleInvClick(${i})"
          title="${item.name}&#10;${item.stat}&#10;Kvalita: ${qcfg.label}">
-      <div class="pinv-icon">${item.icon}</div>
-      <div class="pinv-val" style="color:${qcfg.color}">+${item.val||''}</div>
-      <div class="pinv-name">${item.name.split(' ').slice(-1)[0]}</div>
+      <div class="inv-item">
+        <div class="inv-icon">${item.icon}</div>
+        <div class="inv-val" style="color:${qcfg.color}">+${item.val||''}</div>
+        <div class="inv-name">${item.name.split(' ').slice(-1)[0]}</div>
+      </div>
     </div>`;
   }).join('');
 
   return `
-  <div class="prof-panel">
+  <div class="profile-container">
 
-    <!-- HEADER s tabs -->
-    <div class="prof-header">
-      <div class="prof-header-name">
-        <span class="prof-header-icon">${c.class==='Warrior'?'🗡️':c.class==='Mage'?'🔮':c.class==='Rogue'?'🥷':'🛡️'}</span>
-        <span>${c.name}</span>
-        <span class="prof-header-class">${c.class}</span>
+    <!-- HEADER -->
+    <div class="profile-header">
+      <div class="profile-title">
+        <span class="profile-icon">${c.class==='Warrior'?'🗡️':c.class==='Mage'?'🔮':c.class==='Rogue'?'🥷':'🛡️'}</span>
+        <h1>${c.name}</h1>
+        <span class="profile-class">${c.class}</span>
       </div>
-      <div class="prof-tabs2">
-        <div class="prof-tab2 active" onclick="profTab(this,'ptab-main')">⚔ Hrdina</div>
-        <div class="prof-tab2" onclick="profTab(this,'ptab-stats')">📊 Statistiky</div>
-        <div class="prof-tab2" onclick="profTab(this,'ptab-victories')">🏆 Vítězství</div>
+      <div class="profile-tabs">
+        <button class="ptab active" onclick="profTab(this,'ptab-main')">⚔ Profil</button>
+        <button class="ptab" onclick="profTab(this,'ptab-stats')">📊 Statistiky</button>
+        <button class="ptab" onclick="profTab(this,'ptab-victories')">🏆 Vítězství</button>
       </div>
     </div>
 
-    <!-- TAB: HRDINA -->
-    <div id="ptab-main" class="ptab-content">
-      <div class="prof-body">
+    <!-- TAB: PROFIL S DRAG-DROP -->
+    <div id="ptab-main" class="ptab-content active">
+      <div class="profile-main">
 
-        <!-- LEVÝ SLOUPEC -->
-        <div class="prof-col-left">
-
-          <!-- Avatar -->
-          <div class="prof-avatar-wrap">
-            <div class="prof-avatar-frame">
-              <div class="prof-avatar-inner">${getAvatar(c.class, c.gender)}</div>
-              <div class="prof-avatar-glow"></div>
-            </div>
-            <div class="prof-level-badge">
-              <span class="prof-level-num">${c.level}</span>
-              <span class="prof-level-txt">LEVEL</span>
+        <!-- CENTRUM: AVATAR + EQUIPMENT -->
+        <div class="profile-center">
+          <!-- Velký Avatar -->
+          <div class="avatar-section">
+            <div class="avatar-frame">
+              <div class="avatar-inner">${getAvatar(c.class, c.gender)}</div>
+              <div class="avatar-level">${c.level}</div>
             </div>
           </div>
 
-          <!-- XP bar -->
-          <div class="prof-xp-wrap">
-            <div class="prof-xp-label">
-              <span>Zkušenosti</span>
-              <span>${c.experience} / ${xpNeeded}</span>
+          <!-- Equipment Slots (drag-drop) -->
+          <div class="equipment-grid">
+            <div class="equip-row">
+              <div class="equip-spacer"></div>
+              ${slotHTML('helmet')}
+              <div class="equip-spacer"></div>
             </div>
-            <div class="prof-xp-bg">
-              <div class="prof-xp-fill" style="width:${xpPct}%"></div>
+            <div class="equip-row">
+              ${slotHTML('weapon')}
+              ${slotHTML('chest')}
+              ${slotHTML('shield')}
             </div>
-          </div>
-
-          <!-- Stats -->
-          <div class="prof-stats-panel">
-            <div class="prof-stats-title">⚔ Atributy</div>
-            ${statRow('❤️','Zdraví',    c.max_health, 0,        '#CC2222', 500)}
-            ${statRow('⚔️','Síla',      c.strength,   totalStr,  '#E87020', 300)}
-            ${statRow('🛡️','Obrana',    c.defense,    totalDef,  '#8833CC', 300)}
-            ${statRow('💨','Hbitost',   c.agility,    totalAgi,  '#22AA44', 300)}
-            ${statRow('🔮','Intelekt',  c.intelligence,totalInt, '#2266DD', 300)}
-            <div class="prof-stats-divider"></div>
-            <div class="prof-combat-stats">
-              <div class="prof-cs-item">
-                <span class="prof-cs-icon">⚔</span>
-                <span class="prof-cs-label">Poškození</span>
-                <span class="prof-cs-val">${Math.max(1,c.strength-5)} - ${totalDmg}</span>
-              </div>
-              <div class="prof-cs-item">
-                <span class="prof-cs-icon">🛡</span>
-                <span class="prof-cs-label">Zbroj</span>
-                <span class="prof-cs-val">${totalArmor}</span>
-              </div>
-              <div class="prof-cs-item">
-                <span class="prof-cs-icon">💰</span>
-                <span class="prof-cs-label">Zlato</span>
-                <span class="prof-cs-val" style="color:var(--gold)">${c.gold}</span>
-              </div>
+            <div class="equip-row">
+              ${slotHTML('gloves')}
+              <div class="equip-spacer"></div>
+              ${slotHTML('boots')}
+            </div>
+            <div class="equip-row">
+              ${slotHTML('ring')}
+              ${slotHTML('amulet')}
+              ${slotHTML('belt')}
             </div>
           </div>
 
+          <!-- XP Bar -->
+          <div class="xp-section">
+            <div class="xp-label">Zkušenosti</div>
+            <div class="xp-bg">
+              <div class="xp-fill" style="width:${xpPct}%"></div>
+            </div>
+            <div class="xp-text">${c.experience} / ${xpNeeded}</div>
+          </div>
         </div>
 
-        <!-- PRAVÝ SLOUPEC -->
-        <div class="prof-col-right">
-
-          <!-- Equipment -->
-          <div class="prof-equip-section">
-            <div class="prof-section-title">⚔ Vybavení</div>
-            <div class="prof-equip-body">
-
-              <!-- Equipment grid 3x4 jako Gladiatus -->
-              <div class="pslots-grid">
-                <div class="pslots-spacer"></div>
-                ${slotHTML('helmet')}
-                <div class="pslots-spacer"></div>
-
-                ${slotHTML('weapon')}
-                ${slotHTML('chest')}
-                ${slotHTML('shield')}
-
-                ${slotHTML('gloves')}
-                <div class="pslots-spacer"></div>
-                ${slotHTML('boots')}
-
-                ${slotHTML('ring')}
-                ${slotHTML('amulet')}
-                ${slotHTML('belt')}
-              </div>
-
+        <!-- VLEVO: ATRIBUTY -->
+        <div class="profile-left">
+          <div class="stat-panel">
+            <h3>⚔ Atributy</h3>
+            <div class="stat-list">
+              ${statRow('❤️','Zdraví',    c.max_health, 0,        '#CC2222', 500)}
+              ${statRow('⚔️','Síla',      c.strength,   totalStr,  '#E87020', 300)}
+              ${statRow('🛡️','Obrana',    c.defense,    totalDef,  '#8833CC', 300)}
+              ${statRow('💨','Hbitost',   c.agility,    totalAgi,  '#22AA44', 300)}
+              ${statRow('🔮','Intelekt',  c.intelligence,totalInt, '#2266DD', 300)}
             </div>
           </div>
-
-          <!-- Inventář -->
-          <div class="prof-inv-section">
-            <div class="prof-section-title">
-              🎒 Batoh
-              <span class="prof-inv-count">${inventory.length}/20</span>
+          <div class="combat-stats">
+            <div class="cstat">
+              <span class="cstat-icon">⚔</span>
+              <span>Poškození</span>
+              <span class="cstat-val">${Math.max(1,c.strength-5)}-${totalDmg}</span>
             </div>
-            <div class="pinv-grid">${invHTML}</div>
-            ${inventory.length > 0 ? '<div class="prof-inv-hint">Klikni na předmět pro nasazení · Klikni na slot pro sundání</div>' : '<div class="prof-inv-hint">Inventář je prázdný — nakup vybavení na Trhu!</div>'}
+            <div class="cstat">
+              <span class="cstat-icon">🛡</span>
+              <span>Zbroj</span>
+              <span class="cstat-val">${totalArmor}</span>
+            </div>
+            <div class="cstat">
+              <span class="cstat-icon">💰</span>
+              <span>Zlato</span>
+              <span class="cstat-val" style="color:var(--gold)">${c.gold}</span>
+            </div>
           </div>
-
         </div>
+
+        <!-- VPRAVO: INVENTÁŘ -->
+        <div class="profile-right">
+          <div class="inventory-panel">
+            <h3>🎒 Batoh (${inventory.length}/20)</h3>
+            <div class="inventory-grid">${invHTML}</div>
+            <div class="inventory-hint">
+              ${inventory.length > 0
+                ? '💡 Přetáhni předmět na slot pro nasazení'
+                : 'Inventář je prázdný — nakup vybavení na Trhu!'}
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
     <!-- TAB: STATISTIKY -->
-    <div id="ptab-stats" class="ptab-content" style="display:none;">
-      <div class="prof-stats-tab">
-        <div class="pstat-block">
-          <div class="pstat-block-title">⚔ Bojové statistiky</div>
-          <div class="pstat-grid">
-            <div class="pstat-cell"><div class="pstat-cell-val">${c.strength + totalStr}</div><div class="pstat-cell-name">Síla</div></div>
-            <div class="pstat-cell"><div class="pstat-cell-val">${c.defense + totalDef}</div><div class="pstat-cell-name">Obrana</div></div>
-            <div class="pstat-cell"><div class="pstat-cell-val">${c.agility + totalAgi}</div><div class="pstat-cell-name">Hbitost</div></div>
-            <div class="pstat-cell"><div class="pstat-cell-val">${c.intelligence + totalInt}</div><div class="pstat-cell-name">Intelekt</div></div>
-            <div class="pstat-cell"><div class="pstat-cell-val">${totalDmg}</div><div class="pstat-cell-name">Max poškození</div></div>
-            <div class="pstat-cell"><div class="pstat-cell-val">${totalArmor}</div><div class="pstat-cell-name">Zbroj</div></div>
+    <div id="ptab-stats" class="ptab-content">
+      <div class="stats-grid">
+        <div class="stats-block">
+          <h3>⚔ Bojové statistiky</h3>
+          <div class="stat-cells">
+            <div class="stat-cell"><div class="sc-val">${c.strength + totalStr}</div><div class="sc-name">Síla</div></div>
+            <div class="stat-cell"><div class="sc-val">${c.defense + totalDef}</div><div class="sc-name">Obrana</div></div>
+            <div class="stat-cell"><div class="sc-val">${c.agility + totalAgi}</div><div class="sc-name">Hbitost</div></div>
+            <div class="stat-cell"><div class="sc-val">${c.intelligence + totalInt}</div><div class="sc-name">Intelekt</div></div>
+            <div class="stat-cell"><div class="sc-val">${totalDmg}</div><div class="sc-name">Max DMG</div></div>
+            <div class="stat-cell"><div class="sc-val">${totalArmor}</div><div class="sc-name">Zbroj</div></div>
           </div>
         </div>
-        <div class="pstat-block">
-          <div class="pstat-block-title">📜 Obecné</div>
-          <div class="pstat-grid">
-            <div class="pstat-cell"><div class="pstat-cell-val" style="color:var(--gold)">${c.level}</div><div class="pstat-cell-name">Úroveň</div></div>
-            <div class="pstat-cell"><div class="pstat-cell-val">${c.experience}</div><div class="pstat-cell-name">Zkušenosti</div></div>
-            <div class="pstat-cell"><div class="pstat-cell-val" style="color:var(--gold)">${c.gold}</div><div class="pstat-cell-name">Zlato</div></div>
-            <div class="pstat-cell"><div class="pstat-cell-val">${c.max_health}</div><div class="pstat-cell-name">Max zdraví</div></div>
-            <div class="pstat-cell"><div class="pstat-cell-val">${inventory.length}</div><div class="pstat-cell-name">Předmětů</div></div>
-            <div class="pstat-cell"><div class="pstat-cell-val">${Object.values(equipped).filter(Boolean).length}</div><div class="pstat-cell-name">Nasazeno</div></div>
+        <div class="stats-block">
+          <h3>📜 Obecné</h3>
+          <div class="stat-cells">
+            <div class="stat-cell"><div class="sc-val" style="color:var(--gold)">${c.level}</div><div class="sc-name">Úroveň</div></div>
+            <div class="stat-cell"><div class="sc-val">${c.experience}</div><div class="sc-name">XP</div></div>
+            <div class="stat-cell"><div class="sc-val" style="color:var(--gold)">${c.gold}</div><div class="sc-name">Zlato</div></div>
+            <div class="stat-cell"><div class="sc-val">${c.max_health}</div><div class="sc-name">Max HP</div></div>
+            <div class="stat-cell"><div class="sc-val">${inventory.length}</div><div class="sc-name">Předmětů</div></div>
+            <div class="stat-cell"><div class="sc-val">${Object.values(equipped).filter(Boolean).length}</div><div class="sc-name">Vybaveno</div></div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- TAB: VÍTĚZSTVÍ -->
-    <div id="ptab-victories" class="ptab-content" style="display:none;">
-      <div style="padding:50px;text-align:center;">
-        <div style="font-size:4em;margin-bottom:20px;">🏆</div>
-        <div style="color:var(--gold);font-size:1.2em;margin-bottom:10px;">Síň slávy</div>
-        <div style="color:var(--text-dim);font-style:italic;">Statistiky vítězství přijdou brzy...</div>
+    <div id="ptab-victories" class="ptab-content">
+      <div class="coming-soon">
+        <div class="cs-icon">🏆</div>
+        <h2>Síň slávy</h2>
+        <p>Statistiky vítězství přijdou brzy...</p>
       </div>
     </div>
 
@@ -697,11 +707,100 @@ function inventoryView() {
 }
 
 function profTab(el, tabId) {
-  document.querySelectorAll('.prof-tab2').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  document.querySelectorAll('.ptab-content').forEach(c => c.style.display = 'none');
-  document.getElementById(tabId).style.display = 'block';
+  document.querySelectorAll('.ptab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
 }
+
+// ========== DRAG-DROP SYSTEM ==========
+function onDragStart(e, fromType, fromIdx) {
+  const item = fromType === 'inv' ? inventory[fromIdx] : equipped[SLOT_DEFS_KEYS[fromIdx]];
+  if (!item) { e.preventDefault(); return; }
+  draggedItem = item;
+  draggedFrom = { type: fromType, index: fromIdx };
+  e.dataTransfer.effectAllowed = 'move';
+  e.target.closest('.inv-slot, .equip-slot').classList.add('dragging');
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.target.closest('.inv-slot, .equip-slot')?.classList.add('drag-over');
+}
+
+function onDragLeave(e) {
+  if (e.target === e.currentTarget) {
+    e.target.closest('.inv-slot, .equip-slot')?.classList.remove('drag-over');
+  }
+}
+
+function onDrop(e, toType, toIdx) {
+  e.preventDefault();
+  e.target.closest('.inv-slot, .equip-slot').classList.remove('drag-over');
+
+  if (!draggedItem || !draggedFrom) return;
+
+  if (toType === 'slot') {
+    const slotKey = Object.keys(SLOT_DEFS).find((k, i) => i === toIdx);
+    if (!slotKey) return;
+
+    const slotMap = {
+      'w1':'weapon','w2':'weapon','w3':'weapon','w4':'weapon',
+      'a1':'chest','a2':'chest','a3':'chest','a4':'chest',
+      'p1':null,'p2':null,'p3':null,
+      'm1':'ring','m2':'amulet','m3':'weapon',
+    };
+    const targetSlot = slotMap[draggedItem.id];
+    if (!targetSlot) return;
+
+    // Lektvar - použít okamžitě
+    if (!targetSlot) {
+      if (draggedItem.key === 'health') {
+        character.health = Math.min(character.max_health, character.health + draggedItem.val);
+        if (draggedFrom.type === 'inv') inventory.splice(draggedFrom.index, 1);
+        localStorage.setItem('inv', JSON.stringify(inventory));
+        saveChar(); updateUI();
+        alert(`🧪 Použil jsi ${draggedItem.name}! +${draggedItem.val} HP`);
+        openView('inventory');
+      }
+      return;
+    }
+
+    // Swap or equip
+    if (equipped[targetSlot]) {
+      const old = equipped[targetSlot];
+      if (old.key && old.key !== 'health') character[old.key] -= old.val;
+      inventory.push(old);
+    }
+    equipped[targetSlot] = draggedItem;
+    if (draggedFrom.type === 'inv') {
+      inventory.splice(draggedFrom.index, 1);
+    } else {
+      delete equipped[draggedFrom.index];
+    }
+    if (draggedItem.key && draggedItem.key !== 'health') character[draggedItem.key] += draggedItem.val;
+
+  } else if (toType === 'inv') {
+    // Move from slot to inv
+    if (draggedFrom.type === 'slot') {
+      const slotKey = draggedFrom.index;
+      inventory.push(equipped[slotKey]);
+      if (draggedItem.key && draggedItem.key !== 'health') character[draggedItem.key] -= draggedItem.val;
+      delete equipped[slotKey];
+    }
+    // Inv to inv is no-op
+  }
+
+  localStorage.setItem('eqp', JSON.stringify(equipped));
+  localStorage.setItem('inv', JSON.stringify(inventory));
+  draggedItem = null;
+  draggedFrom = null;
+  saveChar(); updateUI();
+  openView('inventory');
+}
+
+const SLOT_DEFS_KEYS = Object.keys(SLOT_DEFS);
 
 // Kliknutí na slot vybavení (sundání)
 function handleSlotClick(key) {
