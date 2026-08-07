@@ -457,7 +457,7 @@ function goodsSlot(item, dark) {
   return `
     <div class="g-slot ${dark ? 'dark' : ''} ${afford ? '' : 'poor'}"
          onclick="buyItem('${item.uid}')"
-         title="${item.name} (${qualityOf(item).label})&#10;${statLine(item)}&#10;Cena: ${item.price} zlatých">
+         data-tip="shop:${item.uid}">
       <span class="g-q" style="background:${qualityOf(item).color}"></span>
       ${itemIcon(item, 'g-ico')}
       <span class="g-price">${item.price}</span>
@@ -707,7 +707,7 @@ function dollSlotsHTML() {
            ondragleave="dragLeave(event)"
            ondrop="dropOn(event,'slot','${key}')"
            onclick="unequip('${key}')"
-           title="${eq ? eq.name + '\n' + statLine(eq) + '\n(klikni pro sundání)' : def.label}">
+           ${eq ? `data-tip="eq:${key}"` : `title="${def.label}"`}>
         ${eq ? itemIcon(eq, 's-ico') : slotIcon(key, 's-ico')}
         ${eq ? `<span class="s-nm">${eq.name}</span>` : `<span class="s-lbl">${def.label}</span>`}
       </div>`;
@@ -725,7 +725,7 @@ function dollSlotsHTML() {
                      ondragleave="dragLeave(event)"
                      ondrop="dropOn(event,'slot','${k}')"
                      onclick="unequip('${k}')"
-                     title="${eq ? eq.name : SLOT_DEFS[k].label}">${eq ? itemIcon(eq,'s-ico-sm') : slotIcon(k,'s-ico-sm')}</div>`;
+                     ${eq ? `data-tip="eq:${k}"` : `title="${SLOT_DEFS[k].label}"`}>${eq ? itemIcon(eq,'s-ico-sm') : slotIcon(k,'s-ico-sm')}</div>`;
       }).join('')}
     </div>`;
 }
@@ -738,9 +738,7 @@ function bagSlotsHTML(mode) {
   for (let i = 0; i < BAG_SIZE; i++) {
     const it = inventory[i];
     const click = !it ? '' : (mode === 'sell' ? `sellItem(${i})` : `useItem(${i})`);
-    const tip = !it ? '' : (mode === 'sell'
-      ? `${it.name} — prodat za ${sellPrice(it)} zlatých`
-      : `${it.name}\n${statLine(it)}`);
+    const tipAttr = !it ? '' : `data-tip="inv:${i}"`;
     html += `
       <div class="bag-slot ${it ? '' : 'empty'}"
            draggable="${it ? 'true' : 'false'}"
@@ -750,7 +748,7 @@ function bagSlotsHTML(mode) {
            ondragleave="dragLeave(event)"
            ondrop="dropOn(event,'inv','${i}')"
            onclick="${click}"
-           title="${tip}">
+           ${tipAttr}>
         ${it ? `${itemIcon(it,'b-ico')}<span class="b-nm">${it.name.split(' ')[0]}</span>` : ''}
       </div>`;
   }
@@ -909,6 +907,10 @@ function dropOn(e, type, ref) {
 
   // --- do slotu vybavení ---
   if (type === 'slot') {
+    if (item.lvl && character.level < item.lvl) {
+      toast(`${item.name} si můžeš vzít až na úrovni ${item.lvl}.`);
+      return;
+    }
     const want = slotForItem(item);
     if (want !== ref) {
       toast(`${item.name} sem nepatří — patří do slotu „${SLOT_DEFS[want] ? SLOT_DEFS[want].label : 'žádný'}".`);
@@ -965,6 +967,10 @@ function unequip(key) {
 function useItem(i) {
   const item = inventory[i];
   if (!item) return;
+  if (item.lvl && character.level < item.lvl) {
+    toast(`${item.name} si můžeš vzít až na úrovni ${item.lvl}.`);
+    return;
+  }
 
   if (item.key === 'health') {
     character.health = Math.min(character.max_health, character.health + item.val);
@@ -1234,6 +1240,7 @@ const qualityOf = it => QUALITY_ROLL[(it && it.quality) || 'common'] || QUALITY_
 // zbylé se losují, takže dva stejné meče nejsou nikdy stejné.
 function rollItem(tpl) {
   const it = { ...tpl, uid: 'i' + Math.random().toString(36).slice(2, 10) };
+  it.lvl = Math.max(1, Math.round((tpl.price || 25) / 28));   // požadovaná úroveň
   if (tpl.key === 'health') return it;          // lektvary se nerolují
 
   const q = qualityOf(tpl);
@@ -1282,6 +1289,93 @@ function migrateItem(it) {
 }
 inventory = inventory.map(migrateItem).filter(Boolean);
 Object.keys(equipped).forEach(k => { equipped[k] = migrateItem(equipped[k]); });
+
+
+// ========== POPISEK PŘEDMĚTU ==========
+// Vlastní bublina místo nativního title – umí barvy a víc řádků.
+function itemByRef(ref) {
+  if (!ref) return null;
+  const i = ref.indexOf(':');
+  const kind = ref.slice(0, i), val = ref.slice(i + 1);
+  if (kind === 'eq')  return equipped[val] || null;
+  if (kind === 'inv') return inventory[+val] || null;
+  if (kind === 'shop') {
+    for (const id of Object.keys(MERCHANTS)) {
+      const it = shopStock(id).find(x => x && x.uid === val);
+      if (it) return it;
+    }
+  }
+  return null;
+}
+
+function itemTipHTML(it) {
+  const q = qualityOf(it);
+  const rows = [];
+
+  if (Array.isArray(it.dmg)) {
+    rows.push(`<div class="tip-row"><span>Poškození</span><b>${it.dmg[0]} - ${it.dmg[1]}</b></div>`);
+  }
+  if (it.key === 'health') {
+    rows.push(`<div class="tip-row"><span>Obnoví zdraví</span><b>+${it.val}</b></div>`);
+  }
+  for (const [k, v] of Object.entries(it.stats || {})) {
+    const cls = v < 0 ? ' neg' : '';
+    rows.push(`<div class="tip-row${cls}"><span>${STAT_DEFS[k]}</span><b>${v > 0 ? '+' : ''}${v}</b></div>`);
+  }
+
+  const tezky = it.lvl && character && character.level < it.lvl;
+
+  return `
+    <div class="tip-head" style="background:linear-gradient(180deg,${q.color},#1a1409)">
+      <div class="tip-name">${it.name}</div>
+      <div class="tip-q">${q.label}</div>
+    </div>
+    <div class="tip-body">
+      ${rows.join('') || '<div class="tip-row"><span>Bez bonusů</span><b>—</b></div>'}
+      <div class="tip-sep"></div>
+      ${it.lvl ? `<div class="tip-row${tezky ? ' neg' : ''}"><span>Úroveň</span><b>${it.lvl}</b></div>` : ''}
+      <div class="tip-row"><span>Hodnota</span><b>${it.price || 0} zlata</b></div>
+      ${tezky ? '<div class="tip-warn">Na tenhle kus ti chybí úroveň.</div>' : ''}
+    </div>`;
+}
+
+let tipEl = null;
+function showItemTip(e) {
+  const host = e.target.closest('[data-tip]');
+  if (!host) return;
+  const it = itemByRef(host.dataset.tip);
+  if (!it) return;
+
+  if (!tipEl) {
+    tipEl = document.createElement('div');
+    tipEl.className = 'item-tip';
+    document.body.appendChild(tipEl);
+  }
+  tipEl.innerHTML = itemTipHTML(it);
+  tipEl.style.display = 'block';
+  moveItemTip(e);
+}
+
+function moveItemTip(e) {
+  if (!tipEl || tipEl.style.display === 'none') return;
+  const pad = 14, w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+  let x = e.clientX + pad, y = e.clientY + pad;
+  if (x + w > innerWidth  - 8) x = e.clientX - w - pad;   // překlopit doleva
+  if (y + h > innerHeight - 8) y = Math.max(8, innerHeight - h - 8);
+  tipEl.style.left = x + 'px';
+  tipEl.style.top  = y + 'px';
+}
+
+function hideItemTip(e) {
+  if (!tipEl) return;
+  if (e && e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('[data-tip]')) return;
+  tipEl.style.display = 'none';
+}
+
+document.addEventListener('mouseover', showItemTip);
+document.addEventListener('mousemove', moveItemTip);
+document.addEventListener('mouseout',  hideItemTip);
+document.addEventListener('click',     () => hideItemTip());
 
 // ========== ZBOŽÍ V OBCHODĚ ==========
 // Nabídka se vyloosuje jednou za restock a drží se, dokud kupec nedoplní.
