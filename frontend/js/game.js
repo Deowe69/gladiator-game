@@ -140,34 +140,53 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ========== UI UPDATE ==========
 function updateUI() {
   const c = character;
-  const hpPct = Math.max(0, (c.health / c.max_health * 100)).toFixed(1);
   const xpNeeded = c.level * 100;
+  const hpPct = Math.max(0, (c.health / c.max_health * 100)).toFixed(1);
   const xpPct = Math.min(100, (c.experience / xpNeeded * 100)).toFixed(1);
 
-  document.getElementById('navName').textContent = c.name;
-  document.getElementById('navLevel').textContent = c.level;
-  document.getElementById('hpBar').style.width = hpPct + '%';
-  document.getElementById('hpVal').textContent = `${c.health}/${c.max_health}`;
-  document.getElementById('xpBar').style.width = xpPct + '%';
-  document.getElementById('xpVal').textContent = `${c.experience}/${xpNeeded} XP`;
-  document.getElementById('navGold').textContent = c.gold;
+  // Cache DOM elements to avoid repeated queries
+  const els = {
+    navName: document.getElementById('navName'),
+    navLevel: document.getElementById('navLevel'),
+    hpBar: document.getElementById('hpBar'),
+    hpVal: document.getElementById('hpVal'),
+    xpBar: document.getElementById('xpBar'),
+    xpVal: document.getElementById('xpVal'),
+    navGold: document.getElementById('navGold'),
+    charNameSm: document.getElementById('charNameSm'),
+    charClassSm: document.getElementById('charClassSm'),
+    charAvatarSm: document.getElementById('charAvatarSm'),
+    sHealth: document.getElementById('sHealth'),
+    sStr: document.getElementById('sStr'),
+    sDef: document.getElementById('sDef'),
+    sAgi: document.getElementById('sAgi'),
+    sInt: document.getElementById('sInt'),
+    dailyBtn: document.getElementById('dailyBtn'),
+  };
 
-  document.getElementById('charNameSm').textContent = c.name;
-  document.getElementById('charClassSm').textContent = c.class;
-  document.getElementById('charAvatarSm').innerHTML = getAvatar(c.class, c.gender);
-  document.getElementById('sHealth').textContent = `${c.health}/${c.max_health}`;
-  document.getElementById('sStr').textContent = c.strength;
-  document.getElementById('sDef').textContent = c.defense;
-  document.getElementById('sAgi').textContent = c.agility;
-  document.getElementById('sInt').textContent = c.intelligence;
+  // Update cached elements
+  if (els.navName) els.navName.textContent = c.name;
+  if (els.navLevel) els.navLevel.textContent = c.level;
+  if (els.hpBar) els.hpBar.style.width = hpPct + '%';
+  if (els.hpVal) els.hpVal.textContent = `${c.health}/${c.max_health}`;
+  if (els.xpBar) els.xpBar.style.width = xpPct + '%';
+  if (els.xpVal) els.xpVal.textContent = `${c.experience}/${xpNeeded} XP`;
+  if (els.navGold) els.navGold.textContent = c.gold;
+  if (els.charNameSm) els.charNameSm.textContent = c.name;
+  if (els.charClassSm) els.charClassSm.textContent = c.class;
+  if (els.charAvatarSm) els.charAvatarSm.innerHTML = getAvatar(c.class, c.gender);
+  if (els.sHealth) els.sHealth.textContent = `${c.health}/${c.max_health}`;
+  if (els.sStr) els.sStr.textContent = c.strength;
+  if (els.sDef) els.sDef.textContent = c.defense;
+  if (els.sAgi) els.sAgi.textContent = c.agility;
+  if (els.sInt) els.sInt.textContent = c.intelligence;
 
-  // Daily btn
-  const lastDaily = localStorage.getItem('lastDaily');
-  const today = new Date().toDateString();
-  document.getElementById('dailyBtn').disabled = lastDaily === today;
+  // Daily button
+  if (els.dailyBtn) els.dailyBtn.disabled = localStorage.getItem('lastDaily') === new Date().toDateString();
 }
 
 // ========== VIEWS ==========
+let viewCache = {}; // Cache rendered views to avoid regeneration
 function openView(view) {
   document.querySelectorAll('.side-item').forEach(i => i.classList.remove('active'));
   const m = document.getElementById('menu-' + view);
@@ -175,7 +194,9 @@ function openView(view) {
 
   const cc = document.getElementById('centerContent');
   const views = { city, arena, dungeon, quests, shop, inventory: inventoryView, profile: inventoryView, guild, tavern, forge };
-  cc.innerHTML = (views[view] || (() => `<div class="panel"><div class="panel-header">🚧 Brzy</div><div class="panel-body" style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">Tato sekce bude brzy dostupná!</div></div>`))();
+  const viewFn = views[view] || (() => `<div class="panel"><div class="panel-header">🚧 Brzy</div><div class="panel-body" style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">Tato sekce bude brzy dostupná!</div></div>`);
+  cc.innerHTML = viewFn();
+  viewCache[view] = true; // Mark view as rendered
 }
 
 // ===== CITY =====
@@ -747,13 +768,6 @@ function handleInvClick(idx) {
   openView('inventory');
 }
 
-function profTab(el, tabId) {
-  document.querySelectorAll('.prof-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.querySelectorAll('.prof-content').forEach(c => c.style.display = 'none');
-  document.getElementById(tabId).style.display = 'block';
-}
-
 // ===== TAVERN =====
 function tavern() {
   const now = Date.now();
@@ -984,12 +998,19 @@ function fleeCombat() {
 }
 
 function updateHpBars() {
-  const pp = (character.health/character.max_health*100).toFixed(1);
-  const ep = (currentEnemy.hp/currentEnemy.maxHp*100).toFixed(1);
-  const pb = document.getElementById('pHpBar'); if(pb) pb.style.width=pp+'%';
-  const eb = document.getElementById('eHpBar'); if(eb) eb.style.width=ep+'%';
-  const pt = document.getElementById('pHpTxt'); if(pt) pt.textContent=`${character.health}/${character.max_health}`;
-  const et = document.getElementById('eHpTxt'); if(et) et.textContent=`${currentEnemy.hp}/${currentEnemy.maxHp}`;
+  // Cache DOM elements to reduce queries
+  const pb = document.getElementById('pHpBar');
+  const eb = document.getElementById('eHpBar');
+  const pt = document.getElementById('pHpTxt');
+  const et = document.getElementById('eHpTxt');
+
+  const pp = Math.max(0, Math.min(100, (character.health / character.max_health * 100).toFixed(1)));
+  const ep = Math.max(0, Math.min(100, (currentEnemy.hp / currentEnemy.maxHp * 100).toFixed(1)));
+
+  if (pb) pb.style.width = pp + '%';
+  if (eb) eb.style.width = ep + '%';
+  if (pt) pt.textContent = `${Math.max(0, character.health)}/${character.max_health}`;
+  if (et) et.textContent = `${Math.max(0, currentEnemy.hp)}/${currentEnemy.maxHp}`;
 }
 
 function addLog(msg, cls) {
@@ -1036,8 +1057,11 @@ function startQuestTimer() {
   activeQuestTimer = setInterval(() => {
     const cc = document.getElementById('centerContent');
     if (!cc) return;
-    if (cc.querySelector('.quest-list')) openView('quests');
-    if (cc.querySelector('.tavern-board')) openView('tavern');
+    // Only refresh if current view has quests (avoid unnecessary DOM operations)
+    const hasQuests = cc.querySelector('.quest-list');
+    const hasTavern = cc.querySelector('.tavern-board');
+    if (hasQuests) openView('quests');
+    else if (hasTavern) openView('tavern');
   }, 5000);
 }
 
@@ -1061,11 +1085,7 @@ function buyItem(itemId) {
   if (!item) return;
   if (character.gold < item.price) { alert('❌ Nedostatek zlatých!'); return; }
   character.gold -= item.price;
-  if (item.key === 'health') {
-    character.health = Math.min(character.max_health, character.health + item.val);
-  } else {
-    character[item.key] += item.val;
-  }
+  // Just add to inventory - don't apply stats yet (will be done on equip)
   inventory.push({...item});
   localStorage.setItem('inv', JSON.stringify(inventory));
   saveChar(); updateUI();
@@ -1092,8 +1112,9 @@ function claimDaily() {
 
 // ========== LEVEL UP ==========
 function checkLevelUp() {
-  const needed = character.level * 100;
-  if (character.experience >= needed) {
+  let leveledUp = false;
+  while (character.experience >= character.level * 100) {
+    const needed = character.level * 100;
     character.experience -= needed;
     character.level++;
     character.max_health += 10;
@@ -1101,6 +1122,9 @@ function checkLevelUp() {
     character.strength += 2;
     character.defense += 1;
     character.agility += 1;
+    leveledUp = true;
+  }
+  if (leveledUp) {
     document.getElementById('newLevel').textContent = character.level;
     document.getElementById('levelUpModal').style.display = 'flex';
   }
@@ -1121,11 +1145,11 @@ async function saveChar() {
 }
 
 // ========== LEADERBOARD ==========
+let leaderboardCache = null;
 async function loadLeaderboard() {
   const lb = document.getElementById('leaderboard');
   if (!lb) return;
 
-  // Pokud není backend (file:// nebo offline), zobraz aktuálního hráče
   if (!API.isLoggedIn()) {
     lb.innerHTML = '<div style="text-align:center;color:var(--text-dim);font-size:.78em;padding:10px;font-style:italic;">Přihlas se pro žebříček</div>';
     return;
@@ -1133,9 +1157,11 @@ async function loadLeaderboard() {
 
   try {
     const res = await API.getLeaderboard();
+    // Avoid re-rendering if leaderboard hasn't changed
+    if (leaderboardCache && JSON.stringify(leaderboardCache) === JSON.stringify(res.leaderboard)) return;
+    leaderboardCache = res.leaderboard;
 
     if (!res.leaderboard || res.leaderboard.length === 0) {
-      // Zobraz aspoň aktuálního hráče
       lb.innerHTML = character ? `
         <div class="lb-row lb-me">
           <span class="lb-rank">🥇</span>
@@ -1157,7 +1183,6 @@ async function loadLeaderboard() {
       </div>`;
     }).join('');
   } catch(e) {
-    // Backend nedostupný - zobraz aktuálního hráče z localStorage
     if (character) {
       lb.innerHTML = `
         <div class="lb-row lb-me">

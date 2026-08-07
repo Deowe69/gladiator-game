@@ -34,6 +34,7 @@ document.getElementById('characterForm').addEventListener('submit', async e => {
     return showMsg('characterMsg', '⚠ Jméno musí mít alespoň 3 znaky');
 
   const btn = document.getElementById('createCharBtn');
+  const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '⏳ Zrození hrdiny...';
 
@@ -45,7 +46,7 @@ document.getElementById('characterForm').addEventListener('submit', async e => {
   } catch (err) {
     showMsg('characterMsg', `⚠ ${err.message || 'Chyba při vytváření postavy'}`);
     btn.disabled = false;
-    btn.textContent = '⚔ Vstoupit do Arény ⚔';
+    btn.textContent = originalText;
   }
 });
 

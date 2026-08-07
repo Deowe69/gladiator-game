@@ -69,8 +69,6 @@ router.put('/update', authenticateToken, async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // Žebříček - top 10 hráčů
 router.get('/leaderboard', async (req, res) => {
   try {
@@ -87,3 +85,5 @@ router.get('/leaderboard', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+module.exports = router;

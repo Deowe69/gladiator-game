@@ -22,22 +22,19 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
   if (!username || !password) return showMsg('loginMsg', '⚠ Vyplň všechna pole');
 
   const btn = e.target.querySelector('button');
+  const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '⏳ Přihlašování...';
 
   try {
     const res = await API.login(username, password);
     API.saveToken(res.token);
-
     showMsg('loginMsg', '✅ Přihlášení úspěšné! Vstupuješ do arény...', 'success');
 
-    // Zkontroluj postavu
     try {
       const charRes = await API.getCharacter();
       if (charRes.character) {
-        setTimeout(() => {
-          window.location.href = 'game.html';
-        }, 1200);
+        setTimeout(() => { window.location.href = 'game.html'; }, 1200);
       }
     } catch {
       setTimeout(() => showPage('characterCreation'), 1200);
@@ -45,7 +42,7 @@ document.getElementById('loginForm').addEventListener('submit', async e => {
   } catch (err) {
     showMsg('loginMsg', `⚠ ${err.message || 'Chyba přihlášení'}`);
     btn.disabled = false;
-    btn.textContent = '⚔ Vstoupit do Arény ⚔';
+    btn.textContent = originalText;
   }
 });
 
@@ -65,6 +62,7 @@ document.getElementById('registerForm').addEventListener('submit', async e => {
     return showMsg('registerMsg', '⚠ Hesla se neshodují');
 
   const btn = e.target.querySelector('button');
+  const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '⏳ Registrování...';
 
@@ -76,6 +74,6 @@ document.getElementById('registerForm').addEventListener('submit', async e => {
   } catch (err) {
     showMsg('registerMsg', `⚠ ${err.message || 'Chyba registrace'}`);
     btn.disabled = false;
-    btn.textContent = '📜 Zaregistrovat se';
+    btn.textContent = originalText;
   }
 });
