@@ -1,3 +1,8 @@
+// ========== AUTH CHECK ==========
+if (!API.isLoggedIn()) {
+  window.location.href = 'index.html';
+}
+
 // ========== STATE ==========
 let character = null;
 let currentEnemy = null;
@@ -146,7 +151,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     openView('city');
     startQuestTimer();
     loadLeaderboard();
-  } catch { window.location.href = 'index.html'; }
+  } catch (err) {
+    // Fallback: load from localStorage or create demo character
+    const savedChar = localStorage.getItem('character');
+    if (savedChar) {
+      character = JSON.parse(savedChar);
+      questData = JSON.parse(localStorage.getItem('questData') || 'null');
+      updateUI();
+      openView('city');
+      startQuestTimer();
+      loadLeaderboard();
+    } else {
+      // Demo character pro offline vývoj
+      character = {
+        id: 1,
+        name: 'Témochlios',
+        gender: 'male',
+        class: 'Warrior',
+        level: 5,
+        experience: 250,
+        health: 85,
+        max_health: 100,
+        strength: 15,
+        defense: 12,
+        agility: 10,
+        intelligence: 8,
+        gold: 500
+      };
+      localStorage.setItem('character', JSON.stringify(character));
+      updateUI();
+      openView('city');
+      startQuestTimer();
+      loadLeaderboard();
+    }
+  }
 });
 
 // ========== UI UPDATE ==========
