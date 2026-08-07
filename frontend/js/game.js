@@ -174,7 +174,7 @@ function openView(view) {
   if (m) m.classList.add('active');
 
   const cc = document.getElementById('centerContent');
-  const views = { city, arena, dungeon, quests, shop, inventory, guild, tavern, forge };
+  const views = { city, arena, dungeon, quests, shop, inventory: inventoryView, guild, tavern, forge };
   cc.innerHTML = (views[view] || (() => `<div class="panel"><div class="panel-header">🚧 Brzy</div><div class="panel-body" style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">Tato sekce bude brzy dostupná!</div></div>`))();
 }
 
@@ -424,7 +424,7 @@ function shopTab(el, cat) {
 }
 
 // ===== INVENTORY =====
-function inventory() {
+function inventoryView() {
   const slotDefs = ['⚔️ Zbraň','🛡️ Zbroj','⛑️ Helma','👟 Boty','💍 Prsten','📿 Amulet'];
   const slots = slotDefs.map((s,i) => {
     const eq = equipped[i];
@@ -833,13 +833,28 @@ async function saveChar() {
 
 // ========== LEADERBOARD ==========
 async function loadLeaderboard() {
+  const lb = document.getElementById('leaderboard');
+  if (!lb) return;
+
+  // Pokud není backend (file:// nebo offline), zobraz aktuálního hráče
+  if (!API.isLoggedIn()) {
+    lb.innerHTML = '<div style="text-align:center;color:var(--text-dim);font-size:.78em;padding:10px;font-style:italic;">Přihlas se pro žebříček</div>';
+    return;
+  }
+
   try {
     const res = await API.getLeaderboard();
-    const lb = document.getElementById('leaderboard');
-    if (!lb) return;
 
     if (!res.leaderboard || res.leaderboard.length === 0) {
-      lb.innerHTML = '<div style="text-align:center;color:var(--text-dim);font-size:.78em;padding:10px;font-style:italic;">Zatím žádní hráči</div>';
+      // Zobraz aspoň aktuálního hráče
+      lb.innerHTML = character ? `
+        <div class="lb-row lb-me">
+          <span class="lb-rank">🥇</span>
+          <span class="lb-name">${character.name} 👈</span>
+          <span class="lb-lvl">Lv.${character.level}</span>
+        </div>
+        <div style="text-align:center;color:var(--text-dim);font-size:.72em;padding:6px;font-style:italic;">Jsi jediný hráč!</div>
+      ` : '<div style="text-align:center;color:var(--text-dim);font-size:.78em;padding:10px;">Zatím žádní hráči</div>';
       return;
     }
 
@@ -853,8 +868,19 @@ async function loadLeaderboard() {
       </div>`;
     }).join('');
   } catch(e) {
-    const lb = document.getElementById('leaderboard');
-    if (lb) lb.innerHTML = '<div style="text-align:center;color:var(--text-dim);font-size:.78em;padding:10px;">Nelze načíst</div>';
+    // Backend nedostupný - zobraz aktuálního hráče z localStorage
+    if (character) {
+      lb.innerHTML = `
+        <div class="lb-row lb-me">
+          <span class="lb-rank">🥇</span>
+          <span class="lb-name">${character.name} 👈</span>
+          <span class="lb-lvl">Lv.${character.level}</span>
+        </div>
+        <div style="text-align:center;color:var(--text-dim);font-size:.72em;padding:6px;font-style:italic;">Offline mód</div>
+      `;
+    } else {
+      lb.innerHTML = '<div style="text-align:center;color:var(--text-dim);font-size:.78em;padding:10px;">Nelze načíst</div>';
+    }
   }
 }
 
