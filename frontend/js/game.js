@@ -239,7 +239,7 @@ function updateUI() {
 // ========== VIEWS ==========
 let viewCache = {}; // Cache rendered views to avoid regeneration
 // který folder tab patří ke které view
-const TAB_OF_VIEW = { profile:0, inventory:0, city:0, stats:1, achievements:2, guild:3 };
+const TAB_OF_VIEW = { profile:0, inventory:0, city:0, stats:1, hall:2, tavern:3 };
 
 function openView(view) {
   // zvýraznění v levém banneru
@@ -255,7 +255,7 @@ function openView(view) {
 
   const cc = document.getElementById('centerContent');
   const views = { city, arena, dungeon, quests, shop, inventory: profileView, profile: profileView,
-                  guild, tavern, forge, expedition };
+                  guild, tavern, forge, expedition, hall, stats, training, work, premium };
   const viewFn = views[view] || (() => `
     <div class="coming-soon">
       <div class="cs-icon">🚧</div>
@@ -1458,32 +1458,10 @@ function claimTavernQuest(id) {
 }
 
 // ===== FORGE =====
-function forge() {
-  return `
-  <div class="panel">
-    <div class="panel-header">🔨 Kovárna Hefaista</div>
-    <div class="panel-body" style="text-align:center;padding:30px;">
-      <div style="font-size:3em;margin-bottom:15px;">🔥</div>
-      <p style="color:var(--gold);font-size:1.1em;margin-bottom:10px;">Kovárna Hefaista</p>
-      <p style="color:var(--text-dim);font-style:italic;">"Vylepši své vybavení silou olympského ohně"</p>
-      <p style="color:var(--text-dim);margin-top:20px;font-size:.85em;">🚧 Brzy dostupné...</p>
-    </div>
-  </div>`;
-}
+function forge() { return lockedSoon('Kovárna'); }
 
 // ===== GUILD =====
-function guild() {
-  return `
-  <div class="panel">
-    <div class="panel-header">🏛️ Gildy</div>
-    <div class="panel-body" style="text-align:center;padding:30px;">
-      <div style="font-size:3em;margin-bottom:15px;">🏛️</div>
-      <p style="color:var(--gold);font-size:1.1em;margin-bottom:10px;">Gildy Olympu</p>
-      <p style="color:var(--text-dim);font-style:italic;">"Síla je v jednotě bojovníků"</p>
-      <p style="color:var(--text-dim);margin-top:20px;font-size:.85em;">🚧 Brzy dostupné...</p>
-    </div>
-  </div>`;
-}
+function guild() { return lockedSoon('Gilda'); }
 
 // ========== COMBAT ==========
 function startCombat(idx) {
@@ -1606,6 +1584,9 @@ function endCombat(won) {
     rewards = `Probral ses s ${character.health} HP.`;
     addLog(`Porážka. ${rewards}`, 'log-d');
   }
+  // po výpravě si gladiátor musí odpočinout
+  if (lastFight && lastFight.view === 'expedition') startExpedCooldown();
+
   saveChar(); updateUI();
 
   const box = document.getElementById('combatBtns');
@@ -1651,8 +1632,8 @@ function addLog(msg, cls) {
 // ========== DUNGEON ==========
 function startDungeon(idx) {
   const d = DUNGEONS[idx];
-  if (character.level < d.level) { alert(`🔒 Potřebuješ úroveň ${d.level}!`); return; }
-  alert(`🏰 Vstupuješ do: ${d.name}\n⏱ Trvá: ${d.time}\nVrátíš se za ${d.time}!`);
+  if (character.level < d.level) { toast(`Bludiště ${d.name} se otevře na úrovni ${d.level}.`); return; }
+  toast(`${d.name}: výprava potrvá ${d.time}.`);
 }
 
 // ========== QUESTS ==========
@@ -1735,8 +1716,9 @@ function claimDaily() {
   character.experience += exp;
   localStorage.setItem('lastDaily', today);
   checkLevelUp(); saveChar(); updateUI();
-  document.getElementById('dailyBtn').disabled = true;
-  alert(`🎁 Denní odměna!\n+${gold} 💰\n+${exp} ⭐`);
+  const btn = document.getElementById('dailyBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Dnes už vyzvednuto'; }
+  toast(`Denní odměna: +${gold} zlata, +${exp} zkušeností`);
 }
 
 // ========== LEVEL UP ==========
@@ -1834,6 +1816,98 @@ function logout() {
   window.location.href = 'index.html';
 }
 
+
+
+// ========== BODY VÝPRAVY A ODPOČINEK ==========
+const EXPED_MAX      = 12;
+const EXPED_REGEN_MS = 10 * 60 * 1000;   // +1 bod za 10 minut
+
+// Cooldown roste s úrovní — vyšší level = delší odpočinek mezi výpravami
+function expedCooldownMs() {
+  const L = character ? character.level : 1;
+  if (L <= 10) return 15 * 1000;
+  if (L <= 20) return 30 * 1000;
+  if (L <= 35) return 45 * 1000;
+  if (L <= 50) return 90 * 1000;
+  return 150 * 1000;
+}
+
+// načte body a doplní ty, co se mezitím zregenerovaly
+function expedPoints() {
+  let pts = parseInt(localStorage.getItem('expedPts'), 10);
+  let at  = parseInt(localStorage.getItem('expedPtsAt'), 10);
+  if (isNaN(pts)) pts = EXPED_MAX;
+  if (isNaN(at))  at  = Date.now();
+
+  if (pts < EXPED_MAX) {
+    const gained = Math.floor((Date.now() - at) / EXPED_REGEN_MS);
+    if (gained > 0) {
+      pts = Math.min(EXPED_MAX, pts + gained);
+      at += gained * EXPED_REGEN_MS;
+    }
+  }
+  if (pts >= EXPED_MAX) at = Date.now();
+
+  localStorage.setItem('expedPts', pts);
+  localStorage.setItem('expedPtsAt', at);
+  return pts;
+}
+
+function spendExpedPoint() {
+  const pts = expedPoints();
+  if (pts <= 0) return false;
+  if (pts === EXPED_MAX) localStorage.setItem('expedPtsAt', Date.now());
+  localStorage.setItem('expedPts', pts - 1);
+  return true;
+}
+
+function startExpedCooldown() {
+  localStorage.setItem('expedCdUntil', Date.now() + expedCooldownMs());
+}
+
+function expedCdLeft() {
+  const until = parseInt(localStorage.getItem('expedCdUntil'), 10) || 0;
+  return Math.max(0, until - Date.now());
+}
+
+const fmtSec = ms => Math.ceil(ms / 1000) + ' s';
+
+// čas do dalšího bodu
+function expedRegenLeft() {
+  if (expedPoints() >= EXPED_MAX) return 0;
+  const at = parseInt(localStorage.getItem('expedPtsAt'), 10) || Date.now();
+  return Math.max(0, at + EXPED_REGEN_MS - Date.now());
+}
+
+// obnoví ukazatele bodů a tlačítka Útok
+function refreshExpedUI() {
+  if (!character) return;
+
+  const pts = expedPoints();
+  const el  = document.getElementById('expedPts');
+  if (el) el.textContent = pts + ' / ' + EXPED_MAX;
+
+  const dg = document.getElementById('dungeonPts');
+  if (dg) dg.textContent = pts + ' / ' + EXPED_MAX;
+
+  const cd = expedCdLeft();
+  document.querySelectorAll('.mon-attack').forEach(b => {
+    if (cd > 0)        { b.disabled = true;  b.textContent = 'Odpočinek ' + fmtSec(cd); }
+    else if (pts <= 0) { b.disabled = true;  b.textContent = 'Bez bodů'; }
+    else if (b.dataset.locked !== '1') { b.disabled = false; b.textContent = 'Útok'; }
+  });
+
+  const info = document.getElementById('expedInfo');
+  if (info) {
+    const regen = expedRegenLeft();
+    info.textContent =
+      (cd > 0 ? 'Odpočinek: ' + fmtSec(cd) + ' · ' : '') +
+      'Body výpravy: ' + pts + '/' + EXPED_MAX +
+      (regen > 0 ? ' · další za ' + Math.ceil(regen / 60000) + ' min' : '');
+  }
+}
+
+setInterval(refreshExpedUI, 1000);
 
 // ========== VÝPRAVY ==========
 // Lokace se odemykají podle úrovně. Staty příšer se dopočítají
@@ -1981,7 +2055,164 @@ function expedMenuHTML() {
   }).join('');
 }
 
+
+
+// ===== CVIČIŠTĚ =====
+const TRAIN_STATS = [
+  { key:'strength',     name:'Síla',        popis:'Zvyšuje poškození, které rozdáš.' },
+  { key:'defense',      name:'Obrana',      popis:'Tlumí zásahy soupeřů.' },
+  { key:'agility',      name:'Hbitost',     popis:'Pomáhá ti uhýbat a útočit dřív.' },
+  { key:'intelligence', name:'Inteligence', popis:'Otevírá cestu k magickému vybavení.' },
+];
+
+// cena roste s aktuální hodnotou, ať trénink není nekonečný zdroj
+const trainCost = key => Math.floor(15 * character[key] + 25);
+
+function training() {
+  const rows = TRAIN_STATS.map(s => {
+    const cost = trainCost(s.key);
+    const ok = character.gold >= cost;
+    return `
+      <div class="gl-row">
+        <div class="gl-main">
+          <div class="gl-nm">${s.name} — ${character[s.key]}</div>
+          <div class="gl-sub">${s.popis}</div>
+        </div>
+        <div class="train-cost ${ok ? '' : 'poor'}">${cost} zlata</div>
+        <button class="btn-green" ${ok ? '' : 'disabled'} onclick="trainStat('${s.key}')">Trénovat +1</button>
+      </div>`;
+  }).join('');
+
+  return `
+  <div class="panel">
+    <div class="panel-header">Cvičiště</div>
+    <div class="panel-body">
+      <p class="hall-note">Trenér tě za zlato vypiluje. Čím jsi lepší, tím dráž si účtuje.</p>
+      <div class="gl-list">${rows}</div>
+    </div>
+  </div>`;
+}
+
+function trainStat(key) {
+  const cost = trainCost(key);
+  if (character.gold < cost) { toast('Na trénink ti chybí zlato.'); return; }
+  character.gold -= cost;
+  character[key] += 1;
+  const label = (TRAIN_STATS.find(s => s.key === key) || {}).name || key;
+  toast(`${label} +1 (−${cost} zlata)`);
+  saveChar(); updateUI();
+  openView('training');
+}
+
+// sekce, které zatím nejsou hotové
+function lockedSoon(nazev) {
+  return `
+  <div class="coming-soon">
+    <div class="cs-icon">🔒</div>
+    <h2>${nazev}</h2>
+    <p>Tuhle část Olympu teprve stavíme.</p>
+  </div>`;
+}
+const work    = () => lockedSoon('Práce');
+const premium = () => lockedSoon('Prémium');
+
+// ===== SÍŇ SLÁVY =====
+function hall() {
+  const claimed = localStorage.getItem('lastDaily') === new Date().toDateString();
+  setTimeout(loadLeaderboard, 0);   // doplní se po vykreslení
+  return `
+  <div class="panel">
+    <div class="panel-header">Síň slávy</div>
+    <div class="panel-body">
+      <div class="hall-grid">
+
+        <div class="hall-box">
+          <h3>Nejlepší gladiátoři</h3>
+          <div id="leaderboard"></div>
+        </div>
+
+        <div class="hall-box">
+          <h3>Denní odměna</h3>
+          <p class="hall-note">Jednou denně ti Olymp přeje. Vyzvedni si zlato a zkušenosti.</p>
+          <button class="btn-green" id="dailyBtn" ${claimed ? 'disabled' : ''} onclick="claimDaily()">
+            ${claimed ? 'Dnes už vyzvednuto' : 'Vyzvednout odměnu'}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>`;
+}
+
+// ===== STATISTIKY =====
+function stats() {
+  const c = character;
+  const bonus = k => Object.values(equipped).filter(e => e && e.key === k).reduce((a, e) => a + e.val, 0);
+  const [dmgMin, dmgMax] = playerDamageRange();
+  const w = equipped.weapon;
+
+  const cell = (label, val) => `<div class="stat-cell"><span class="sc-val">${val}</span><span class="sc-name">${label}</span></div>`;
+
+  return `
+  <div class="panel">
+    <div class="panel-header">Statistiky – ${c.name}</div>
+    <div class="panel-body">
+      <div class="stats-grid">
+
+        <div class="stats-block">
+          <h3>Postava</h3>
+          <div class="stat-cells">
+            ${cell('Úroveň', c.level)}
+            ${cell('Zkušenosti', c.experience + '/' + c.level * 100)}
+            ${cell('Životy', c.health + '/' + c.max_health)}
+            ${cell('Zlato', c.gold)}
+          </div>
+        </div>
+
+        <div class="stats-block">
+          <h3>Vlastnosti</h3>
+          <div class="stat-cells">
+            ${cell('Síla', c.strength + bonus('strength'))}
+            ${cell('Obrana', c.defense + bonus('defense'))}
+            ${cell('Hbitost', c.agility + bonus('agility'))}
+            ${cell('Inteligence', c.intelligence + bonus('intelligence'))}
+          </div>
+        </div>
+
+        <div class="stats-block">
+          <h3>Boj</h3>
+          <div class="stat-cells">
+            ${cell('Poškození', dmgMin + '-' + dmgMax)}
+            ${cell('Zbraň', w ? w.name : 'Holé ruce')}
+            ${cell('Zbroj', (c.defense + bonus('defense')) * 3)}
+            ${cell('Vybaveno', Object.values(equipped).filter(Boolean).length + '/9')}
+          </div>
+        </div>
+
+        <div class="stats-block">
+          <h3>Výprava</h3>
+          <div class="stat-cells">
+            ${cell('Body', expedPoints() + '/' + EXPED_MAX)}
+            ${cell('Odpočinek', Math.ceil(expedCooldownMs() / 1000) + ' s')}
+            ${cell('Batoh', inventory.length + '/' + BAG_SIZE)}
+            ${cell('Lokace', EXPEDITIONS.filter(e => c.level >= e.minLevel).length + '/' + EXPEDITIONS.length)}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>`;
+}
+
+// otevře výkup u vetešníka
+function openSell() {
+  currentShop = 'blacksmith';
+  shopPage = 'sell';
+  openView('shop');
+}
+
 function expedition() {
+  setTimeout(refreshExpedUI, 0);   // ať ukazatel nečeká na další tik
   const loc = EXPEDITIONS.find(e => e.id === currentExped) || EXPEDITIONS[0];
   currentExped = loc.id;
   const locked = character.level < loc.minLevel;
@@ -1991,7 +2222,7 @@ function expedition() {
       <div class="mon-name">${m.name}</div>
       <div class="mon-frame">${monsterPortrait(m, 'mon-img')}</div>
 
-      <button class="btn-green mon-attack" ${locked ? 'disabled' : ''}
+      <button class="btn-green mon-attack" ${locked ? 'disabled data-locked="1"' : ''}
               onclick="attackMonster(${i})">Útok</button>
 
       <div class="mon-rew">
@@ -2020,6 +2251,7 @@ function expedition() {
 
     <div class="exped-body">
       ${locked ? `<div class="exped-lock">Tato oblast se otevře na úrovni ${loc.minLevel}.</div>` : ''}
+      <div class="exped-info" id="expedInfo"></div>
 
       <div class="mon-row">${cards}</div>
 
@@ -2045,6 +2277,11 @@ function attackMonster(i) {
   const loc = EXPEDITIONS.find(e => e.id === currentExped);
   if (!loc) return;
   if (character.level < loc.minLevel) { toast(`Potřebuješ úroveň ${loc.minLevel}.`); return; }
+
+  const cd = expedCdLeft();
+  if (cd > 0) { toast('Ještě si odpočiň — zbývá ' + fmtSec(cd) + '.'); return; }
+  if (!spendExpedPoint()) { toast('Došly body výpravy. Další se doplní za 10 minut.'); return; }
+
   beginFight(rollMonster(loc.monsters[i]), 'expedition');
 }
 
