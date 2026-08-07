@@ -1175,3 +1175,10 @@ span.fighter-img{font-size:52px}
 }
 .train-cost.poor{color:#a02525}
 .gl-row .btn-green{flex:0 0 auto}
+
+/* ---- barevný proužek kvality na zboží ---- */
+.g-slot{overflow:hidden}
+.g-q{
+  position:absolute;left:0;right:0;top:0;height:3px;
+  opacity:.9;pointer-events:none;
+}

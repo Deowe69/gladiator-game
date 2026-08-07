@@ -456,8 +456,9 @@ function goodsSlot(item, dark) {
   const afford = character.gold >= item.price;
   return `
     <div class="g-slot ${dark ? 'dark' : ''} ${afford ? '' : 'poor'}"
-         onclick="buyItem('${item.id}')"
-         title="${item.name}&#10;${item.stat}&#10;Cena: ${item.price} zlatých">
+         onclick="buyItem('${item.uid}')"
+         title="${item.name} (${qualityOf(item).label})&#10;${statLine(item)}&#10;Cena: ${item.price} zlatých">
+      <span class="g-q" style="background:${qualityOf(item).color}"></span>
       ${itemIcon(item, 'g-ico')}
       <span class="g-price">${item.price}</span>
     </div>`;
@@ -501,7 +502,7 @@ function shop() {
   ).join('');
 
   // zboží rozdělené na stránky I / II / III
-  const stock = m.items;
+  const stock = shopStock(id);
   const pages = [stock.slice(0, 12), stock.slice(12, 24), stock.slice(24, 36)];
 
   const pageTabs = ['I', 'II', 'III'].map((lbl, i) =>
@@ -627,260 +628,9 @@ const SLOT_DEFS = {
   belt:    { label:'Pás',      icon:'🔗',  key:'defense',  bonus:2  },
 };
 
-const QUALITY_CONFIG = {
-  common:    { color:'#888',   label:'Běžný',     glow:'' },
-  uncommon:  { color:'#3a9a2a',label:'Neobvyklý', glow:'0 0 8px rgba(58,154,42,.5)' },
-  rare:      { color:'#2255bb',label:'Vzácný',    glow:'0 0 8px rgba(34,85,187,.5)' },
-  epic:      { color:'#8833cc',label:'Epický',    glow:'0 0 10px rgba(136,51,204,.6)' },
-  legendary: { color:'#D4AF37',label:'Legendární',glow:'0 0 14px rgba(212,175,55,.7)' },
-};
 
-let draggedItem = null;
-let draggedFrom = null;
 
-function inventoryView() {
-  const c = character;
-  const xpNeeded = c.level * 100;
-  const xpPct = Math.min(100, (c.experience / xpNeeded * 100)).toFixed(1);
 
-  // Total bonusy z equipment
-  const totalStr  = Object.values(equipped).filter(e=>e&&e.key==='strength').reduce((a,e)=>a+e.val,0);
-  const totalDef  = Object.values(equipped).filter(e=>e&&e.key==='defense').reduce((a,e)=>a+e.val,0);
-  const totalAgi  = Object.values(equipped).filter(e=>e&&e.key==='agility').reduce((a,e)=>a+e.val,0);
-  const totalInt  = Object.values(equipped).filter(e=>e&&e.key==='intelligence').reduce((a,e)=>a+e.val,0);
-  const totalDmg  = Math.floor((c.strength + totalStr) * 1.5);
-  const totalArmor= (c.defense + totalDef) * 3;
-
-  function slotHTML(key) {
-    const def = SLOT_DEFS[key];
-    const eq  = equipped[key];
-    const qcfg = eq ? (QUALITY_CONFIG[eq.quality||'common']) : null;
-    return `
-    <div class="equip-slot"
-         data-slot="${key}"
-         draggable="true"
-         ondragstart="onDragStart(event, 'slot', '${key}')"
-         ondragover="onDragOver(event)"
-         ondrop="onDrop(event, 'slot', '${key}')"
-         ondragleave="onDragLeave(event)"
-         style="${eq ? 'border-color:'+qcfg.color+';box-shadow:'+qcfg.glow : ''}">
-      ${eq ? `
-        <div class="equip-slot-item">
-          <div class="equip-icon">${eq.icon}</div>
-          <div class="equip-name">${eq.name}</div>
-          <div class="equip-stat" style="color:${qcfg.color}">+${eq.val}</div>
-        </div>
-      ` : `
-        <div class="equip-slot-empty">
-          <div class="equip-slot-icon">${def.icon}</div>
-          <div class="equip-slot-name">${def.label}</div>
-        </div>
-      `}
-    </div>`;
-  }
-
-  function statRow(icon, label, base, bonus, color, max) {
-    const total = base + (bonus||0);
-    const pct = Math.min(100, total/max*100).toFixed(1);
-    return `
-    <div class="pstat-row">
-      <div class="pstat-left">
-        <span class="pstat-icon">${icon}</span>
-        <span class="pstat-name">${label}</span>
-      </div>
-      <div class="pstat-bar-wrap">
-        <div class="pstat-bar-bg">
-          <div class="pstat-bar-fill" style="width:${pct}%;background:${color}"></div>
-          ${bonus > 0 ? `<div class="pstat-bar-bonus" style="left:${Math.min(100,(base/max*100)).toFixed(1)}%;width:${Math.min(100-base/max*100,(bonus/max*100)).toFixed(1)}%;background:${color};opacity:.5"></div>` : ''}
-        </div>
-      </div>
-      <div class="pstat-val">
-        <span style="color:${color}">${total}</span>
-        ${bonus > 0 ? `<span class="pstat-bonus">+${bonus}</span>` : ''}
-      </div>
-    </div>`;
-  }
-
-  const invHTML = Array.from({length:20}, (_,i) => {
-    const item = inventory[i];
-    if (!item) return `<div class="inv-slot inv-empty" data-inv="${i}" ondragover="onDragOver(event)" ondrop="onDrop(event, 'inv', ${i})" ondragleave="onDragLeave(event)"></div>`;
-    const qcfg = QUALITY_CONFIG[item.quality||'common'];
-    return `
-    <div class="inv-slot inv-filled"
-         data-inv="${i}"
-         draggable="true"
-         ondragstart="onDragStart(event, 'inv', ${i})"
-         ondragover="onDragOver(event)"
-         ondrop="onDrop(event, 'inv', ${i})"
-         ondragleave="onDragLeave(event)"
-         style="border-color:${qcfg.color};box-shadow:${qcfg.glow}"
-         title="${item.name}&#10;${item.stat}&#10;Kvalita: ${qcfg.label}">
-      <div class="inv-item">
-        <div class="inv-icon">${item.icon}</div>
-        <div class="inv-val" style="color:${qcfg.color}">+${item.val||''}</div>
-        <div class="inv-name">${item.name.split(' ').slice(-1)[0]}</div>
-      </div>
-    </div>`;
-  }).join('');
-
-  return `
-  <div class="profile-container">
-
-    <!-- HEADER -->
-    <div class="profile-header">
-      <div class="profile-title">
-        <span class="profile-icon">${c.class==='Warrior'?'🗡️':c.class==='Mage'?'🔮':c.class==='Rogue'?'🥷':'🛡️'}</span>
-        <h1>${c.name}</h1>
-        <span class="profile-class">${c.class}</span>
-      </div>
-      <div class="profile-tabs">
-        <button class="ptab active" onclick="profTab(this,'ptab-main')">⚔ Profil</button>
-        <button class="ptab" onclick="profTab(this,'ptab-stats')">📊 Statistiky</button>
-        <button class="ptab" onclick="profTab(this,'ptab-victories')">🏆 Vítězství</button>
-      </div>
-    </div>
-
-    <!-- TAB: PROFIL S DRAG-DROP -->
-    <div id="ptab-main" class="ptab-content active">
-      <div class="profile-main">
-
-        <!-- CENTRUM: AVATAR + EQUIPMENT -->
-        <div class="profile-center">
-          <!-- Velký Avatar -->
-          <div class="avatar-section">
-            <div class="avatar-frame">
-              <div class="avatar-inner">${getAvatar(c.class, c.gender)}</div>
-              <div class="avatar-level">${c.level}</div>
-            </div>
-          </div>
-
-          <!-- Equipment Slots (drag-drop) -->
-          <div class="equipment-grid">
-            <div class="equip-row">
-              <div class="equip-spacer"></div>
-              ${slotHTML('helmet')}
-              <div class="equip-spacer"></div>
-            </div>
-            <div class="equip-row">
-              ${slotHTML('weapon')}
-              ${slotHTML('chest')}
-              ${slotHTML('shield')}
-            </div>
-            <div class="equip-row">
-              ${slotHTML('gloves')}
-              <div class="equip-spacer"></div>
-              ${slotHTML('boots')}
-            </div>
-            <div class="equip-row">
-              ${slotHTML('ring')}
-              ${slotHTML('amulet')}
-              ${slotHTML('belt')}
-            </div>
-          </div>
-
-          <!-- XP Bar -->
-          <div class="xp-section">
-            <div class="xp-label">Zkušenosti</div>
-            <div class="xp-bg">
-              <div class="xp-fill" style="width:${xpPct}%"></div>
-            </div>
-            <div class="xp-text">${c.experience} / ${xpNeeded}</div>
-          </div>
-        </div>
-
-        <!-- VLEVO: ATRIBUTY -->
-        <div class="profile-left">
-          <div class="stat-panel">
-            <h3>⚔ Atributy</h3>
-            <div class="stat-list">
-              ${statRow('❤️','Zdraví',    c.max_health, 0,        '#CC2222', 500)}
-              ${statRow('⚔️','Síla',      c.strength,   totalStr,  '#E87020', 300)}
-              ${statRow('🛡️','Obrana',    c.defense,    totalDef,  '#8833CC', 300)}
-              ${statRow('💨','Hbitost',   c.agility,    totalAgi,  '#22AA44', 300)}
-              ${statRow('🔮','Intelekt',  c.intelligence,totalInt, '#2266DD', 300)}
-            </div>
-          </div>
-          <div class="combat-stats">
-            <div class="cstat">
-              <span class="cstat-icon">⚔</span>
-              <span>Poškození</span>
-              <span class="cstat-val">${Math.max(1,c.strength-5)}-${totalDmg}</span>
-            </div>
-            <div class="cstat">
-              <span class="cstat-icon">🛡</span>
-              <span>Zbroj</span>
-              <span class="cstat-val">${totalArmor}</span>
-            </div>
-            <div class="cstat">
-              <span class="cstat-icon">💰</span>
-              <span>Zlato</span>
-              <span class="cstat-val" style="color:var(--gold)">${c.gold}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- VPRAVO: INVENTÁŘ -->
-        <div class="profile-right">
-          <div class="inventory-panel">
-            <h3>🎒 Batoh (${inventory.length}/20)</h3>
-            <div class="inventory-grid">${invHTML}</div>
-            <div class="inventory-hint">
-              ${inventory.length > 0
-                ? '💡 Přetáhni předmět na slot pro nasazení'
-                : 'Inventář je prázdný — nakup vybavení na Trhu!'}
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- TAB: STATISTIKY -->
-    <div id="ptab-stats" class="ptab-content">
-      <div class="stats-grid">
-        <div class="stats-block">
-          <h3>⚔ Bojové statistiky</h3>
-          <div class="stat-cells">
-            <div class="stat-cell"><div class="sc-val">${c.strength + totalStr}</div><div class="sc-name">Síla</div></div>
-            <div class="stat-cell"><div class="sc-val">${c.defense + totalDef}</div><div class="sc-name">Obrana</div></div>
-            <div class="stat-cell"><div class="sc-val">${c.agility + totalAgi}</div><div class="sc-name">Hbitost</div></div>
-            <div class="stat-cell"><div class="sc-val">${c.intelligence + totalInt}</div><div class="sc-name">Intelekt</div></div>
-            <div class="stat-cell"><div class="sc-val">${totalDmg}</div><div class="sc-name">Max DMG</div></div>
-            <div class="stat-cell"><div class="sc-val">${totalArmor}</div><div class="sc-name">Zbroj</div></div>
-          </div>
-        </div>
-        <div class="stats-block">
-          <h3>📜 Obecné</h3>
-          <div class="stat-cells">
-            <div class="stat-cell"><div class="sc-val" style="color:var(--gold)">${c.level}</div><div class="sc-name">Úroveň</div></div>
-            <div class="stat-cell"><div class="sc-val">${c.experience}</div><div class="sc-name">XP</div></div>
-            <div class="stat-cell"><div class="sc-val" style="color:var(--gold)">${c.gold}</div><div class="sc-name">Zlato</div></div>
-            <div class="stat-cell"><div class="sc-val">${c.max_health}</div><div class="sc-name">Max HP</div></div>
-            <div class="stat-cell"><div class="sc-val">${inventory.length}</div><div class="sc-name">Předmětů</div></div>
-            <div class="stat-cell"><div class="sc-val">${Object.values(equipped).filter(Boolean).length}</div><div class="sc-name">Vybaveno</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB: VÍTĚZSTVÍ -->
-    <div id="ptab-victories" class="ptab-content">
-      <div class="coming-soon">
-        <div class="cs-icon">🏆</div>
-        <h2>Síň slávy</h2>
-        <p>Statistiky vítězství přijdou brzy...</p>
-      </div>
-    </div>
-
-  </div>`;
-}
-
-function profTab(el, tabId) {
-  document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.querySelectorAll('.ptab-content').forEach(c => c.classList.remove('active'));
-  document.getElementById(tabId).classList.add('active');
-}
 
 // ===== PŘEHLED (Gladiatus styl) =====
 const DOLL = [
@@ -957,7 +707,7 @@ function dollSlotsHTML() {
            ondragleave="dragLeave(event)"
            ondrop="dropOn(event,'slot','${key}')"
            onclick="unequip('${key}')"
-           title="${eq ? eq.name + ' — klikni pro sundání' : def.label}">
+           title="${eq ? eq.name + '\n' + statLine(eq) + '\n(klikni pro sundání)' : def.label}">
         ${eq ? itemIcon(eq, 's-ico') : slotIcon(key, 's-ico')}
         ${eq ? `<span class="s-nm">${eq.name}</span>` : `<span class="s-lbl">${def.label}</span>`}
       </div>`;
@@ -990,7 +740,7 @@ function bagSlotsHTML(mode) {
     const click = !it ? '' : (mode === 'sell' ? `sellItem(${i})` : `useItem(${i})`);
     const tip = !it ? '' : (mode === 'sell'
       ? `${it.name} — prodat za ${sellPrice(it)} zlatých`
-      : `${it.name} ( ${it.stat} )`);
+      : `${it.name}\n${statLine(it)}`);
     html += `
       <div class="bag-slot ${it ? '' : 'empty'}"
            draggable="${it ? 'true' : 'false'}"
@@ -1032,7 +782,7 @@ function bagPanelHTML(mode) {
 
 function profileView() {
   const c = character;
-  const bonus = k => Object.values(equipped).filter(e => e && e.key === k).reduce((a,e) => a + e.val, 0);
+  const bonus = equipBonus;
   const str = c.strength     + bonus('strength');
   const def = c.defense      + bonus('defense');
   const agi = c.agility      + bonus('agility');
@@ -1140,7 +890,10 @@ function dragLeave(e) {
 }
 
 function applyBonus(item, sign) {
-  if (item && item.key && item.key !== 'health') character[item.key] += sign * item.val;
+  if (!item || !item.stats) return;
+  for (const [k, v] of Object.entries(item.stats)) {
+    if (typeof character[k] === 'number') character[k] += sign * v;
+  }
 }
 
 function dropOn(e, type, ref) {
@@ -1257,21 +1010,8 @@ function toast(msg) {
   t._h = setTimeout(() => { t.style.display = 'none'; }, 2200);
 }
 
-const SLOT_DEFS_KEYS = Object.keys(SLOT_DEFS);
 
 // Kliknutí na slot vybavení (sundání)
-function handleSlotClick(key) {
-  if (!equipped[key]) return;
-  const item = equipped[key];
-  // Vrátit bonus
-  if (item.key && item.key !== 'health') character[item.key] -= item.val;
-  delete equipped[key];
-  localStorage.setItem('eqp', JSON.stringify(equipped));
-  inventory.push(item);
-  localStorage.setItem('inv', JSON.stringify(inventory));
-  saveChar(); updateUI();
-  openView('inventory');
-}
 
 // Kliknutí na předmět v inventáři (nasazení)
 function handleInvClick(idx) {
@@ -1466,6 +1206,113 @@ function guild() { return lockedSoon('Gilda'); }
 // ========== COMBAT ==========
 function startCombat(idx) {
   beginFight(ENEMIES[idx], 'arena');
+}
+
+
+// ========== NÁHODNÉ STATY PŘEDMĚTŮ ==========
+const STAT_DEFS = {
+  strength:     'Síla',
+  agility:      'Obratnost',
+  defense:      'Odolnost',
+  intelligence: 'Inteligence',
+};
+const STAT_KEYS = Object.keys(STAT_DEFS);
+
+// čím vzácnější předmět, tím víc statů a vyšší objem
+const QUALITY_ROLL = {
+  common:    { count:1, mult:1.00, label:'Běžný',      color:'#6b6b6b' },
+  uncommon:  { count:2, mult:1.25, label:'Neobvyklý',  color:'#2d8020' },
+  rare:      { count:3, mult:1.55, label:'Vzácný',     color:'#1a4a8b' },
+  epic:      { count:4, mult:1.90, label:'Epický',     color:'#6b2fa0' },
+  legendary: { count:4, mult:2.30, label:'Legendární', color:'#b8860b' },
+};
+
+const qualityOf = it => QUALITY_ROLL[(it && it.quality) || 'common'] || QUALITY_ROLL.common;
+
+// Ze šablony z obchodu vyrobí konkrétní kus s náhodně rozhozenými staty.
+// Hlavní stat odpovídá typu předmětu (zbraň → síla, zbroj → odolnost…),
+// zbylé se losují, takže dva stejné meče nejsou nikdy stejné.
+function rollItem(tpl) {
+  const it = { ...tpl, uid: 'i' + Math.random().toString(36).slice(2, 10) };
+  if (tpl.key === 'health') return it;          // lektvary se nerolují
+
+  const q = qualityOf(tpl);
+  const main = STAT_DEFS[tpl.key] ? tpl.key : STAT_KEYS[Math.floor(Math.random() * STAT_KEYS.length)];
+  const rest = STAT_KEYS.filter(k => k !== main).sort(() => Math.random() - 0.5);
+  const keys = [main, ...rest.slice(0, Math.max(0, q.count - 1))];
+
+  let left = Math.max(keys.length, Math.round((tpl.val || 4) * q.mult));
+  const stats = {};
+  keys.forEach((k, i) => {
+    const zbyva = keys.length - 1 - i;           // kolik statů ještě přijde
+    if (zbyva === 0) { stats[k] = left; return; }
+    const podil = i === 0 ? 0.55 : 0.5;
+    let v = Math.round(left * podil * (0.75 + Math.random() * 0.5));
+    v = Math.min(Math.max(1, v), left - zbyva);  // na každý další musí zbýt aspoň 1
+    stats[k] = v;
+    left -= v;
+  });
+
+  it.stats = stats;
+  delete it.key; delete it.val;
+  return it;
+}
+
+// souhrn statů předmětu do čitelné věty
+function statLine(it) {
+  if (!it) return '';
+  if (it.key === 'health') return '+' + it.val + ' zdraví';
+  const parts = [];
+  if (Array.isArray(it.dmg)) parts.push(it.dmg[0] + '-' + it.dmg[1] + ' poškození');
+  if (it.stats) for (const [k, v] of Object.entries(it.stats)) parts.push('+' + v + ' ' + STAT_DEFS[k]);
+  return parts.join(', ') || (it.stat || '');
+}
+
+// součet jednoho statu ze všeho nasazeného
+function equipBonus(k) {
+  return Object.values(equipped).reduce((a, e) => a + ((e && e.stats && e.stats[k]) || 0), 0);
+}
+
+// starší uložené předměty měly jen jeden stat (key/val) — převedeme je
+function migrateItem(it) {
+  if (!it || it.stats || it.key === 'health') return it;
+  it.stats = (it.key && it.val) ? { [it.key]: it.val } : {};
+  delete it.key; delete it.val;
+  return it;
+}
+inventory = inventory.map(migrateItem).filter(Boolean);
+Object.keys(equipped).forEach(k => { equipped[k] = migrateItem(equipped[k]); });
+
+// ========== ZBOŽÍ V OBCHODĚ ==========
+// Nabídka se vyloosuje jednou za restock a drží se, dokud kupec nedoplní.
+function shopStock(id) {
+  restockLeft();                                  // zajistí, že restockAt existuje
+  const stamp = localStorage.getItem('restockAt') || '0';
+  const kIt = 'stock_' + id, kAt = 'stockAt_' + id;
+
+  if (localStorage.getItem(kAt) === stamp) {
+    try {
+      const s = JSON.parse(localStorage.getItem(kIt));
+      if (Array.isArray(s)) return s;
+    } catch (e) { /* poškozený záznam – vyloosujeme znovu */ }
+  }
+  const rolled = MERCHANTS[id].items.map(rollItem);
+  localStorage.setItem(kIt, JSON.stringify(rolled));
+  localStorage.setItem(kAt, stamp);
+  return rolled;
+}
+
+function takeFromStock(uid) {
+  for (const id of Object.keys(MERCHANTS)) {
+    const s = shopStock(id);
+    const i = s.findIndex(x => x && x.uid === uid);
+    if (i >= 0) {
+      const [it] = s.splice(i, 1);
+      localStorage.setItem('stock_' + id, JSON.stringify(s));
+      return it;
+    }
+  }
+  return null;
 }
 
 // ========== POŠKOZENÍ ==========
@@ -1685,18 +1532,19 @@ function formatTime(secs) {
 }
 
 // ========== SHOP ==========
-function buyItem(itemId) {
+function buyItem(uid) {
   let item = null;
-  for (const cat of Object.values(SHOP_ITEMS)) {
-    item = cat.find(i => i.id === itemId);
-    if (item) break;
+  for (const id of Object.keys(MERCHANTS)) {
+    const found = shopStock(id).find(x => x && x.uid === uid);
+    if (found) { item = found; break; }
   }
   if (!item) return;
   if (character.gold < item.price) { toast('Nedostatek zlatých na ' + item.name); return; }
   if (inventory.length >= 24) { toast('Batoh je plný!'); return; }
   character.gold -= item.price;
+  takeFromStock(uid);              // kus je jedinečný, z pultu zmizí
   // staty se přičtou až při vybavení
-  inventory.push({...item});
+  inventory.push({ ...item });
   localStorage.setItem('inv', JSON.stringify(inventory));
   saveChar(); updateUI();
   toast(`Zakoupeno: ${item.name} (−${item.price} zlatých)`);
@@ -2147,7 +1995,7 @@ function hall() {
 // ===== STATISTIKY =====
 function stats() {
   const c = character;
-  const bonus = k => Object.values(equipped).filter(e => e && e.key === k).reduce((a, e) => a + e.val, 0);
+  const bonus = equipBonus;
   const [dmgMin, dmgMax] = playerDamageRange();
   const w = equipped.weapon;
 
