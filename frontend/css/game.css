@@ -624,3 +624,174 @@ html, body {
   margin:-3px -4px;
 }
 .lb-me .lb-name { color:var(--gold); font-weight:bold; }
+
+/* ===== GLADIATUS-STYLE PROFILE ===== */
+.prof-tabs {
+  display:flex; border-bottom:2px solid var(--border);
+  background:var(--bg2);
+}
+.prof-tab {
+  padding:11px 20px; color:var(--text-dim); font-size:.82em;
+  cursor:pointer; border-right:1px solid var(--border);
+  transition:all .25s; font-family:'Cinzel',serif;
+  letter-spacing:1px; border-bottom:2px solid transparent;
+  margin-bottom:-2px;
+}
+.prof-tab:hover { color:var(--gold); background:var(--panel); }
+.prof-tab.active { color:var(--gold); background:var(--panel); border-bottom-color:var(--gold); }
+
+.prof-content { animation:fadeIn .3s ease; }
+.prof-layout {
+  display:grid; grid-template-columns:220px 1fr;
+  gap:0; min-height:400px;
+}
+
+/* LEFT PANEL */
+.prof-left {
+  background:linear-gradient(180deg,var(--panel2),var(--panel));
+  border-right:2px solid var(--border);
+}
+
+.prof-avatar-box {
+  padding:12px; border-bottom:2px solid var(--border);
+  background:linear-gradient(135deg,#1a1005,#2a1e10);
+  text-align:center;
+}
+.prof-title-badge {
+  background:linear-gradient(135deg,var(--red),#6B0000);
+  color:var(--cream); font-size:.75em; font-weight:bold;
+  padding:4px 14px; letter-spacing:1px; margin-bottom:10px;
+  display:inline-block; border-radius:2px;
+  text-transform:uppercase;
+}
+.prof-avatar-img {
+  width:130px; height:156px; margin:0 auto;
+  border:3px solid var(--gold); border-radius:3px;
+  overflow:hidden; background:var(--bg);
+  box-shadow:0 0 20px rgba(212,175,55,0.3);
+}
+.prof-avatar-img svg { width:100%; height:100%; }
+
+/* Stats bars */
+.prof-stats-box { padding:12px; }
+.prof-stat-row {
+  display:flex; align-items:center; gap:6px;
+  margin-bottom:7px;
+}
+.prof-stat-label {
+  width:80px; font-size:.76em; color:var(--text-dim);
+  flex-shrink:0; text-align:right;
+}
+.prof-stat-bar-bg {
+  flex:1; height:10px; background:rgba(0,0,0,.5);
+  border-radius:2px; overflow:hidden;
+  border:1px solid rgba(255,255,255,.05);
+}
+.prof-stat-bar-fill { height:100%; border-radius:2px; transition:width .5s ease; }
+.prof-stat-val {
+  width:35px; font-size:.76em; color:var(--text);
+  text-align:right; font-weight:bold; flex-shrink:0;
+}
+.prof-divider { height:1px; background:var(--border); margin:8px 0; }
+
+/* RIGHT PANEL */
+.prof-right { padding:14px; }
+.prof-equip-label {
+  color:var(--gold); font-size:.8em; font-weight:bold;
+  letter-spacing:2px; margin-bottom:10px; text-transform:uppercase;
+}
+
+/* Equipment grid - 3 sloupce jako Gladiatus */
+.prof-equip-grid {
+  display:grid; grid-template-columns:repeat(3,72px);
+  gap:6px; margin-bottom:14px;
+  justify-content:start;
+}
+.prof-slot-empty-space { width:72px; height:72px; }
+
+.prof-slot {
+  width:72px; height:72px;
+  background:linear-gradient(135deg,rgba(0,0,0,.4),rgba(0,0,0,.25));
+  border:2px solid var(--border); border-radius:2px;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  cursor:pointer; transition:all .3s; position:relative;
+  overflow:hidden;
+}
+.prof-slot:hover { border-color:var(--gold-dark); background:rgba(212,175,55,.08); }
+.prof-slot-filled { border-color:var(--gold-dark); background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(0,0,0,.2)); }
+.prof-slot-filled:hover { border-color:var(--red); }
+
+.prof-slot-item { display:flex; flex-direction:column; align-items:center; }
+.prof-slot-icon { font-size:2em; line-height:1; }
+.prof-slot-val {
+  position:absolute; top:3px; right:4px;
+  font-size:.6em; color:var(--gold-light); font-weight:bold;
+}
+.prof-slot-empty { font-size:1.8em; opacity:.25; }
+.prof-slot-label {
+  font-size:.58em; color:var(--text-dim); margin-top:2px;
+  text-align:center; line-height:1.2;
+}
+
+/* Quality borders */
+.q-common .prof-slot, .q-common.prof-slot { border-color:#666 !important; }
+.q-uncommon .prof-slot, .q-uncommon.prof-slot { border-color:#2d8020 !important; box-shadow:0 0 6px rgba(45,128,32,.3); }
+.q-rare .prof-slot, .q-rare.prof-slot { border-color:#1a4a8b !important; box-shadow:0 0 6px rgba(26,74,139,.3); }
+.q-epic .prof-slot, .q-epic.prof-slot { border-color:#6b2fa0 !important; box-shadow:0 0 8px rgba(107,47,160,.4); }
+
+/* Guild box */
+.prof-guild-box {
+  background:rgba(0,0,0,.2); border:1px solid var(--border);
+  padding:8px 12px; border-radius:2px; margin-bottom:12px;
+}
+.prof-guild-row { display:flex; align-items:center; }
+
+/* Inventory grid */
+.prof-inv-label {
+  color:var(--gold); font-size:.78em; font-weight:bold;
+  letter-spacing:1px; margin-bottom:8px; text-transform:uppercase;
+}
+.prof-inv-grid {
+  display:grid; grid-template-columns:repeat(10,44px);
+  gap:4px;
+}
+.prof-inv-item {
+  width:44px; height:44px;
+  background:linear-gradient(135deg,rgba(0,0,0,.4),rgba(0,0,0,.2));
+  border:2px solid var(--border); border-radius:2px;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; transition:all .25s; position:relative;
+  font-size:1.4em;
+}
+.prof-inv-item:hover { border-color:var(--gold); transform:scale(1.08); }
+.prof-inv-empty { cursor:default; opacity:.4; }
+.prof-inv-empty:hover { transform:none; border-color:var(--border); }
+.prof-inv-val {
+  position:absolute; bottom:1px; right:2px;
+  font-size:.45em; color:var(--gold-light); font-weight:bold;
+  line-height:1;
+}
+/* Quality on inv items */
+.prof-inv-item.q-uncommon { border-color:#2d8020; }
+.prof-inv-item.q-rare { border-color:#1a4a8b; }
+.prof-inv-item.q-epic { border-color:#6b2fa0; box-shadow:0 0 6px rgba(107,47,160,.4); }
+.prof-inv-item.q-legendary { border-color:var(--gold); box-shadow:0 0 8px rgba(212,175,55,.5); }
+
+/* Stats table */
+.prof-table {
+  width:100%; border-collapse:collapse; font-size:.85em;
+}
+.prof-table td {
+  padding:10px 14px; border-bottom:1px solid var(--border);
+  color:var(--text);
+}
+.prof-table td:nth-child(odd) { color:var(--text-dim); width:130px; }
+.prof-table td:nth-child(even) { color:var(--gold); font-weight:bold; }
+.prof-table tr:hover td { background:rgba(212,175,55,.04); }
+
+@media(max-width:900px) {
+  .prof-layout { grid-template-columns:1fr; }
+  .prof-left { border-right:none; border-bottom:2px solid var(--border); }
+  .prof-inv-grid { grid-template-columns:repeat(5,44px); }
+}

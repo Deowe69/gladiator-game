@@ -174,7 +174,7 @@ function openView(view) {
   if (m) m.classList.add('active');
 
   const cc = document.getElementById('centerContent');
-  const views = { city, arena, dungeon, quests, shop, inventory: inventoryView, guild, tavern, forge };
+  const views = { city, arena, dungeon, quests, shop, inventory: inventoryView, profile: inventoryView, guild, tavern, forge };
   cc.innerHTML = (views[view] || (() => `<div class="panel"><div class="panel-header">🚧 Brzy</div><div class="panel-body" style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">Tato sekce bude brzy dostupná!</div></div>`))();
 }
 
@@ -356,7 +356,7 @@ function quests() {
        : claimable ? `<button class="quest-btn claim" onclick="claimQuest('${q.id}')">🎁 Převzít odměnu</button>`
        : running ? `<button class="quest-btn" disabled>⏳ Probíhá...</button>`
        : questData && !questData.done ? `<button class="quest-btn" disabled>Jiný úkol běží</button>`
-       : `<button class="quest-btn" onclick="startQuest('${q.id}')">📜 Zahájit</button>`}
+       : questData && !questData.done ? `<button class="quest-btn" disabled>⚠ Jiný úkol běží</button>` : `<button class="quest-btn" onclick="startQuest('${q.id}')">📜 Zahájit</button>`}
     </div>`;
   }).join('');
 
@@ -424,39 +424,246 @@ function shopTab(el, cat) {
 }
 
 // ===== INVENTORY =====
-function inventoryView() {
-  const slotDefs = ['⚔️ Zbraň','🛡️ Zbroj','⛑️ Helma','👟 Boty','💍 Prsten','📿 Amulet'];
-  const slots = slotDefs.map((s,i) => {
-    const eq = equipped[i];
-    return `<div class="equip-slot ${eq?'filled':''}" title="${s}">
-      <span class="equip-slot-icon">${eq ? eq.icon : s.split(' ')[0]}</span>
-      <span class="equip-slot-name">${eq ? eq.name : s.split(' ').slice(1).join(' ')}</span>
-    </div>`;
-  }).join('');
+// Slot definitions - pozice na těle
+const SLOT_DEFS = [
+  { key:'helmet',  label:'Helma',    icon:'⛑️',  row:0, col:1 },
+  { key:'weapon',  label:'Zbraň',    icon:'⚔️',  row:1, col:0 },
+  { key:'chest',   label:'Zbroj',    icon:'🧥',  row:1, col:2 },
+  { key:'shield',  label:'Štít',     icon:'🛡️',  row:1, col:3 },
+  { key:'gloves',  label:'Rukavice', icon:'🥊',  row:2, col:0 },
+  { key:'boots',   label:'Boty',     icon:'👟',  row:2, col:2 },
+  { key:'ring',    label:'Prsten',   icon:'💍',  row:3, col:0 },
+  { key:'amulet',  label:'Amulet',   icon:'📿',  row:3, col:1 },
+  { key:'belt',    label:'Pás',      icon:'🔗',  row:3, col:2 },
+];
 
-  const invSlots = Array.from({length:20}, (_,i) => {
-    const item = inventory[i];
-    return `<div class="inv-slot ${item?'filled':''}" title="${item?item.name:'Prázdné'}">
-      ${item ? `<span class="inv-slot-icon">${item.icon}</span><span class="inv-slot-name">${item.name}</span>` : ''}
+function inventoryView() {
+  const c = character;
+  const hpPct = (c.health / c.max_health * 100).toFixed(0);
+  const xpNeeded = c.level * 100;
+  const xpPct = Math.min(100, (c.experience / xpNeeded * 100)).toFixed(0);
+
+  // Equipment grid (3x4 layout jako Gladiatus)
+  function slotHTML(key, label, icon) {
+    const eq = equipped[key];
+    const qualClass = eq ? 'q-' + (eq.quality || 'common') : '';
+    return `
+    <div class="prof-slot ${eq ? 'prof-slot-filled ' + qualClass : ''}"
+         onclick="handleSlotClick('${key}')"
+         title="${eq ? eq.name + ' (' + (eq.stat||'') + ')' : label}">
+      ${eq ? `
+        <div class="prof-slot-item">
+          <span class="prof-slot-icon">${eq.icon}</span>
+          ${eq.val ? `<span class="prof-slot-val">+${eq.val}</span>` : ''}
+        </div>
+      ` : `<span class="prof-slot-empty">${icon}</span>`}
+      <span class="prof-slot-label">${label}</span>
     </div>`;
-  }).join('');
+  }
+
+  // Inventory items
+  const invHTML = inventory.map((item, i) => `
+    <div class="prof-inv-item q-${item.quality||'common'}"
+         onclick="handleInvClick(${i})"
+         title="${item.name}&#10;${item.stat}&#10;Klikni pro nasazení">
+      <span class="prof-inv-icon">${item.icon}</span>
+      <span class="prof-inv-val">${item.val ? '+'+item.val : ''}</span>
+    </div>`).join('') + Array.from({length: Math.max(0, 20-inventory.length)}, (_,i) =>
+    `<div class="prof-inv-item prof-inv-empty" title="Prázdné"></div>`
+  ).join('');
+
+  // Stat bars jako Gladiatus
+  function statBar(label, val, max, color) {
+    const pct = Math.min(100, (val/max*100)).toFixed(0);
+    return `
+    <div class="prof-stat-row">
+      <span class="prof-stat-label">${label}</span>
+      <div class="prof-stat-bar-bg">
+        <div class="prof-stat-bar-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <span class="prof-stat-val">${val}</span>
+    </div>`;
+  }
 
   return `
-  <div class="panel">
-    <div class="panel-header">🎒 Inventář</div>
-    <div class="panel-body">
-      <div class="equip-layout">
-        <div>
-          <div style="color:var(--gold);font-size:.78em;letter-spacing:1px;margin-bottom:8px;">VYBAVENÍ</div>
-          <div class="equip-slots">${slots}</div>
-        </div>
-        <div>
-          <div style="color:var(--gold);font-size:.78em;letter-spacing:1px;margin-bottom:8px;">BATOH (${inventory.length}/20)</div>
-          <div class="inv-grid">${invSlots}</div>
+  <div class="panel panel-gold">
+    <div class="panel-header">👤 Profil postavy</div>
+    <div class="panel-body" style="padding:0;">
+
+      <!-- TABS jako Gladiatus -->
+      <div class="prof-tabs">
+        <div class="prof-tab active" onclick="profTab(this,'prof-main')">⚔ Hrdina</div>
+        <div class="prof-tab" onclick="profTab(this,'prof-stats')">📊 Statistiky</div>
+        <div class="prof-tab" onclick="profTab(this,'prof-victories')">🏆 Vítězství</div>
+      </div>
+
+      <!-- MAIN TAB -->
+      <div id="prof-main" class="prof-content">
+        <div class="prof-layout">
+
+          <!-- LEVÝ PANEL - Avatar + Stats -->
+          <div class="prof-left">
+            <!-- Avatar box -->
+            <div class="prof-avatar-box">
+              <div class="prof-title-badge">${c.class}</div>
+              <div class="prof-avatar-img" id="profAvatar">${getAvatar(c.class, c.gender)}</div>
+            </div>
+
+            <!-- Stats jako Gladiatus -->
+            <div class="prof-stats-box">
+              ${statBar('Level', c.level, 100, '#D4AF37')}
+              ${statBar('Život', c.health, c.max_health, '#CC2222')}
+              ${statBar('Zkušenosti', c.experience, xpNeeded, '#D4AF37')}
+              ${statBar('Síla', c.strength, 200, '#CC6600')}
+              ${statBar('Hbitost', c.agility, 200, '#22AA22')}
+              ${statBar('Intelekt', c.intelligence, 200, '#2244CC')}
+              ${statBar('Obrana', c.defense, 200, '#AA22AA')}
+              <div class="prof-divider"></div>
+              <div class="prof-stat-row">
+                <span class="prof-stat-label">Zlato</span>
+                <span class="prof-stat-val" style="color:var(--gold)">💰 ${c.gold}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- PRAVÝ PANEL - Equipment grid -->
+          <div class="prof-right">
+            <div class="prof-equip-label">⚔ Vybavení</div>
+
+            <!-- Equipment grid jako Gladiatus (3 sloupce) -->
+            <div class="prof-equip-grid">
+              <!-- Řada 1: Helma uprostřed -->
+              <div class="prof-slot-empty-space"></div>
+              ${slotHTML('helmet','Helma','⛑️')}
+              <div class="prof-slot-empty-space"></div>
+
+              <!-- Řada 2: Zbraň | Zbroj | Štít -->
+              ${slotHTML('weapon','Zbraň','⚔️')}
+              ${slotHTML('chest','Zbroj','🧥')}
+              ${slotHTML('shield','Štít','🛡️')}
+
+              <!-- Řada 3: Rukavice | prázdno | Boty -->
+              ${slotHTML('gloves','Rukavice','🥊')}
+              <div class="prof-slot-empty-space"></div>
+              ${slotHTML('boots','Boty','👟')}
+
+              <!-- Řada 4: Prsten | Amulet | Pás -->
+              ${slotHTML('ring','Prsten','💍')}
+              ${slotHTML('amulet','Amulet','📿')}
+              ${slotHTML('belt','Pás','🔗')}
+            </div>
+
+            <!-- Guild + akce -->
+            <div class="prof-guild-box">
+              <div class="prof-guild-row">
+                <span style="color:var(--text-dim);font-size:.8em;">Gilda:</span>
+                <span style="color:var(--gold);font-size:.85em;margin-left:6px;">— Bez gildy —</span>
+              </div>
+            </div>
+
+            <!-- Inventář -->
+            <div class="prof-inv-label">🎒 Batoh (${inventory.length}/20)</div>
+            <div class="prof-inv-grid">${invHTML}</div>
+            ${inventory.length > 0 ? `<div style="font-size:.72em;color:var(--text-dim);margin-top:6px;font-style:italic;">Klikni na předmět pro nasazení · Klikni na slot pro sundání</div>` : ''}
+          </div>
+
         </div>
       </div>
+
+      <!-- STATS TAB -->
+      <div id="prof-stats" class="prof-content" style="display:none;">
+        <div style="padding:20px;">
+          <table class="prof-table">
+            <tr><td>🗡️ Síla</td><td>${c.strength}</td><td>💨 Hbitost</td><td>${c.agility}</td></tr>
+            <tr><td>🛡️ Obrana</td><td>${c.defense}</td><td>🔮 Intelekt</td><td>${c.intelligence}</td></tr>
+            <tr><td>❤️ Max Zdraví</td><td>${c.max_health}</td><td>⭐ Level</td><td>${c.level}</td></tr>
+            <tr><td>💰 Zlato</td><td>${c.gold}</td><td>📜 XP</td><td>${c.experience}</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- VICTORIES TAB -->
+      <div id="prof-victories" class="prof-content" style="display:none;">
+        <div style="padding:30px;text-align:center;color:var(--text-dim);font-style:italic;">
+          <div style="font-size:3em;margin-bottom:15px;">🏆</div>
+          Statistiky vítězství budou brzy dostupné!
+        </div>
+      </div>
+
     </div>
   </div>`;
+}
+
+// Kliknutí na slot vybavení (sundání)
+function handleSlotClick(key) {
+  if (!equipped[key]) return;
+  const item = equipped[key];
+  // Vrátit bonus
+  if (item.key && item.key !== 'health') character[item.key] -= item.val;
+  delete equipped[key];
+  localStorage.setItem('eqp', JSON.stringify(equipped));
+  inventory.push(item);
+  localStorage.setItem('inv', JSON.stringify(inventory));
+  saveChar(); updateUI();
+  openView('inventory');
+}
+
+// Kliknutí na předmět v inventáři (nasazení)
+function handleInvClick(idx) {
+  const item = inventory[idx];
+  if (!item) return;
+
+  // Určit slot podle typu předmětu
+  const slotMap = {
+    'w1':'weapon','w2':'weapon','w3':'weapon','w4':'weapon',
+    'a1':'chest','a2':'chest','a3':'chest','a4':'chest',
+    'p1':null,'p2':null,'p3':null, // lektvary se nenosí
+    'm1':'ring','m2':'amulet','m3':'weapon',
+  };
+
+  const slotKey = slotMap[item.id];
+
+  // Lektvar - použít okamžitě
+  if (slotKey === null) {
+    if (item.key === 'health') {
+      character.health = Math.min(character.max_health, character.health + item.val);
+      inventory.splice(idx, 1);
+      localStorage.setItem('inv', JSON.stringify(inventory));
+      saveChar(); updateUI();
+      alert(`🧪 Použil jsi ${item.name}! +${item.val} HP`);
+      openView('inventory');
+      return;
+    }
+  }
+
+  if (!slotKey) {
+    alert('Tento předmět nelze nasadit!');
+    return;
+  }
+
+  // Pokud je slot obsazený - vrátit starý předmět do inventáře
+  if (equipped[slotKey]) {
+    const old = equipped[slotKey];
+    if (old.key && old.key !== 'health') character[old.key] -= old.val;
+    inventory.push(old);
+  }
+
+  // Nasadit nový
+  equipped[slotKey] = item;
+  inventory.splice(idx, 1);
+  if (item.key && item.key !== 'health') character[item.key] += item.val;
+
+  localStorage.setItem('eqp', JSON.stringify(equipped));
+  localStorage.setItem('inv', JSON.stringify(inventory));
+  saveChar(); updateUI();
+  openView('inventory');
+}
+
+function profTab(el, tabId) {
+  document.querySelectorAll('.prof-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.prof-content').forEach(c => c.style.display = 'none');
+  document.getElementById(tabId).style.display = 'block';
 }
 
 // ===== TAVERN =====
@@ -532,7 +739,7 @@ function tavern() {
             <div style="color:var(--text-dim);font-size:.8em;font-style:italic;">"Zde se rodí hrdinové a zalévají vínem"</div>
           </div>
         </div>
-        <button class="tavern-heal-btn" onclick="healInTavern()">🍷 Uzdravit se · 50💰</button>
+
       </div>
 
       <!-- Quest board tabs -->
@@ -569,7 +776,9 @@ function startTavernQuest(id) {
   const q = TAVERN_QUESTS.find(x => x.id === id);
   if (!q) return;
   if (character.level < q.minLevel) { alert(`🔒 Potřebuješ úroveň ${q.minLevel}!`); return; }
-  if (tavernQuests.find(x => x.id === id)) { alert('Tento úkol již probíhá!'); return; }
+  const activeQuest = tavernQuests.find(x => !x.done);
+  if (activeQuest) { alert('⚠ Už máš aktivní úkol! Dokonči ho nebo počkej než skončí.'); return; }
+  if (tavernQuests.find(x => x.id === id && x.done)) { alert('Tento úkol jsi už splnil!'); return; }
 
   const now = Date.now();
   tavernQuests.push({ id, startTime: now, endTime: now + q.time*1000, done: false });
@@ -620,7 +829,8 @@ function guild() {
 
 // ========== COMBAT ==========
 function startCombat(idx) {
-  if (character.health <= 10) { alert('⚠ Jsi příliš zraněn! Uzdrav se v Taverně.'); return; }
+  // HP se vždy resetuje před bojem
+  character.health = character.max_health;
   currentEnemy = JSON.parse(JSON.stringify(ENEMIES[idx]));
   inCombat = true;
 
@@ -776,15 +986,6 @@ function buyItem(itemId) {
 }
 
 // ========== TAVERN ==========
-function healInTavern() {
-  if (character.gold < 50) { alert('❌ Nemáš dost zlatých (potřebuješ 50)!'); return; }
-  if (character.health === character.max_health) { alert('❤️ Jsi plně zdráv!'); return; }
-  character.gold -= 50;
-  character.health = character.max_health;
-  saveChar(); updateUI();
-  alert('🍷 Byl jsi uzdraven! Zdraví obnoveno na maximum.');
-  openView('tavern');
-}
 
 // ========== DAILY REWARD ==========
 function claimDaily() {
