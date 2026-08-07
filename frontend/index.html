@@ -91,6 +91,9 @@
           <form id="characterForm">
 
             <!-- Jméno postavy -->
+            <!-- Avatar preview -->
+            <div id="avatarPreview" style="width:100px;height:120px;margin:0 auto 20px;background:linear-gradient(135deg,#2d2417,#1a1410);border:3px solid #d4af37;border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(212,175,55,0.3);padding:5px;font-size:3em;">⚔</div>
+
             <div class="form-group">
               <label>⚔ Jméno tvého Gladiátora</label>
               <input type="text" id="charName" placeholder="Např: Marcus, Spartacus, Maximus..." maxlength="30" required />
@@ -149,6 +152,7 @@
   </div>
 
   <script src="js/api.js"></script>
+  <script src="js/avatars.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/character.js"></script>
   <script>

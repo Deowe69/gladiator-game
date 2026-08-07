@@ -6,6 +6,7 @@ function selectGender(g) {
   document.querySelectorAll('.gender-card').forEach(c => c.classList.remove('selected'));
   document.querySelector(`[data-gender="${g}"]`).classList.add('selected');
   checkReady();
+  updateAvatarPreview();
 }
 
 function selectClass(c) {
@@ -13,6 +14,7 @@ function selectClass(c) {
   document.querySelectorAll('.class-card').forEach(el => el.classList.remove('selected'));
   document.querySelector(`[data-class="${c}"]`).classList.add('selected');
   checkReady();
+  updateAvatarPreview();
 }
 
 function checkReady() {
@@ -46,3 +48,12 @@ document.getElementById('characterForm').addEventListener('submit', async e => {
     btn.textContent = '⚔ Vstoupit do Arény ⚔';
   }
 });
+
+function updateAvatarPreview() {
+  const preview = document.getElementById('avatarPreview');
+  if (!preview) return;
+  const cls = selectedClass || 'Warrior';
+  const gen = selectedGender || 'male';
+  preview.innerHTML = getAvatar(cls, gen);
+  preview.style.fontSize = '';
+}
