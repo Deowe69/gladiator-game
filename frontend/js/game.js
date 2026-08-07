@@ -424,174 +424,262 @@ function shopTab(el, cat) {
 }
 
 // ===== INVENTORY =====
-// Slot definitions - pozice na těle
-const SLOT_DEFS = [
-  { key:'helmet',  label:'Helma',    icon:'⛑️',  row:0, col:1 },
-  { key:'weapon',  label:'Zbraň',    icon:'⚔️',  row:1, col:0 },
-  { key:'chest',   label:'Zbroj',    icon:'🧥',  row:1, col:2 },
-  { key:'shield',  label:'Štít',     icon:'🛡️',  row:1, col:3 },
-  { key:'gloves',  label:'Rukavice', icon:'🥊',  row:2, col:0 },
-  { key:'boots',   label:'Boty',     icon:'👟',  row:2, col:2 },
-  { key:'ring',    label:'Prsten',   icon:'💍',  row:3, col:0 },
-  { key:'amulet',  label:'Amulet',   icon:'📿',  row:3, col:1 },
-  { key:'belt',    label:'Pás',      icon:'🔗',  row:3, col:2 },
-];
+// Slot definitions
+const SLOT_DEFS = {
+  helmet:  { label:'Helma',    icon:'⛑️',  key:'defense',  bonus:3  },
+  weapon:  { label:'Zbraň',    icon:'⚔️',  key:'strength', bonus:6  },
+  chest:   { label:'Zbroj',    icon:'🧥',  key:'defense',  bonus:8  },
+  shield:  { label:'Štít',     icon:'🛡️',  key:'defense',  bonus:5  },
+  gloves:  { label:'Rukavice', icon:'🥊',  key:'strength', bonus:3  },
+  boots:   { label:'Boty',     icon:'👟',  key:'agility',  bonus:4  },
+  ring:    { label:'Prsten',   icon:'💍',  key:'agility',  bonus:3  },
+  amulet:  { label:'Amulet',   icon:'📿',  key:'intelligence',bonus:4},
+  belt:    { label:'Pás',      icon:'🔗',  key:'defense',  bonus:2  },
+};
+
+const QUALITY_CONFIG = {
+  common:    { color:'#888',   label:'Běžný',     glow:'' },
+  uncommon:  { color:'#3a9a2a',label:'Neobvyklý', glow:'0 0 8px rgba(58,154,42,.5)' },
+  rare:      { color:'#2255bb',label:'Vzácný',    glow:'0 0 8px rgba(34,85,187,.5)' },
+  epic:      { color:'#8833cc',label:'Epický',    glow:'0 0 10px rgba(136,51,204,.6)' },
+  legendary: { color:'#D4AF37',label:'Legendární',glow:'0 0 14px rgba(212,175,55,.7)' },
+};
 
 function inventoryView() {
   const c = character;
-  const hpPct = (c.health / c.max_health * 100).toFixed(0);
   const xpNeeded = c.level * 100;
-  const xpPct = Math.min(100, (c.experience / xpNeeded * 100)).toFixed(0);
+  const xpPct = Math.min(100, (c.experience / xpNeeded * 100)).toFixed(1);
 
-  // Equipment grid (3x4 layout jako Gladiatus)
-  function slotHTML(key, label, icon) {
-    const eq = equipped[key];
-    const qualClass = eq ? 'q-' + (eq.quality || 'common') : '';
+  // Total bonusy z equipment
+  const totalStr  = Object.values(equipped).filter(e=>e&&e.key==='strength').reduce((a,e)=>a+e.val,0);
+  const totalDef  = Object.values(equipped).filter(e=>e&&e.key==='defense').reduce((a,e)=>a+e.val,0);
+  const totalAgi  = Object.values(equipped).filter(e=>e&&e.key==='agility').reduce((a,e)=>a+e.val,0);
+  const totalInt  = Object.values(equipped).filter(e=>e&&e.key==='intelligence').reduce((a,e)=>a+e.val,0);
+  const totalDmg  = Math.floor((c.strength + totalStr) * 1.5);
+  const totalArmor= (c.defense + totalDef) * 3;
+
+  function slotHTML(key) {
+    const def = SLOT_DEFS[key];
+    const eq  = equipped[key];
+    const qcfg = eq ? (QUALITY_CONFIG[eq.quality||'common']) : null;
     return `
-    <div class="prof-slot ${eq ? 'prof-slot-filled ' + qualClass : ''}"
+    <div class="pslot ${eq?'pslot-eq':''}"
+         style="${eq ? 'border-color:'+qcfg.color+';box-shadow:'+qcfg.glow : ''}"
          onclick="handleSlotClick('${key}')"
-         title="${eq ? eq.name + ' (' + (eq.stat||'') + ')' : label}">
+         data-tooltip="${eq ? eq.name+'\n'+eq.stat+'\nKlikni pro sundání' : def.label+' (prázdný)'}">
       ${eq ? `
-        <div class="prof-slot-item">
-          <span class="prof-slot-icon">${eq.icon}</span>
-          ${eq.val ? `<span class="prof-slot-val">+${eq.val}</span>` : ''}
-        </div>
-      ` : `<span class="prof-slot-empty">${icon}</span>`}
-      <span class="prof-slot-label">${label}</span>
+        <div class="pslot-icon">${eq.icon}</div>
+        <div class="pslot-stat" style="color:${qcfg.color}">+${eq.val}</div>
+      ` : `
+        <div class="pslot-empty-icon">${def.icon}</div>
+      `}
+      <div class="pslot-label">${def.label}</div>
     </div>`;
   }
 
-  // Inventory items
-  const invHTML = inventory.map((item, i) => `
-    <div class="prof-inv-item q-${item.quality||'common'}"
-         onclick="handleInvClick(${i})"
-         title="${item.name}&#10;${item.stat}&#10;Klikni pro nasazení">
-      <span class="prof-inv-icon">${item.icon}</span>
-      <span class="prof-inv-val">${item.val ? '+'+item.val : ''}</span>
-    </div>`).join('') + Array.from({length: Math.max(0, 20-inventory.length)}, (_,i) =>
-    `<div class="prof-inv-item prof-inv-empty" title="Prázdné"></div>`
-  ).join('');
-
-  // Stat bars jako Gladiatus
-  function statBar(label, val, max, color) {
-    const pct = Math.min(100, (val/max*100)).toFixed(0);
+  function statRow(icon, label, base, bonus, color, max) {
+    const total = base + (bonus||0);
+    const pct = Math.min(100, total/max*100).toFixed(1);
     return `
-    <div class="prof-stat-row">
-      <span class="prof-stat-label">${label}</span>
-      <div class="prof-stat-bar-bg">
-        <div class="prof-stat-bar-fill" style="width:${pct}%;background:${color}"></div>
+    <div class="pstat-row">
+      <div class="pstat-left">
+        <span class="pstat-icon">${icon}</span>
+        <span class="pstat-name">${label}</span>
       </div>
-      <span class="prof-stat-val">${val}</span>
+      <div class="pstat-bar-wrap">
+        <div class="pstat-bar-bg">
+          <div class="pstat-bar-fill" style="width:${pct}%;background:${color}"></div>
+          ${bonus > 0 ? `<div class="pstat-bar-bonus" style="left:${Math.min(100,(base/max*100)).toFixed(1)}%;width:${Math.min(100-base/max*100,(bonus/max*100)).toFixed(1)}%;background:${color};opacity:.5"></div>` : ''}
+        </div>
+      </div>
+      <div class="pstat-val">
+        <span style="color:${color}">${total}</span>
+        ${bonus > 0 ? `<span class="pstat-bonus">+${bonus}</span>` : ''}
+      </div>
     </div>`;
   }
+
+  const invHTML = Array.from({length:20}, (_,i) => {
+    const item = inventory[i];
+    if (!item) return `<div class="pinv-slot pinv-empty"></div>`;
+    const qcfg = QUALITY_CONFIG[item.quality||'common'];
+    return `
+    <div class="pinv-slot pinv-filled"
+         style="border-color:${qcfg.color};box-shadow:${qcfg.glow}"
+         onclick="handleInvClick(${i})"
+         title="${item.name}&#10;${item.stat}&#10;Kvalita: ${qcfg.label}">
+      <div class="pinv-icon">${item.icon}</div>
+      <div class="pinv-val" style="color:${qcfg.color}">+${item.val||''}</div>
+      <div class="pinv-name">${item.name.split(' ').slice(-1)[0]}</div>
+    </div>`;
+  }).join('');
 
   return `
-  <div class="panel panel-gold">
-    <div class="panel-header">👤 Profil postavy</div>
-    <div class="panel-body" style="padding:0;">
+  <div class="prof-panel">
 
-      <!-- TABS jako Gladiatus -->
-      <div class="prof-tabs">
-        <div class="prof-tab active" onclick="profTab(this,'prof-main')">⚔ Hrdina</div>
-        <div class="prof-tab" onclick="profTab(this,'prof-stats')">📊 Statistiky</div>
-        <div class="prof-tab" onclick="profTab(this,'prof-victories')">🏆 Vítězství</div>
+    <!-- HEADER s tabs -->
+    <div class="prof-header">
+      <div class="prof-header-name">
+        <span class="prof-header-icon">${c.class==='Warrior'?'🗡️':c.class==='Mage'?'🔮':c.class==='Rogue'?'🥷':'🛡️'}</span>
+        <span>${c.name}</span>
+        <span class="prof-header-class">${c.class}</span>
       </div>
-
-      <!-- MAIN TAB -->
-      <div id="prof-main" class="prof-content">
-        <div class="prof-layout">
-
-          <!-- LEVÝ PANEL - Avatar + Stats -->
-          <div class="prof-left">
-            <!-- Avatar box -->
-            <div class="prof-avatar-box">
-              <div class="prof-title-badge">${c.class}</div>
-              <div class="prof-avatar-img" id="profAvatar">${getAvatar(c.class, c.gender)}</div>
-            </div>
-
-            <!-- Stats jako Gladiatus -->
-            <div class="prof-stats-box">
-              ${statBar('Level', c.level, 100, '#D4AF37')}
-              ${statBar('Život', c.health, c.max_health, '#CC2222')}
-              ${statBar('Zkušenosti', c.experience, xpNeeded, '#D4AF37')}
-              ${statBar('Síla', c.strength, 200, '#CC6600')}
-              ${statBar('Hbitost', c.agility, 200, '#22AA22')}
-              ${statBar('Intelekt', c.intelligence, 200, '#2244CC')}
-              ${statBar('Obrana', c.defense, 200, '#AA22AA')}
-              <div class="prof-divider"></div>
-              <div class="prof-stat-row">
-                <span class="prof-stat-label">Zlato</span>
-                <span class="prof-stat-val" style="color:var(--gold)">💰 ${c.gold}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- PRAVÝ PANEL - Equipment grid -->
-          <div class="prof-right">
-            <div class="prof-equip-label">⚔ Vybavení</div>
-
-            <!-- Equipment grid jako Gladiatus (3 sloupce) -->
-            <div class="prof-equip-grid">
-              <!-- Řada 1: Helma uprostřed -->
-              <div class="prof-slot-empty-space"></div>
-              ${slotHTML('helmet','Helma','⛑️')}
-              <div class="prof-slot-empty-space"></div>
-
-              <!-- Řada 2: Zbraň | Zbroj | Štít -->
-              ${slotHTML('weapon','Zbraň','⚔️')}
-              ${slotHTML('chest','Zbroj','🧥')}
-              ${slotHTML('shield','Štít','🛡️')}
-
-              <!-- Řada 3: Rukavice | prázdno | Boty -->
-              ${slotHTML('gloves','Rukavice','🥊')}
-              <div class="prof-slot-empty-space"></div>
-              ${slotHTML('boots','Boty','👟')}
-
-              <!-- Řada 4: Prsten | Amulet | Pás -->
-              ${slotHTML('ring','Prsten','💍')}
-              ${slotHTML('amulet','Amulet','📿')}
-              ${slotHTML('belt','Pás','🔗')}
-            </div>
-
-            <!-- Guild + akce -->
-            <div class="prof-guild-box">
-              <div class="prof-guild-row">
-                <span style="color:var(--text-dim);font-size:.8em;">Gilda:</span>
-                <span style="color:var(--gold);font-size:.85em;margin-left:6px;">— Bez gildy —</span>
-              </div>
-            </div>
-
-            <!-- Inventář -->
-            <div class="prof-inv-label">🎒 Batoh (${inventory.length}/20)</div>
-            <div class="prof-inv-grid">${invHTML}</div>
-            ${inventory.length > 0 ? `<div style="font-size:.72em;color:var(--text-dim);margin-top:6px;font-style:italic;">Klikni na předmět pro nasazení · Klikni na slot pro sundání</div>` : ''}
-          </div>
-
-        </div>
+      <div class="prof-tabs2">
+        <div class="prof-tab2 active" onclick="profTab(this,'ptab-main')">⚔ Hrdina</div>
+        <div class="prof-tab2" onclick="profTab(this,'ptab-stats')">📊 Statistiky</div>
+        <div class="prof-tab2" onclick="profTab(this,'ptab-victories')">🏆 Vítězství</div>
       </div>
-
-      <!-- STATS TAB -->
-      <div id="prof-stats" class="prof-content" style="display:none;">
-        <div style="padding:20px;">
-          <table class="prof-table">
-            <tr><td>🗡️ Síla</td><td>${c.strength}</td><td>💨 Hbitost</td><td>${c.agility}</td></tr>
-            <tr><td>🛡️ Obrana</td><td>${c.defense}</td><td>🔮 Intelekt</td><td>${c.intelligence}</td></tr>
-            <tr><td>❤️ Max Zdraví</td><td>${c.max_health}</td><td>⭐ Level</td><td>${c.level}</td></tr>
-            <tr><td>💰 Zlato</td><td>${c.gold}</td><td>📜 XP</td><td>${c.experience}</td></tr>
-          </table>
-        </div>
-      </div>
-
-      <!-- VICTORIES TAB -->
-      <div id="prof-victories" class="prof-content" style="display:none;">
-        <div style="padding:30px;text-align:center;color:var(--text-dim);font-style:italic;">
-          <div style="font-size:3em;margin-bottom:15px;">🏆</div>
-          Statistiky vítězství budou brzy dostupné!
-        </div>
-      </div>
-
     </div>
+
+    <!-- TAB: HRDINA -->
+    <div id="ptab-main" class="ptab-content">
+      <div class="prof-body">
+
+        <!-- LEVÝ SLOUPEC -->
+        <div class="prof-col-left">
+
+          <!-- Avatar -->
+          <div class="prof-avatar-wrap">
+            <div class="prof-avatar-frame">
+              <div class="prof-avatar-inner">${getAvatar(c.class, c.gender)}</div>
+              <div class="prof-avatar-glow"></div>
+            </div>
+            <div class="prof-level-badge">
+              <span class="prof-level-num">${c.level}</span>
+              <span class="prof-level-txt">LEVEL</span>
+            </div>
+          </div>
+
+          <!-- XP bar -->
+          <div class="prof-xp-wrap">
+            <div class="prof-xp-label">
+              <span>Zkušenosti</span>
+              <span>${c.experience} / ${xpNeeded}</span>
+            </div>
+            <div class="prof-xp-bg">
+              <div class="prof-xp-fill" style="width:${xpPct}%"></div>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="prof-stats-panel">
+            <div class="prof-stats-title">⚔ Atributy</div>
+            ${statRow('❤️','Zdraví',    c.max_health, 0,        '#CC2222', 500)}
+            ${statRow('⚔️','Síla',      c.strength,   totalStr,  '#E87020', 300)}
+            ${statRow('🛡️','Obrana',    c.defense,    totalDef,  '#8833CC', 300)}
+            ${statRow('💨','Hbitost',   c.agility,    totalAgi,  '#22AA44', 300)}
+            ${statRow('🔮','Intelekt',  c.intelligence,totalInt, '#2266DD', 300)}
+            <div class="prof-stats-divider"></div>
+            <div class="prof-combat-stats">
+              <div class="prof-cs-item">
+                <span class="prof-cs-icon">⚔</span>
+                <span class="prof-cs-label">Poškození</span>
+                <span class="prof-cs-val">${Math.max(1,c.strength-5)} - ${totalDmg}</span>
+              </div>
+              <div class="prof-cs-item">
+                <span class="prof-cs-icon">🛡</span>
+                <span class="prof-cs-label">Zbroj</span>
+                <span class="prof-cs-val">${totalArmor}</span>
+              </div>
+              <div class="prof-cs-item">
+                <span class="prof-cs-icon">💰</span>
+                <span class="prof-cs-label">Zlato</span>
+                <span class="prof-cs-val" style="color:var(--gold)">${c.gold}</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- PRAVÝ SLOUPEC -->
+        <div class="prof-col-right">
+
+          <!-- Equipment -->
+          <div class="prof-equip-section">
+            <div class="prof-section-title">⚔ Vybavení</div>
+            <div class="prof-equip-body">
+
+              <!-- Equipment grid 3x4 jako Gladiatus -->
+              <div class="pslots-grid">
+                <div class="pslots-spacer"></div>
+                ${slotHTML('helmet')}
+                <div class="pslots-spacer"></div>
+
+                ${slotHTML('weapon')}
+                ${slotHTML('chest')}
+                ${slotHTML('shield')}
+
+                ${slotHTML('gloves')}
+                <div class="pslots-spacer"></div>
+                ${slotHTML('boots')}
+
+                ${slotHTML('ring')}
+                ${slotHTML('amulet')}
+                ${slotHTML('belt')}
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Inventář -->
+          <div class="prof-inv-section">
+            <div class="prof-section-title">
+              🎒 Batoh
+              <span class="prof-inv-count">${inventory.length}/20</span>
+            </div>
+            <div class="pinv-grid">${invHTML}</div>
+            ${inventory.length > 0 ? '<div class="prof-inv-hint">Klikni na předmět pro nasazení · Klikni na slot pro sundání</div>' : '<div class="prof-inv-hint">Inventář je prázdný — nakup vybavení na Trhu!</div>'}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: STATISTIKY -->
+    <div id="ptab-stats" class="ptab-content" style="display:none;">
+      <div class="prof-stats-tab">
+        <div class="pstat-block">
+          <div class="pstat-block-title">⚔ Bojové statistiky</div>
+          <div class="pstat-grid">
+            <div class="pstat-cell"><div class="pstat-cell-val">${c.strength + totalStr}</div><div class="pstat-cell-name">Síla</div></div>
+            <div class="pstat-cell"><div class="pstat-cell-val">${c.defense + totalDef}</div><div class="pstat-cell-name">Obrana</div></div>
+            <div class="pstat-cell"><div class="pstat-cell-val">${c.agility + totalAgi}</div><div class="pstat-cell-name">Hbitost</div></div>
+            <div class="pstat-cell"><div class="pstat-cell-val">${c.intelligence + totalInt}</div><div class="pstat-cell-name">Intelekt</div></div>
+            <div class="pstat-cell"><div class="pstat-cell-val">${totalDmg}</div><div class="pstat-cell-name">Max poškození</div></div>
+            <div class="pstat-cell"><div class="pstat-cell-val">${totalArmor}</div><div class="pstat-cell-name">Zbroj</div></div>
+          </div>
+        </div>
+        <div class="pstat-block">
+          <div class="pstat-block-title">📜 Obecné</div>
+          <div class="pstat-grid">
+            <div class="pstat-cell"><div class="pstat-cell-val" style="color:var(--gold)">${c.level}</div><div class="pstat-cell-name">Úroveň</div></div>
+            <div class="pstat-cell"><div class="pstat-cell-val">${c.experience}</div><div class="pstat-cell-name">Zkušenosti</div></div>
+            <div class="pstat-cell"><div class="pstat-cell-val" style="color:var(--gold)">${c.gold}</div><div class="pstat-cell-name">Zlato</div></div>
+            <div class="pstat-cell"><div class="pstat-cell-val">${c.max_health}</div><div class="pstat-cell-name">Max zdraví</div></div>
+            <div class="pstat-cell"><div class="pstat-cell-val">${inventory.length}</div><div class="pstat-cell-name">Předmětů</div></div>
+            <div class="pstat-cell"><div class="pstat-cell-val">${Object.values(equipped).filter(Boolean).length}</div><div class="pstat-cell-name">Nasazeno</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: VÍTĚZSTVÍ -->
+    <div id="ptab-victories" class="ptab-content" style="display:none;">
+      <div style="padding:50px;text-align:center;">
+        <div style="font-size:4em;margin-bottom:20px;">🏆</div>
+        <div style="color:var(--gold);font-size:1.2em;margin-bottom:10px;">Síň slávy</div>
+        <div style="color:var(--text-dim);font-style:italic;">Statistiky vítězství přijdou brzy...</div>
+      </div>
+    </div>
+
   </div>`;
+}
+
+function profTab(el, tabId) {
+  document.querySelectorAll('.prof-tab2').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.ptab-content').forEach(c => c.style.display = 'none');
+  document.getElementById(tabId).style.display = 'block';
 }
 
 // Kliknutí na slot vybavení (sundání)
