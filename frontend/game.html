@@ -3,68 +3,84 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Olympus - Aréna Bohů</title>
+  <title>Gladiátor - Aréna Bohů</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/game.css">
 </head>
 <body>
 
-<!-- ===== NAVBAR ===== -->
-<nav class="navbar">
-  <span class="nav-logo">🏛 OLYMPUS</span>
-  <div class="nav-char-info">
-    <span class="nav-char-name" id="navName">-</span>
-    <span class="nav-char-level" id="navLevel">1</span>
+<!-- TOP MENU BAR -->
+<div class="top-menu">
+  <div class="top-menu-left">
+    <div class="game-title">⚔ OLYMPUS ⚔</div>
   </div>
-  <div class="nav-bars">
-    <div class="nav-bar-row">
-      <span class="nav-bar-label">❤</span>
-      <div class="nav-bar-bg"><div class="nav-bar-fill hp-bar-fill" id="hpBar" style="width:100%"></div></div>
-      <span class="nav-bar-val" id="hpVal">100/100</span>
-    </div>
-    <div class="nav-bar-row">
-      <span class="nav-bar-label">⭐</span>
-      <div class="nav-bar-bg"><div class="nav-bar-fill xp-bar-fill" id="xpBar" style="width:0%"></div></div>
-      <span class="nav-bar-val" id="xpVal">0 XP</span>
-    </div>
+  <nav class="top-nav">
+    <a class="top-nav-item active" onclick="openView('city')">🏛 Město</a>
+    <a class="top-nav-item" onclick="openView('arena')">⚔ Aréna</a>
+    <a class="top-nav-item" onclick="openView('dungeon')">🏰 Dungeon</a>
+    <a class="top-nav-item" onclick="openView('quests')">📜 Úkoly</a>
+    <a class="top-nav-item" onclick="openView('shop')">🏪 Obchod</a>
+    <a class="top-nav-item" onclick="openView('tavern')">🍺 Taverna</a>
+    <a class="top-nav-item" onclick="openView('inventory')">🎒 Inventář</a>
+    <a class="top-nav-item" onclick="openView('profile')">👤 Profil</a>
+  </nav>
+  <div class="top-menu-right">
+    <div class="gold-display">💰 <span id="navGold">0</span></div>
+    <button class="btn-logout" onclick="logout()">Odhlásit</button>
   </div>
-  <div class="nav-resources">
-    <div class="nav-res"><span class="nav-res-icon">💰</span><span class="nav-res-val" id="navGold">0</span></div>
-    <div class="nav-res"><span class="nav-res-icon">💎</span><span class="nav-res-val" id="navGems">0</span></div>
-  </div>
-  <button class="btn-logout" onclick="logout()">⬅ Odhlásit</button>
-</nav>
+</div>
 
-<!-- ===== MAIN WRAP ===== -->
-<div class="game-wrap">
+<!-- MAIN CONTAINER -->
+<div class="game-container">
 
   <!-- LEFT SIDEBAR -->
-  <aside class="sidebar-left">
-    <div class="char-card">
-      <div class="char-avatar-sm" id="charAvatarSm"></div>
-      <div class="char-name-sm" id="charNameSm">-</div>
-      <div class="char-class-sm" id="charClassSm">-</div>
-      <div class="greek-divider"></div>
-      <div class="stat-mini"><span class="stat-mini-icon">❤️</span><span class="stat-mini-name">Zdraví</span><span class="stat-mini-val" id="sHealth">-</span></div>
-      <div class="stat-mini"><span class="stat-mini-icon">⚔️</span><span class="stat-mini-name">Síla</span><span class="stat-mini-val" id="sStr">-</span></div>
-      <div class="stat-mini"><span class="stat-mini-icon">🛡️</span><span class="stat-mini-name">Obrana</span><span class="stat-mini-val" id="sDef">-</span></div>
-      <div class="stat-mini"><span class="stat-mini-icon">💨</span><span class="stat-mini-name">Hbitost</span><span class="stat-mini-val" id="sAgi">-</span></div>
-      <div class="stat-mini"><span class="stat-mini-icon">🔮</span><span class="stat-mini-name">Intelekt</span><span class="stat-mini-val" id="sInt">-</span></div>
+  <aside class="sidebar left-sidebar">
+    <div class="sidebar-char">
+      <div class="char-avatar" id="charAvatarSm"></div>
+      <div class="char-name" id="charNameSm">-</div>
+      <div class="char-class" id="charClassSm">-</div>
+      <div class="char-level">Lv. <span id="charLevelSm">1</span></div>
     </div>
-    <div class="side-divider"></div>
-    <nav class="side-menu">
-      <div class="side-item" onclick="openView('profile')" id="menu-profile"><span class="side-item-icon">👤</span>Profil</div>
-      <div class="side-item active" onclick="openView('city')" id="menu-city"><span class="side-item-icon">🏛</span>Město</div>
-      <div class="side-item" onclick="openView('arena')" id="menu-arena"><span class="side-item-icon">⚔️</span>Aréna</div>
-      <div class="side-item" onclick="openView('dungeon')" id="menu-dungeon"><span class="side-item-icon">🏰</span>Dungeon</div>
-      <div class="side-item" onclick="openView('quests')" id="menu-quests"><span class="side-item-icon">📜</span>Úkoly</div>
-      <div class="side-item" onclick="openView('shop')" id="menu-shop"><span class="side-item-icon">🏪</span>Obchod</div>
-      <div class="side-item" onclick="openView('inventory')" id="menu-inventory"><span class="side-item-icon">🎒</span>Inventář</div>
-      <div class="side-divider"></div>
-      <div class="side-item" onclick="openView('guild')" id="menu-guild"><span class="side-item-icon">🏰</span>Gildy</div>
-      <div class="side-item" onclick="openView('tavern')" id="menu-tavern"><span class="side-item-icon">🍺</span>Taverna</div>
-      <div class="side-item" onclick="openView('forge')" id="menu-forge"><span class="side-item-icon">🔨</span>Kovárna</div>
-    </nav>
+
+    <div class="sidebar-stats">
+      <div class="stat-row">
+        <span class="stat-icon">❤️</span>
+        <span class="stat-name">Zdraví</span>
+        <span class="stat-val" id="sHealth">-</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-icon">⚔️</span>
+        <span class="stat-name">Síla</span>
+        <span class="stat-val" id="sStr">-</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-icon">🛡️</span>
+        <span class="stat-name">Obrana</span>
+        <span class="stat-val" id="sDef">-</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-icon">💨</span>
+        <span class="stat-name">Hbitost</span>
+        <span class="stat-val" id="sAgi">-</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-icon">🔮</span>
+        <span class="stat-name">Intelekt</span>
+        <span class="stat-val" id="sInt">-</span>
+      </div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-info">
+      <div class="info-label">Zkušenosti</div>
+      <div class="xp-bar-container">
+        <div class="xp-bar-bg">
+          <div class="xp-bar-fill" id="xpBar" style="width: 0%"></div>
+        </div>
+        <div class="xp-text" id="xpVal">0 XP</div>
+      </div>
+    </div>
   </aside>
 
   <!-- CENTER CONTENT -->
@@ -73,56 +89,38 @@
   </main>
 
   <!-- RIGHT SIDEBAR -->
-  <aside class="sidebar-right">
-    <!-- Daily Reward -->
-    <div class="widget">
-      <div class="widget-header">🎁 Denní odměna</div>
-      <div class="widget-body">
-        <div class="daily-box">
-          <div class="daily-icon">🏺</div>
-          <div class="daily-desc">Přihlas se každý den pro odměnu!</div>
-          <button class="daily-btn" id="dailyBtn" onclick="claimDaily()">Převzít</button>
-        </div>
-      </div>
+  <aside class="sidebar right-sidebar">
+    <div class="sidebar-widget">
+      <div class="widget-title">🏆 Leaderboard</div>
+      <div class="leaderboard" id="leaderboard"></div>
     </div>
-    <!-- Leaderboard -->
-    <div class="widget">
-      <div class="widget-header">🏆 Žebříček</div>
-      <div class="widget-body">
-        <div id="leaderboard">
-          <div style="text-align:center;color:var(--text-dim);font-size:.78em;padding:10px;">⏳ Načítání...</div>
-        </div>
-      </div>
-    </div>
-    <!-- News -->
-    <div class="widget">
-      <div class="widget-header">📰 Novinky</div>
-      <div class="widget-body">
-        <div class="news-row"><span>⚡</span><span>Zeus seslal bouři na Athény!</span></div>
-        <div class="news-row"><span>🏆</span><span>Leonidas vyhrál Turnaj bohů</span></div>
-        <div class="news-row"><span>🏺</span><span>Nové relikvie v obchodě</span></div>
-        <div class="news-row"><span>⚔️</span><span>Aréna - sezóna 3 začala</span></div>
-      </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-widget">
+      <div class="widget-title">🎁 Denní odměna</div>
+      <button class="btn-daily" id="dailyBtn" onclick="claimDaily()">Převzít odměnu</button>
     </div>
   </aside>
 
 </div>
 
-<!-- LEVEL UP MODAL -->
-<div class="modal-overlay" id="levelUpModal" style="display:none;">
-  <div class="modal">
-    <span class="levelup-star">⭐</span>
-    <div class="modal-title">LEVEL UP!</div>
-    <div class="modal-body">
-      <p>Dosáhl jsi úrovně <strong id="newLevel">2</strong>!</p>
-      <p class="modal-bonus">+10 ❤️ &nbsp; +2 ⚔️ &nbsp; +1 🛡️</p>
-    </div>
-    <button onclick="document.getElementById('levelUpModal').style.display='none'" style="background:linear-gradient(135deg,#A07820,#D4AF37);color:#1A1208;border:2px solid #D4AF37;padding:12px 25px;font-family:'Cinzel',serif;font-size:.9em;cursor:pointer;border-radius:2px;font-weight:bold;letter-spacing:2px;">⚔ Sláva Olympu!</button>
+<!-- MODALS -->
+<div class="modal-overlay" id="levelUpModal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-icon">⭐</div>
+    <h2>POSTOUPIL JSI!</h2>
+    <p>Dosáhl jsi úrovně <strong id="newLevel">2</strong>!</p>
+    <p class="modal-rewards">+10 Zdraví · +2 Síla · +1 Obrana · +1 Hbitost</p>
+    <button onclick="document.getElementById('levelUpModal').style.display='none'" class="modal-btn">⚔ Sláva Olympu!</button>
   </div>
 </div>
 
+<!-- SCRIPTS -->
 <script src="js/api.js"></script>
-<script src="js/avatars.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/character.js"></script>
 <script src="js/game.js"></script>
+
 </body>
 </html>
