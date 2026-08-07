@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gladiátor - Aréna Bohů</title>
+  <title>Olympus</title>
   <link rel="stylesheet" href="css/game.css">
 </head>
 <body>
@@ -55,7 +55,7 @@
       <div class="hb-act-row">
         <span class="hb-act-icon">🗺️</span>
         <span class="hb-act-count">12 / 12</span>
-        <button class="btn-green" onclick="openView('quests')">Jít na výpravu</button>
+        <button class="btn-green" onclick="openView('expedition')">Jít na výpravu</button>
       </div>
       <div class="hb-act-row">
         <span class="hb-act-icon">🏰</span>
@@ -90,7 +90,7 @@
 
     <div class="banner-body">
       <div class="menu-list">
-        <a class="menu-btn active" id="menu-city"    onclick="openView('city')">Přehled</a>
+        <a class="menu-btn active" id="menu-profile" onclick="openView('profile')">Přehled</a>
         <a class="menu-btn"        id="menu-quests"  onclick="openView('quests')">Mise</a>
         <a class="menu-btn"        id="menu-guild"   onclick="openView('guild')">Gilda</a>
         <a class="menu-btn"        id="menu-hall"    onclick="openView('hall')">Síň slávy</a>
@@ -102,7 +102,9 @@
           <div class="sub-tab active" onclick="subTab(this,0)">🏛️</div>
           <div class="sub-tab" onclick="subTab(this,1)">🗺️</div>
         </div>
-        <div class="submenu-body">
+        <!-- záložka 0: budovy města -->
+        <div class="submenu-body" id="submenu-city">
+          <a class="sub-item" id="menu-city"      onclick="openView('city')">Město</a>
           <a class="sub-item" id="menu-work"      onclick="openView('work')">Práce</a>
           <a class="sub-item" id="menu-arena"     onclick="openView('arena')">Aréna</a>
           <a class="sub-item" id="menu-training"  onclick="openView('training')">Cvičiště</a>
@@ -115,6 +117,9 @@
           <a class="sub-item" id="menu-auction"   onclick="openView('auction')">Aukční síň</a>
           <a class="sub-item" id="menu-inventory" onclick="openView('inventory')">Tržiště</a>
         </div>
+
+        <!-- záložka 1: mapa výprav (plní game.js) -->
+        <div class="submenu-body" id="submenu-map" style="display:none"></div>
       </div>
     </div>
 
@@ -175,6 +180,10 @@
   function subTab(el, idx) {
     document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
+    document.getElementById('submenu-city').style.display = idx === 0 ? '' : 'none';
+    const map = document.getElementById('submenu-map');
+    map.style.display = idx === 1 ? '' : 'none';
+    if (idx === 1) map.innerHTML = expedMenuHTML();
   }
 </script>
 

@@ -437,7 +437,17 @@ body::after{right:0;transform:scaleX(-1)}
 .slot:hover{border-color:var(--red);box-shadow:inset 0 2px 6px rgba(90,70,40,.3),0 0 6px rgba(160,40,40,.4)}
 .slot.drag-over{border-color:var(--green);background:linear-gradient(180deg,#e2d3a8,#cdb88c)}
 .slot.dragging{opacity:.45}
-.slot .s-ico{font-size:24px;line-height:1}
+/* ikonky předmětů – obrázek i emoji se chovají stejně */
+.ico{display:block;object-fit:contain;image-rendering:auto}
+span.ico{line-height:1;text-align:center}
+
+.slot .s-ico{font-size:24px;line-height:1;width:38px;height:38px}
+img.s-ico{width:38px;height:38px}
+.slot.wpn .s-ico{width:78px;height:88px}
+.slot.body .s-ico,.slot.shld .s-ico{width:44px;height:44px}
+.s-ico-sm{width:26px;height:26px;font-size:18px}
+.b-ico{width:42px;height:42px;font-size:20px}
+img.shop-card-icon{width:44px;height:44px;margin:0 auto 5px}
 .slot .s-lbl{font-size:9px;color:#7a6242;margin-top:2px}
 .slot .s-nm{font-size:9.5px;color:#3a2a12;font-weight:bold;line-height:1.15;margin-top:2px}
 .slot.empty .s-ico{opacity:.28;filter:grayscale(1)}
@@ -586,10 +596,10 @@ body::after{right:0;transform:scaleX(-1)}
 }
 
 /* =========================================================
-   OSTATNĂŤ SEKCE (arĂ©na, dungeon, Ăşkoly, obchod, tavernaâ€¦)
+   OSTATNÍ SEKCE (aréna, dungeon, úkoly, obchod, taverna…)
    ========================================================= */
 
-/* ---- tlaÄŤĂ­tka ---- */
+/* ---- tlačítka ---- */
 .parchment button,
 .parchment .opp-btn, .parchment .dungeon-btn, .parchment .quest-btn,
 .parchment .shop-btn, .parchment .tq-btn, .parchment .tq-start,
@@ -615,7 +625,7 @@ body::after{right:0;transform:scaleX(-1)}
   background:linear-gradient(180deg,#c44040 0%,#a02525 45%,#801616 100%);
 }
 
-/* ---- taby uvnitĹ™ panelĹŻ ---- */
+/* ---- taby uvnitř panelů ---- */
 .arena-tabs,.quest-tabs,.tavern-tabs,.profile-tabs,.shop-merchants{
   display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;
 }
@@ -635,7 +645,7 @@ body::after{right:0;transform:scaleX(-1)}
 .ptab-content{display:none}
 .ptab-content.active{display:block}
 
-/* ---- seznamy / mĹ™Ă­Ĺľky ---- */
+/* ---- seznamy / mřížky ---- */
 .opponents-list,.dungeon-list,.quest-list,.tavern-board,.stat-list{
   display:flex;flex-direction:column;gap:7px;
 }
@@ -645,7 +655,7 @@ body::after{right:0;transform:scaleX(-1)}
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
 .stat-cells{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 
-/* ---- Ĺ™Ăˇdek soupeĹ™e / dungeonu ---- */
+/* ---- řádek soupeře / dungeonu ---- */
 .opponent-row,.dungeon-item{
   display:flex;align-items:center;gap:11px;
   background:linear-gradient(180deg,#f2e6c8,#e3d3ac);
@@ -733,7 +743,7 @@ body::after{right:0;transform:scaleX(-1)}
 }
 .combat-btns{display:flex;gap:9px;justify-content:center}
 
-/* ---- Ăşkoly / taverna ---- */
+/* ---- úkoly / taverna ---- */
 .quest-tier,.tq-header,.tq-top,.quest-card-header{
   background:linear-gradient(180deg,#f2e6c8,#e3d3ac);
   border:1px solid #a8916a;border-radius:3px;
@@ -770,7 +780,7 @@ body::after{right:0;transform:scaleX(-1)}
 }
 .tavern-banner-left{font-size:30px}
 
-/* ---- ĹľebĹ™Ă­ÄŤek ---- */
+/* ---- žebříček ---- */
 .lb-row{
   display:flex;align-items:center;gap:9px;
   background:linear-gradient(180deg,#f2e6c8,#e3d3ac);
@@ -784,7 +794,7 @@ body::after{right:0;transform:scaleX(-1)}
 .lb-lvl{font-size:11px;color:#7a6242}
 .lb-row.lb-me .lb-lvl{color:#e0c9a0}
 
-/* ---- starĂ© profilovĂ© tĹ™Ă­dy (kdyby se nÄ›kde objevily) ---- */
+/* ---- staré profilové třídy (kdyby se někde objevily) ---- */
 .stats-block,.stat-panel{
   background:linear-gradient(180deg,#f2e6c8,#e3d3ac);
   border:2px solid #a8916a;border-radius:3px;padding:12px;
@@ -797,3 +807,338 @@ body::after{right:0;transform:scaleX(-1)}
 .sc-val{display:block;font-weight:bold;font-size:16px;color:#7d1616}
 .sc-name{display:block;font-size:11px;color:#7a6242;margin-top:2px}
 
+
+/* =========================================================
+   OBCHOD (Gladiatus styl)
+   ========================================================= */
+.shop2{display:flex;flex-direction:column}
+
+/* horní folder taby obchodů */
+.s2tabs{display:flex;gap:4px;padding-left:4px}
+.s2tab{
+  padding:6px 20px;
+  background:linear-gradient(180deg,#d9c49a 0%,#b9a274 100%);
+  border:2px solid var(--brown);border-bottom:none;
+  border-radius:6px 6px 0 0;
+  font-size:12.5px;color:#5c4423;cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35);
+  position:relative;top:2px;
+}
+.s2tab:hover{background:linear-gradient(180deg,#e6d3ac 0%,#c9b184 100%)}
+.s2tab.active{
+  background:linear-gradient(180deg,#f8eed4 0%,var(--parch) 100%);
+  color:#3a2a12;font-weight:bold;top:0;padding-bottom:8px;z-index:2;
+}
+
+.s2body{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;
+  background:linear-gradient(180deg,#f8eed4,#e6d6b0);
+  border:2px solid var(--brown);border-radius:0 4px 4px 4px;
+  padding:12px;
+}
+.s2left,.s2right{display:flex;flex-direction:column;gap:10px;min-width:0}
+
+/* portrét kupce */
+.mp-frame{
+  background:linear-gradient(180deg,#8b6f45,#6b5333);
+  border:3px solid #4a3520;border-radius:3px;padding:4px;
+  box-shadow:0 3px 8px rgba(0,0,0,.45);
+}
+.mp-inner{
+  background:radial-gradient(ellipse at 50% 30%,#c9a978,#7a5c38);
+  border:1px solid #3a2a12;
+  height:150px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+.mp-img{width:auto;height:100%;max-width:100%}
+span.mp-img{font-size:72px}
+
+/* mřížka zboží */
+.goods-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.shelf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.general-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+
+.g-slot{
+  position:relative;aspect-ratio:1;
+  background:linear-gradient(180deg,#d5c096 0%,#c0a97e 100%);
+  border:2px solid #a8916a;border-radius:2px;
+  box-shadow:inset 0 2px 6px rgba(90,70,40,.45);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+}
+.g-slot:hover{border-color:var(--red);box-shadow:inset 0 2px 6px rgba(90,70,40,.3),0 0 6px rgba(160,40,40,.45)}
+.g-slot.empty{cursor:default;background:linear-gradient(180deg,#c9b389,#b5a072);opacity:.55}
+.g-slot.empty:hover{border-color:#a8916a;box-shadow:inset 0 2px 6px rgba(90,70,40,.45)}
+.g-slot.poor{opacity:.55}
+.g-slot.poor .g-price{color:#a02525}
+
+.g-slot.dark{
+  background:linear-gradient(180deg,#6b4a30 0%,#4d3320 100%);
+  border-color:#2e1e12;box-shadow:inset 0 2px 5px rgba(0,0,0,.5);
+}
+.g-slot.dark.empty{background:linear-gradient(180deg,#5c3f2a,#3f2a1a)}
+.g-slot.dark:hover{border-color:var(--gold)}
+
+.g-ico{width:80%;height:80%;font-size:24px}
+.g-price{
+  position:absolute;bottom:1px;right:2px;
+  font-size:9px;font-weight:bold;color:#3a2a12;
+  background:rgba(248,238,212,.85);
+  border-radius:2px;padding:0 2px;line-height:1.3;
+}
+.g-slot.dark .g-price{color:#f0e0c0;background:rgba(0,0,0,.6)}
+
+/* police a obecné zboží */
+.shelf,.general{
+  background:linear-gradient(180deg,#e8dab6,#d3bf93);
+  border:2px solid #8b7355;border-radius:3px;padding:9px;
+  box-shadow:inset 0 0 18px rgba(150,120,80,.28);
+}
+.general{
+  background:
+    repeating-linear-gradient(45deg,rgba(0,0,0,.05) 0 3px,transparent 3px 6px),
+    linear-gradient(180deg,#6b4a30 0%,#4a3020 100%);
+  border:3px solid #2a1a0e;border-radius:6px;
+}
+.shelf-title,.general-title{
+  font-size:12px;font-weight:bold;margin-bottom:7px;
+}
+.shelf-title{color:#5c4423}
+.general-title{color:#e8d4a0}
+
+/* doplnění zboží */
+.restock{
+  margin-top:auto;
+  background:linear-gradient(180deg,#e8dab6,#d3bf93);
+  border:2px solid #a8916a;border-radius:3px;
+  padding:8px 10px;
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+}
+.restock-lbl{font-size:11.5px;color:#5c4423;flex:1;min-width:120px}
+.restock-time{
+  font-size:14px;font-weight:bold;color:#7d1616;
+  font-family:Georgia,serif;letter-spacing:.5px;
+}
+.restock .btn-green{flex:0 0 auto}
+
+@media (max-width:1100px){
+  .s2body{grid-template-columns:1fr}
+  .goods-grid{grid-template-columns:repeat(6,1fr)}
+}
+
+
+/* =========================================================
+   VÝPRAVA
+   ========================================================= */
+.exped-body{
+  background:linear-gradient(180deg,#f8eed4,#e6d6b0);
+  border:2px solid var(--brown);border-radius:0 4px 4px 4px;
+  padding:12px;
+}
+
+.exped-lock{
+  background:linear-gradient(180deg,#a02525,#7d1616);
+  border:2px solid var(--gold-dk);border-radius:3px;
+  color:var(--gold-lt);font-size:12.5px;font-weight:bold;
+  padding:8px 12px;margin-bottom:12px;text-align:center;
+}
+
+/* řada příšer */
+.mon-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+
+.mon-card{position:relative;display:flex;flex-direction:column;gap:6px}
+
+.mon-name{
+  background:linear-gradient(180deg,#a02525 0%,#7d1616 60%,#620f0f 100%);
+  border:2px solid var(--gold);border-radius:3px;
+  color:var(--gold-lt);font-size:11.5px;font-weight:bold;
+  text-align:center;padding:5px 4px;
+  text-shadow:0 1px 2px rgba(0,0,0,.8);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+.mon-frame{
+  background:linear-gradient(180deg,#8b6f45,#6b5333);
+  border:3px solid #4a3520;border-radius:2px;padding:3px;
+  box-shadow:0 3px 7px rgba(0,0,0,.45);
+}
+.mon-frame::after{content:'';display:block}
+.mon-img{
+  width:100%;height:118px;
+  background:radial-gradient(ellipse at 50% 35%,#c9a978,#7a5c38);
+  border:1px solid #3a2a12;
+}
+span.mon-img{
+  display:flex;align-items:center;justify-content:center;font-size:52px;
+}
+
+.mon-attack{width:100%;flex:0}
+
+.mon-rew{
+  display:flex;justify-content:center;gap:8px;flex-wrap:wrap;
+  background:linear-gradient(180deg,#e8dab6,#d3bf93);
+  border:1px solid #a8916a;border-radius:2px;
+  padding:4px;font-size:10px;color:#5c4423;
+}
+
+/* tooltip se staty */
+.mon-tip{
+  display:none;
+  position:absolute;top:34px;left:50%;transform:translateX(-8px);
+  z-index:60;width:190px;
+  background:linear-gradient(180deg,#2e2416,#1a1409);
+  border:2px solid var(--gold-dk);border-radius:3px;
+  padding:7px 9px;
+  box-shadow:0 6px 18px rgba(0,0,0,.7);
+  pointer-events:none;
+}
+.mon-card:hover .mon-tip{display:block}
+.mt-name{
+  color:var(--gold-lt);font-size:12px;font-weight:bold;
+  border-bottom:1px solid rgba(201,162,39,.4);
+  padding-bottom:4px;margin-bottom:4px;
+}
+.mt-row{
+  display:flex;justify-content:space-between;gap:10px;
+  font-size:11px;color:#d8c49a;padding:1.5px 0;
+}
+.mt-row b{color:#fff;font-weight:bold}
+
+/* popis lokace */
+.exped-desc{
+  margin-top:12px;
+  background:linear-gradient(180deg,#f2e6c8,#e3d3ac);
+  border:2px solid #a8916a;border-radius:3px;
+  padding:10px 12px;
+}
+.exped-desc-title{
+  font-size:12.5px;font-weight:bold;color:#7d1616;margin-bottom:5px;
+}
+.exped-desc p{font-size:12px;line-height:1.65;color:#4a3520}
+
+/* zamčené lokace v levém menu */
+.sub-item.locked{
+  opacity:.42;cursor:default;
+  background:linear-gradient(180deg,#d8c8a4,#c4b088);
+}
+.sub-item.locked:hover{border-color:#a8916a;background:linear-gradient(180deg,#d8c8a4,#c4b088)}
+
+/* portrét příšery v boji */
+.fighter-img{width:auto;height:100%;max-width:100%}
+span.fighter-img{font-size:52px}
+
+@media (max-width:1100px){
+  .mon-row{grid-template-columns:repeat(2,1fr)}
+}
+
+
+/* =========================================================
+   ANIMACE BOJE
+   ========================================================= */
+.fighter-box{position:relative;overflow:visible}
+
+/* výpad útočníka */
+@keyframes lungeRight{
+  0%{transform:translateX(0)}
+  40%{transform:translateX(30px) rotate(1.5deg)}
+  100%{transform:translateX(0)}
+}
+@keyframes lungeLeft{
+  0%{transform:translateX(0)}
+  40%{transform:translateX(-30px) rotate(-1.5deg)}
+  100%{transform:translateX(0)}
+}
+.fighter-box.lunge-right{animation:lungeRight .5s cubic-bezier(.3,1.4,.5,1)}
+.fighter-box.lunge-left {animation:lungeLeft  .5s cubic-bezier(.3,1.4,.5,1)}
+
+/* otřes zasaženého + rudý záblesk */
+@keyframes shakeHit{
+  0%,100%{transform:translateX(0)}
+  15%{transform:translateX(-7px)}
+  30%{transform:translateX(6px)}
+  45%{transform:translateX(-4px)}
+  60%{transform:translateX(3px)}
+  80%{transform:translateX(-2px)}
+}
+@keyframes redFlash{
+  0%{box-shadow:inset 0 0 0 999px rgba(200,30,30,.45)}
+  100%{box-shadow:inset 0 0 0 999px rgba(200,30,30,0)}
+}
+.fighter-box.hit{animation:shakeHit .4s ease, redFlash .5s ease}
+
+/* plovoucí číslo poškození */
+@keyframes floatDmg{
+  0%  {opacity:0;transform:translate(-50%,6px) scale(.7)}
+  18% {opacity:1;transform:translate(-50%,-4px) scale(1.12)}
+  35% {transform:translate(-50%,-12px) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-56px) scale(.95)}
+}
+.dmg-float{
+  position:absolute;left:50%;top:38%;
+  font:bold 22px Georgia,serif;color:#ff5a3c;
+  text-shadow:0 2px 3px rgba(0,0,0,.85), 0 0 8px rgba(255,80,50,.6);
+  pointer-events:none;z-index:20;
+  animation:floatDmg .95s ease-out forwards;
+}
+.dmg-float.crit{font-size:28px;color:#ffd24a;text-shadow:0 2px 4px #000,0 0 12px rgba(255,200,60,.8)}
+
+/* plynulý ubývající HP pruh */
+.hp-fg{transition:width .45s cubic-bezier(.4,0,.2,1)}
+
+/* výsledek boje */
+.fight-result{
+  flex:1;min-width:180px;
+  border:2px solid var(--gold-dk);border-radius:3px;
+  padding:7px 12px;text-align:center;
+}
+.fight-result.win {background:linear-gradient(180deg,#7da329,#4d6714)}
+.fight-result.lose{background:linear-gradient(180deg,#a02525,#6d1212)}
+.fr-title{
+  color:#fff;font-size:14px;font-weight:bold;letter-spacing:1px;
+  text-shadow:0 1px 2px rgba(0,0,0,.7);
+}
+.fr-sub{color:#f0e0c0;font-size:11.5px;margin-top:2px}
+.combat-btns{align-items:center;flex-wrap:wrap}
+
+/* barvy v logu boje */
+.combat-log .log-p{color:#b6dc6a}
+.combat-log .log-e{color:#ff9a7a}
+.combat-log .log-s{color:#e8c860}
+.combat-log .log-w{color:#9ee34f;font-weight:bold}
+.combat-log .log-d{color:#ff6a6a;font-weight:bold}
+
+/* ---- zbrojíř: stránky zboží a výkup ---- */
+.shop-pages{margin-bottom:0}
+.bag-tab.sell{width:auto;padding:0 10px;font-size:10.5px}
+.bag-tab.sell.active{background:linear-gradient(180deg,#a02525,#7d1616);color:#e8c860}
+
+.goods-grid.dark-grid{
+  background:
+    repeating-linear-gradient(45deg,rgba(0,0,0,.05) 0 3px,transparent 3px 6px),
+    linear-gradient(180deg,#6b4a30 0%,#4a3020 100%);
+  border:3px solid #2a1a0e;border-radius:0 4px 4px 4px;
+  padding:8px;grid-template-columns:repeat(4,1fr);
+}
+
+.sell-zone{
+  background:
+    repeating-linear-gradient(45deg,rgba(0,0,0,.05) 0 3px,transparent 3px 6px),
+    linear-gradient(180deg,#6b4a30 0%,#4a3020 100%);
+  border:3px dashed #a8916a;border-radius:0 4px 4px 4px;
+  min-height:150px;
+  display:flex;align-items:center;justify-content:center;
+}
+.sell-zone.drag-over{border-color:#8bb03a;background:linear-gradient(180deg,#7a5636,#57391f)}
+.sell-hint{color:#e8d4a0;font-size:12px;text-align:center;line-height:1.7;padding:14px}
+.sell-hint small{color:#b8a07a;font-size:10.5px}
+
+.sell-note{
+  background:linear-gradient(180deg,#e8dab6,#d3bf93);
+  border:1px solid #a8916a;border-radius:2px;
+  padding:6px 9px;font-size:11px;color:#5c4423;text-align:center;
+}
+
+/* v obchodě je pravý sloupec užší */
+.s2right .eq-frame{padding:8px}
+.s2right .bag-grid{grid-template-columns:repeat(6,1fr)}

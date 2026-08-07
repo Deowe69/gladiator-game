@@ -32,11 +32,12 @@ const DUNGEONS = [
 
 const SHOP_ITEMS = {
   weapons: [
-    { id:'w1', name:'Bronzový Meč',    icon:'🗡️', stat:'+6 Síla',    key:'strength',  val:6,  price:100,  quality:'common'   },
-    { id:'w2', name:'Železný Kopí',    icon:'🔱', stat:'+12 Síla',   key:'strength',  val:12, price:220,  quality:'uncommon' },
-    { id:'w3', name:'Ocelová Kosa',    icon:'⚔️', stat:'+20 Síla',   key:'strength',  val:20, price:450,  quality:'rare'     },
-    { id:'w4', name:'Meč Achillea',    icon:'🌟', stat:'+35 Síla',   key:'strength',  val:35, price:900,  quality:'epic'     },
-    { id:'w5', name:'Luk Artemidy',    icon:'🏹', stat:'+18 Síla',   key:'strength',  val:18, price:380,  quality:'rare'     },
+    { id:'w0', name:'Wood Sword',      icon:'🪵', stat:'2-4 poškození',   key:'strength', val:2,  dmg:[2,4],   price:25,  quality:'common',   img:'weapons/wooden-sword.png' },
+    { id:'w1', name:'Bronzový Meč',    icon:'🗡️', stat:'7-12 poškození',  key:'strength', val:6,  dmg:[7,12],  price:100, quality:'common',   img:'weapons/bronze-sword.png' },
+    { id:'w2', name:'Železné Kopí',    icon:'🔱', stat:'14-22 poškození', key:'strength', val:12, dmg:[14,22], price:220, quality:'uncommon', img:'weapons/iron-spear.png'   },
+    { id:'w3', name:'Ocelová Kosa',    icon:'⚔️', stat:'24-36 poškození', key:'strength', val:20, dmg:[24,36], price:450, quality:'rare',     img:'weapons/silver-axe.png'   },
+    { id:'w4', name:'Meč Achillea',    icon:'🌟', stat:'42-62 poškození', key:'strength', val:35, dmg:[42,62], price:900, quality:'epic',     img:'weapons/gold-sword.png'   },
+    { id:'w5', name:'Luk Artemidy',    icon:'🏹', stat:'20-31 poškození', key:'strength', val:18, dmg:[20,31], price:380, quality:'rare'     },
   ],
   armor: [
     { id:'a1', name:'Kožená Zbroj',    icon:'🧥', stat:'+6 Obrana',  key:'defense',   val:6,  price:90,   quality:'common'   },
@@ -253,7 +254,8 @@ function openView(view) {
   if (ti !== undefined && tabs[ti]) tabs[ti].classList.add('active');
 
   const cc = document.getElementById('centerContent');
-  const views = { city, arena, dungeon, quests, shop, inventory: profileView, profile: profileView, guild, tavern, forge };
+  const views = { city, arena, dungeon, quests, shop, inventory: profileView, profile: profileView,
+                  guild, tavern, forge, expedition };
   const viewFn = views[view] || (() => `
     <div class="coming-soon">
       <div class="cs-icon">🚧</div>
@@ -347,37 +349,7 @@ function arena() {
       <div class="opponents-list">${enemyCards}</div>
     </div>
   </div>
-  <div class="panel" id="combatPanel" style="display:none;">
-    <div class="panel-header">⚔ Průběh boje</div>
-    <div class="panel-body">
-      <div class="combat-wrap">
-        <div class="vs-row">
-          <div class="fighter-box player">
-            <div class="fighter-avatar-lg" id="pAvatar"></div>
-            <div class="fighter-name-lg" id="pName">-</div>
-            <div class="hp-row">
-              <div class="hp-bg"><div class="hp-fg player" id="pHpBar" style="width:100%"></div></div>
-              <span class="hp-txt" id="pHpTxt">-</span>
-            </div>
-          </div>
-          <div class="vs-badge">VS</div>
-          <div class="fighter-box enemy">
-            <div class="fighter-avatar-lg" id="eAvatar" style="display:flex;align-items:center;justify-content:center;font-size:2.5em;"></div>
-            <div class="fighter-name-lg" id="eName">-</div>
-            <div class="hp-row">
-              <div class="hp-bg"><div class="hp-fg enemy" id="eHpBar" style="width:100%"></div></div>
-              <span class="hp-txt" id="eHpTxt">-</span>
-            </div>
-          </div>
-        </div>
-        <div class="combat-log" id="combatLog"></div>
-        <div class="combat-btns" id="combatBtns">
-          <button class="btn-attack" onclick="doAttack()">⚔ Útočit</button>
-          <button class="btn-flee" onclick="fleeCombat()">🏃 Utéct</button>
-        </div>
-      </div>
-    </div>
-  </div>`;
+  ${combatPanelHTML()}`;
 }
 
 // ===== DUNGEON =====
@@ -462,71 +434,184 @@ function quests() {
 
 // ===== SHOPS =====
 let currentShop = null;
+let shopPage = 0;      // 0/1/2 = stránky zboží, 'sell' = výkup
+
+const MERCHANTS = {
+  blacksmith: { name:'Zbrojíř',    emoji:'🧔', desc:'Zbraně všeho druhu',        get items(){ return SHOP_ITEMS.weapons; } },
+  armorer:    { name:'Platnéř',    emoji:'👨‍🏭', desc:'Zbroje, helmy a štíty',   get items(){ return SHOP_ITEMS.armor.concat(SHOP_ITEMS.armor_extra || []); } },
+  jeweler:    { name:'Šperkař',    emoji:'👳', desc:'Prsteny a amulety',         get items(){ return SHOP_ITEMS.jewelry; } },
+  alchemist:  { name:'Alchymista', emoji:'🧙', desc:'Lektvary a elixíry',        get items(){ return SHOP_ITEMS.potions; } },
+};
+
+// portrét kupce: img/merchants/<id>.png, jinak emoji
+function merchantPortrait(id) {
+  const m = MERCHANTS[id];
+  return `<img class="ico mp-img" src="img/merchants/${id}.png" alt="${m.name}"
+               data-emoji="${m.emoji}" data-try="svg" onerror="iconFallback(this)">`;
+}
+
+// jedno políčko se zbožím
+function goodsSlot(item, dark) {
+  if (!item) return `<div class="g-slot ${dark ? 'dark' : ''} empty"></div>`;
+  const afford = character.gold >= item.price;
+  return `
+    <div class="g-slot ${dark ? 'dark' : ''} ${afford ? '' : 'poor'}"
+         onclick="buyItem('${item.id}')"
+         title="${item.name}&#10;${item.stat}&#10;Cena: ${item.price} zlatých">
+      ${itemIcon(item, 'g-ico')}
+      <span class="g-price">${item.price}</span>
+    </div>`;
+}
+
+function fillSlots(items, count, dark) {
+  let html = '';
+  for (let i = 0; i < count; i++) html += goodsSlot(items[i], dark);
+  return html;
+}
+
+// odpočet do nového zboží (4h cyklus)
+function restockLeft() {
+  const PERIOD = 4 * 60 * 60 * 1000;
+  let next = +localStorage.getItem('restockAt') || 0;
+  if (!next || next < Date.now()) {
+    next = Date.now() + PERIOD;
+    localStorage.setItem('restockAt', next);
+  }
+  const ms = Math.max(0, next - Date.now());
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor(ms % 3600000 / 60000);
+  const s = Math.floor(ms % 60000 / 1000);
+  const p = n => String(n).padStart(2, '0');
+  return `${p(h)}:${p(m)}:${p(s)}`;
+}
+
+function newGoods() {
+  localStorage.removeItem('restockAt');
+  toast('Kupec doplnil zboží!');
+  openView('shop');
+}
 
 function shop() {
-  const merchants = [
-    { id: 'blacksmith', name: 'Zbrojiř', icon: '🔨', desc: 'Nejlepší zbraně Olympu', items: SHOP_ITEMS.weapons },
-    { id: 'armorer', name: 'Zbrojnice', icon: '🛡️', desc: 'Silná zbroj a ochrana', items: SHOP_ITEMS.armor.concat(SHOP_ITEMS.armor_extra || []) },
-    { id: 'jeweler', name: 'Šperkař', icon: '💍', desc: 'Vzácné šperky a relikvie', items: SHOP_ITEMS.jewelry },
-    { id: 'alchemist', name: 'Alchymista', icon: '🧪', desc: 'Magické lektvary a elixíry', items: SHOP_ITEMS.potions },
-  ];
+  const id = MERCHANTS[currentShop] ? currentShop : 'blacksmith';
+  currentShop = id;
+  const m = MERCHANTS[id];
+
+  const tabs = Object.keys(MERCHANTS).map(k =>
+    `<div class="s2tab ${k === id ? 'active' : ''}" onclick="openMerchant('${k}')">${MERCHANTS[k].name}</div>`
+  ).join('');
+
+  // zboží rozdělené na stránky I / II / III
+  const stock = m.items;
+  const pages = [stock.slice(0, 12), stock.slice(12, 24), stock.slice(24, 36)];
+
+  const pageTabs = ['I', 'II', 'III'].map((lbl, i) =>
+    `<div class="bag-tab ${shopPage === i ? 'active' : ''}" onclick="setShopPage(${i})">${lbl}</div>`
+  ).join('') +
+    `<div class="bag-tab sell ${shopPage === 'sell' ? 'active' : ''}" onclick="setShopPage('sell')">Prodat</div>`;
+
+  // levá mřížka: buď zboží kupce, nebo prodejní zóna
+  let leftGrid;
+  if (shopPage === 'sell') {
+    leftGrid = `
+      <div class="sell-zone"
+           ondragover="dragOver(event)"
+           ondragleave="dragLeave(event)"
+           ondrop="dropSell(event)">
+        <div class="sell-hint">
+          Přetáhni sem předmět z batohu<br>
+          <small>nebo na něj klikni — vykoupím ho za 40 % ceny</small>
+        </div>
+      </div>`;
+  } else {
+    leftGrid = `<div class="goods-grid dark-grid">${fillSlots(pages[shopPage] || [], 12, true)}</div>`;
+  }
 
   return `
-  <div class="panel">
-    <div class="panel-header">🏪 Athenský Trh</div>
-    <div class="panel-body">
-      <div class="shop-merchants">
-        ${merchants.map(m => `
-          <div class="merchant-card" onclick="openMerchant('${m.id}')">
-            <div class="merchant-icon">${m.icon}</div>
-            <div class="merchant-name">${m.name}</div>
-            <div class="merchant-desc">${m.desc}</div>
-          </div>
-        `).join('')}
+  <div class="shop2">
+    <div class="s2tabs">${tabs}</div>
+
+    <div class="s2body">
+
+      <div class="s2left">
+        <div class="mp-frame">
+          <div class="mp-inner">${merchantPortrait(id)}</div>
+        </div>
+
+        <div class="bag-tabs shop-pages">${pageTabs}</div>
+        ${leftGrid}
+
+        <div class="restock">
+          <div class="restock-lbl">Než kupec doplní zboží:</div>
+          <div class="restock-time" id="restockTimer">${restockLeft()}</div>
+          <button class="btn-green" onclick="newGoods()">Nové zboží</button>
+        </div>
       </div>
-      <div class="merchant-shop" id="merchantShop" style="display:none;">
-        <button class="btn-back" onclick="openView('shop')">← Zpět na Trh</button>
-        <div id="merchantContent"></div>
+
+      <div class="s2right">
+        ${equipPanelHTML()}
+        ${bagPanelHTML(shopPage === 'sell' ? 'sell' : 'use')}
+        <div class="sell-note">
+          ${shopPage === 'sell'
+            ? 'Klikni na předmět v batohu a kupec ti ho vykoupí.'
+            : 'Klikni na předmět v batohu pro vybavení. Prodej najdeš na záložce „Prodat".'}
+        </div>
       </div>
+
     </div>
   </div>`;
 }
 
-function openMerchant(merchantId) {
-  const shops = {
-    blacksmith: { name: 'Zbrojiř', items: SHOP_ITEMS.weapons },
-    armorer: { name: 'Zbrojnice', items: SHOP_ITEMS.armor.concat(SHOP_ITEMS.armor_extra || []) },
-    jeweler: { name: 'Šperkař', items: SHOP_ITEMS.jewelry },
-    alchemist: { name: 'Alchymista', items: SHOP_ITEMS.potions },
-  };
-
-  const shop = shops[merchantId];
-  if (!shop) return;
-
-  currentShop = merchantId;
-  const grid = document.getElementById('merchantShop');
-  const content = document.getElementById('merchantContent');
-
-  const itemsHTML = shop.items.map(item => `
-    <div class="shop-card">
-      <span class="shop-card-icon">${item.icon}</span>
-      <div class="shop-card-name">${item.name}</div>
-      <div class="shop-card-stat">${item.stat}</div>
-      <div class="shop-card-price">💰 ${item.price}</div>
-      <button class="shop-btn" onclick="buyItem('${item.id}')"
-        ${character.gold < item.price ? 'disabled' : ''}>
-        ${character.gold >= item.price ? '🛒 Koupit' : '❌ Nedost. zlata'}
-      </button>
-    </div>`).join('');
-
-  content.innerHTML = `
-    <h2>${shop.name}</h2>
-    <div class="shop-grid">${itemsHTML}</div>
-  `;
-
-  document.querySelector('.shop-merchants').style.display = 'none';
-  grid.style.display = 'block';
+function openMerchant(id) {
+  if (!MERCHANTS[id]) return;
+  currentShop = id;
+  openView('shop');
 }
+
+function setShopPage(p) {
+  shopPage = p;
+  openView('shop');
+}
+
+// ---------- prodej ----------
+const sellPrice = it => Math.max(1, Math.floor((it.price || 10) * 0.4));
+
+function sellItem(i) {
+  const it = inventory[i];
+  if (!it) return;
+  const got = sellPrice(it);
+  inventory.splice(i, 1);
+  character.gold += got;
+  toast(`Prodáno: ${it.name} (+${got} zlatých)`);
+  persist();
+  openView('shop');
+}
+
+function dropSell(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!dragSrc) return;
+  const src = dragSrc;
+  dragSrc = null;
+
+  if (src.type === 'inv') { sellItem(src.ref); return; }
+
+  // z vybaveného slotu: nejdřív sundat, pak prodat
+  const it = equipped[src.ref];
+  if (!it) return;
+  applyBonus(it, -1);
+  delete equipped[src.ref];
+  const got = sellPrice(it);
+  character.gold += got;
+  toast(`Prodáno: ${it.name} (+${got} zlatých)`);
+  persist();
+  openView('shop');
+}
+
+// živý odpočet do nového zboží
+setInterval(() => {
+  const el = document.getElementById('restockTimer');
+  if (el) el.textContent = restockLeft();
+}, 1000);
 
 // ===== INVENTORY =====
 // Slot definitions
@@ -808,6 +893,40 @@ const DOLL = [
   { key:'boots',  cls:'boots' },
 ];
 
+// ---------- IKONKY PŘEDMĚTŮ ----------
+// Obrázek se hledá v img/items/<id>.png (např. img/items/w1.png).
+// Když soubor neexistuje, automaticky se použije emoji.
+function itemIcon(item, cls = '') {
+  if (!item) return '';
+  const emoji = String(item.icon || '');
+  if (!item.img && !item.id) return `<span class="ico ${cls}">${emoji}</span>`;
+  // item.img = vlastní cesta (relativně k img/), jinak img/items/<id>.png
+  const src = item.img ? `img/${item.img}` : `img/items/${item.id}.png`;
+  return `<img class="ico ${cls}" src="${src}" alt="${item.name || ''}"
+               data-emoji="${emoji}" data-try="svg" onerror="iconFallback(this)">`;
+}
+
+// Prázdný slot: img/slots/<klíč>.png, jinak emoji ze SLOT_DEFS
+function slotIcon(key, cls = '') {
+  const d = SLOT_DEFS[key];
+  const emoji = String((d && d.icon) || '');
+  return `<img class="ico ${cls}" src="img/slots/${key}.png" alt="${(d && d.label) || ''}"
+               data-emoji="${emoji}" data-try="svg" onerror="iconFallback(this)">`;
+}
+
+// Postupně zkusí .png → .svg → emoji
+function iconFallback(img) {
+  if (img.dataset.try === 'svg') {
+    img.dataset.try = 'done';
+    img.src = img.src.replace(/\.png(\?.*)?$/, '.svg');
+    return;
+  }
+  const s = document.createElement('span');
+  s.className = img.className;
+  s.textContent = img.dataset.emoji || '';
+  img.replaceWith(s);
+}
+
 // Do jakého slotu předmět patří (podle id z obchodu)
 function slotForItem(item) {
   const id = (item && item.id) || '';
@@ -823,6 +942,94 @@ function slotForItem(item) {
   return null; // lektvary a neznámé
 }
 
+
+// ---------- sdílené kusy: paperdoll a batoh ----------
+function dollSlotsHTML() {
+  const one = (key, cls) => {
+    const def = SLOT_DEFS[key];
+    const eq  = equipped[key];
+    return `
+      <div class="slot ${cls} ${eq ? '' : 'empty'}"
+           draggable="${eq ? 'true' : 'false'}"
+           ondragstart="dragStart(event,'slot','${key}')"
+           ondragend="dragEnd(event)"
+           ondragover="dragOver(event)"
+           ondragleave="dragLeave(event)"
+           ondrop="dropOn(event,'slot','${key}')"
+           onclick="unequip('${key}')"
+           title="${eq ? eq.name + ' — klikni pro sundání' : def.label}">
+        ${eq ? itemIcon(eq, 's-ico') : slotIcon(key, 's-ico')}
+        ${eq ? `<span class="s-nm">${eq.name}</span>` : `<span class="s-lbl">${def.label}</span>`}
+      </div>`;
+  };
+
+  return DOLL.map(x => one(x.key, x.cls)).join('') + `
+    <div class="slot rings">
+      ${['ring','belt'].map(k => {
+        const eq = equipped[k];
+        return `<div class="slot-sm ${eq ? '' : 'empty'}"
+                     draggable="${eq ? 'true' : 'false'}"
+                     ondragstart="dragStart(event,'slot','${k}')"
+                     ondragend="dragEnd(event)"
+                     ondragover="dragOver(event)"
+                     ondragleave="dragLeave(event)"
+                     ondrop="dropOn(event,'slot','${k}')"
+                     onclick="unequip('${k}')"
+                     title="${eq ? eq.name : SLOT_DEFS[k].label}">${eq ? itemIcon(eq,'s-ico-sm') : slotIcon(k,'s-ico-sm')}</div>`;
+      }).join('')}
+    </div>`;
+}
+
+const BAG_SIZE = 24;
+
+// mode: 'use' = kliknutím vybavit / vypít, 'sell' = kliknutím prodat
+function bagSlotsHTML(mode) {
+  let html = '';
+  for (let i = 0; i < BAG_SIZE; i++) {
+    const it = inventory[i];
+    const click = !it ? '' : (mode === 'sell' ? `sellItem(${i})` : `useItem(${i})`);
+    const tip = !it ? '' : (mode === 'sell'
+      ? `${it.name} — prodat za ${sellPrice(it)} zlatých`
+      : `${it.name} ( ${it.stat} )`);
+    html += `
+      <div class="bag-slot ${it ? '' : 'empty'}"
+           draggable="${it ? 'true' : 'false'}"
+           ondragstart="dragStart(event,'inv','${i}')"
+           ondragend="dragEnd(event)"
+           ondragover="dragOver(event)"
+           ondragleave="dragLeave(event)"
+           ondrop="dropOn(event,'inv','${i}')"
+           onclick="${click}"
+           title="${tip}">
+        ${it ? `${itemIcon(it,'b-ico')}<span class="b-nm">${it.name.split(' ')[0]}</span>` : ''}
+      </div>`;
+  }
+  return html;
+}
+
+function equipPanelHTML() {
+  return `
+    <div class="eq-frame">
+      <div class="eq-doll">${dollSlotsHTML()}</div>
+      <div class="eq-side">
+        ${[0,1,2,3].map(() => '<div class="slot empty" title="Zamčeno"><span class="s-ico">🔒</span></div>').join('')}
+      </div>
+    </div>`;
+}
+
+function bagPanelHTML(mode) {
+  return `
+    <div class="bag">
+      <div class="bag-tabs">
+        <div class="bag-tab active">I</div>
+        <div class="bag-tab">II</div>
+        <div class="bag-tab">III</div>
+        <div class="bag-tab">IV</div>
+      </div>
+      <div class="bag-grid">${bagSlotsHTML(mode)}</div>
+    </div>`;
+}
+
 function profileView() {
   const c = character;
   const bonus = k => Object.values(equipped).filter(e => e && e.key === k).reduce((a,e) => a + e.val, 0);
@@ -831,8 +1038,7 @@ function profileView() {
   const agi = c.agility      + bonus('agility');
   const int = c.intelligence + bonus('intelligence');
 
-  const dmgMax  = Math.floor(str * 1.5);
-  const dmgMin  = Math.max(1, Math.floor(str * 1.1));
+  const [dmgMin, dmgMax] = playerDamageRange();
   const armor   = def * 3;
   const xpNeed  = c.level * 100;
   const xpPct   = Math.min(100, c.experience / xpNeed * 100);
@@ -847,59 +1053,8 @@ function profileView() {
   const avatar = getAvatar(c.class, c.gender);
   const avatarHTML = /^\s*</.test(avatar) ? avatar : `<span class="emoji">${avatar}</span>`;
 
-  // --- sloty vybavení ---
-  function slotHTML(key, cls) {
-    const def = SLOT_DEFS[key];
-    const eq  = equipped[key];
-    return `
-      <div class="slot ${cls} ${eq ? '' : 'empty'}"
-           draggable="${eq ? 'true' : 'false'}"
-           ondragstart="dragStart(event,'slot','${key}')"
-           ondragend="dragEnd(event)"
-           ondragover="dragOver(event)"
-           ondragleave="dragLeave(event)"
-           ondrop="dropOn(event,'slot','${key}')"
-           onclick="unequip('${key}')"
-           title="${eq ? eq.name + ' — klikni pro sundání' : def.label}">
-        <span class="s-ico">${eq ? eq.icon : def.icon}</span>
-        ${eq ? `<span class="s-nm">${eq.name}</span>` : `<span class="s-lbl">${def.label}</span>`}
-      </div>`;
-  }
-
-  const dollHTML = DOLL.map(s => slotHTML(s.key, s.cls)).join('') + `
-    <div class="slot rings">
-      ${['ring','belt'].map(k => {
-        const eq = equipped[k];
-        return `<div class="slot-sm ${eq ? '' : 'empty'}"
-                     draggable="${eq ? 'true' : 'false'}"
-                     ondragstart="dragStart(event,'slot','${k}')"
-                     ondragend="dragEnd(event)"
-                     ondragover="dragOver(event)"
-                     ondragleave="dragLeave(event)"
-                     ondrop="dropOn(event,'slot','${k}')"
-                     onclick="unequip('${k}')"
-                     title="${eq ? eq.name : SLOT_DEFS[k].label}">${eq ? eq.icon : SLOT_DEFS[k].icon}</div>`;
-      }).join('')}
-    </div>`;
-
-  // --- batoh ---
-  const BAG_SIZE = 24;
-  let bagHTML = '';
-  for (let i = 0; i < BAG_SIZE; i++) {
-    const it = inventory[i];
-    bagHTML += `
-      <div class="bag-slot ${it ? '' : 'empty'}"
-           draggable="${it ? 'true' : 'false'}"
-           ondragstart="dragStart(event,'inv','${i}')"
-           ondragend="dragEnd(event)"
-           ondragover="dragOver(event)"
-           ondragleave="dragLeave(event)"
-           ondrop="dropOn(event,'inv','${i}')"
-           onclick="${it ? `useItem(${i})` : ''}"
-           title="${it ? it.name + ' (' + it.stat + ')' : ''}">
-        ${it ? `<span>${it.icon}</span><span class="b-nm">${it.name.split(' ')[0]}</span>` : ''}
-      </div>`;
-  }
+  const dollHTML = dollSlotsHTML();
+  const bagHTML  = bagSlotsHTML('use');
 
   return `
   <div class="gl-profile">
@@ -922,6 +1077,9 @@ function profileView() {
         ${rowBar('Inteligence','st', Math.min(100, int / 3), int)}
         ${rowPlain('Zbroj', armor)}
         ${rowPlain('Poškození', dmgMin + ' - ' + dmgMax)}
+        ${equipped.weapon && equipped.weapon.dmg
+            ? rowPlain('Zbraň', equipped.weapon.dmg[0] + ' - ' + equipped.weapon.dmg[1])
+            : ''}
         ${rowPlain('Zlato', c.gold)}
       </div>
     </div>
@@ -1329,70 +1487,142 @@ function guild() {
 
 // ========== COMBAT ==========
 function startCombat(idx) {
-  // HP se vždy resetuje před bojem
-  character.health = character.max_health;
-  currentEnemy = JSON.parse(JSON.stringify(ENEMIES[idx]));
-  inCombat = true;
-
-  openView('arena');
-  setTimeout(() => {
-    const panel = document.getElementById('combatPanel');
-    if (!panel) return;
-    panel.style.display = 'block';
-
-    document.getElementById('pAvatar').innerHTML = getAvatar(character.class, character.gender);
-    document.getElementById('pName').textContent = character.name;
-    document.getElementById('eAvatar').textContent = currentEnemy.icon;
-    document.getElementById('eName').textContent = currentEnemy.name;
-    document.getElementById('combatBtns').style.display = 'flex';
-    document.getElementById('combatLog').innerHTML = '';
-
-    updateHpBars();
-    addLog(`⚔ ${character.name} vs ${currentEnemy.name} - Boj začal!`, 'log-s');
-    panel.scrollIntoView({behavior:'smooth'});
-  }, 100);
+  beginFight(ENEMIES[idx], 'arena');
 }
 
-function doAttack() {
-  if (!inCombat) return;
-  const pdmg = Math.max(1, character.strength + Math.floor(Math.random()*8) - currentEnemy.def);
-  currentEnemy.hp = Math.max(0, currentEnemy.hp - pdmg);
-  addLog(`⚔ ${character.name} zasáhl za <strong>${pdmg}</strong> poškození!`, 'log-p');
-  updateHpBars();
-  if (currentEnemy.hp <= 0) { endCombat(true); return; }
+// ========== POŠKOZENÍ ==========
+// Poškození dělá hlavně ZBRAŇ; síla ho jen procentuálně navyšuje.
+// Bez toho by staty z vybavení rostly rychleji než životy příšer.
+const FISTS = [1, 2];
+
+function playerDamageRange() {
+  const w = equipped.weapon;
+  const base = (w && Array.isArray(w.dmg)) ? w.dmg : FISTS;
+  const mult = 1 + character.strength / 150;
+  return [Math.max(1, Math.round(base[0] * mult)), Math.max(2, Math.round(base[1] * mult))];
+}
+
+function rollPlayerDamage() {
+  const [lo, hi] = playerDamageRange();
+  return lo + Math.floor(Math.random() * (hi - lo + 1));
+}
+
+// zbroj tlumí zásah, ale nikdy ho nevynuluje
+const soak = def => Math.floor(def / 4);
+
+// ========== AUTOMATICKÝ BOJ ==========
+let fightTimer = null;
+let lastFight  = null;   // {enemy, view} pro tlačítko "Bojovat znovu"
+
+const ROUND_MS = 950;    // pauza mezi výpady
+
+// jeden výpad: animace útočníka, otřes cíle a plovoucí číslo
+function animateHit(fromSel, toSel, dmg, crit) {
+  const from = document.querySelector(fromSel);
+  const to   = document.querySelector(toSel);
+  if (!from || !to) return;
+
+  const lunge = fromSel.includes('player') ? 'lunge-right' : 'lunge-left';
+  from.classList.remove(lunge);
+  void from.offsetWidth;              // restart animace
+  from.classList.add(lunge);
 
   setTimeout(() => {
+    to.classList.remove('hit');
+    void to.offsetWidth;
+    to.classList.add('hit');
+
+    const f = document.createElement('div');
+    f.className = 'dmg-float' + (crit ? ' crit' : '');
+    f.textContent = (crit ? '‼ ' : '') + '-' + dmg;
+    to.appendChild(f);
+    setTimeout(() => f.remove(), 950);
+  }, 180);
+}
+
+function fightRound() {
+  if (!inCombat) return;
+
+  // --- útok hráče ---
+  const crit = Math.random() < 0.15;
+  let pdmg = Math.max(1, rollPlayerDamage() - soak(currentEnemy.def));
+  if (crit) pdmg = Math.floor(pdmg * 1.6);
+
+  currentEnemy.hp = Math.max(0, currentEnemy.hp - pdmg);
+  animateHit('.fighter-box.player', '.fighter-box.enemy', pdmg, crit);
+  addLog(`${character.name} zasáhl za <strong>${pdmg}</strong>${crit ? ' (kritický zásah!)' : ''}`, 'log-p');
+  updateHpBars();
+
+  if (currentEnemy.hp <= 0) { fightTimer = setTimeout(() => endCombat(true), 800); return; }
+
+  // --- odveta soupeře ---
+  fightTimer = setTimeout(() => {
     if (!inCombat) return;
-    const edmg = Math.max(1, currentEnemy.str + Math.floor(Math.random()*6) - character.defense);
+    const edmg = Math.max(1, currentEnemy.str + Math.floor(Math.random() * 6) - soak(character.defense));
     character.health = Math.max(0, character.health - edmg);
-    addLog(`💥 ${currentEnemy.name} zasáhl za <strong>${edmg}</strong> poškození!`, 'log-e');
+    animateHit('.fighter-box.enemy', '.fighter-box.player', edmg, false);
+    addLog(`${currentEnemy.name} zasáhl za <strong>${edmg}</strong>`, 'log-e');
     updateHpBars();
     updateUI();
-    if (character.health <= 0) endCombat(false);
-  }, 700);
+
+    if (character.health <= 0) { fightTimer = setTimeout(() => endCombat(false), 800); return; }
+    fightTimer = setTimeout(fightRound, ROUND_MS);
+  }, ROUND_MS);
+}
+
+// dopočítá boj bez animací
+function skipFight() {
+  if (!inCombat) return;
+  clearTimeout(fightTimer);
+  let guard = 0;
+  while (inCombat && guard++ < 500) {
+    const pdmg = Math.max(1, rollPlayerDamage() - soak(currentEnemy.def));
+    currentEnemy.hp = Math.max(0, currentEnemy.hp - pdmg);
+    addLog(`${character.name} zasáhl za <strong>${pdmg}</strong>`, 'log-p');
+    if (currentEnemy.hp <= 0) { endCombat(true); break; }
+
+    const edmg = Math.max(1, currentEnemy.str + Math.floor(Math.random() * 6) - soak(character.defense));
+    character.health = Math.max(0, character.health - edmg);
+    addLog(`${currentEnemy.name} zasáhl za <strong>${edmg}</strong>`, 'log-e');
+    if (character.health <= 0) { endCombat(false); break; }
+  }
+  updateHpBars();
 }
 
 function endCombat(won) {
   inCombat = false;
-  const btns = document.getElementById('combatBtns');
-  if (btns) btns.style.display = 'none';
+  clearTimeout(fightTimer);
+  updateHpBars();
+
+  let rewards = '';
   if (won) {
-    character.gold += currentEnemy.gold;
+    character.gold       += currentEnemy.gold;
     character.experience += currentEnemy.exp;
-    addLog(`🏆 Vítězství! +${currentEnemy.gold}💰 +${currentEnemy.exp}⭐`, 'log-w');
-    checkLevelUp(); saveChar(); updateUI();
+    rewards = `+${currentEnemy.gold} zlata · +${currentEnemy.exp} zkušeností`;
+    addLog(`Vítězství! ${rewards}`, 'log-w');
+    checkLevelUp();
   } else {
     character.health = Math.max(1, Math.floor(character.max_health * 0.25));
-    addLog(`💀 Poražen! Probral ses s ${character.health} HP.`, 'log-d');
-    saveChar(); updateUI();
+    rewards = `Probral ses s ${character.health} HP.`;
+    addLog(`Porážka. ${rewards}`, 'log-d');
+  }
+  saveChar(); updateUI();
+
+  const box = document.getElementById('combatBtns');
+  if (box) {
+    box.innerHTML = `
+      <div class="fight-result ${won ? 'win' : 'lose'}">
+        <div class="fr-title">${won ? 'Vítězství!' : 'Porážka'}</div>
+        <div class="fr-sub">${rewards}</div>
+      </div>
+      <button class="btn-green" onclick="refight()">Bojovat znovu</button>
+      <button class="btn-back" onclick="openView('${lastFight ? lastFight.view : 'expedition'}')">Zpět</button>`;
   }
 }
 
-function fleeCombat() {
-  inCombat = false;
-  addLog('🏃 Utekl jsi z boje!', 'log-s');
-  const btns = document.getElementById('combatBtns');
-  if (btns) btns.style.display = 'none';
+function refight() {
+  if (!lastFight) return;
+  beginFight(lastFight.enemy, lastFight.view);
 }
 
 function updateHpBars() {
@@ -1481,13 +1711,14 @@ function buyItem(itemId) {
     if (item) break;
   }
   if (!item) return;
-  if (character.gold < item.price) { alert('❌ Nedostatek zlatých!'); return; }
+  if (character.gold < item.price) { toast('Nedostatek zlatých na ' + item.name); return; }
+  if (inventory.length >= 24) { toast('Batoh je plný!'); return; }
   character.gold -= item.price;
-  // Just add to inventory - don't apply stats yet (will be done on equip)
+  // staty se přičtou až při vybavení
   inventory.push({...item});
   localStorage.setItem('inv', JSON.stringify(inventory));
   saveChar(); updateUI();
-  alert(`✅ Zakoupeno: ${item.name}`);
+  toast(`Zakoupeno: ${item.name} (−${item.price} zlatých)`);
   openView('shop');
 }
 
@@ -1601,4 +1832,287 @@ function logout() {
   API.clearToken();
   localStorage.removeItem('character');
   window.location.href = 'index.html';
+}
+
+
+// ========== VÝPRAVY ==========
+// Lokace se odemykají podle úrovně. Staty příšer se dopočítají
+// z úrovně lokace, takže je balanc konzistentní napříč celou mapou.
+const EXPED_DEFS = [
+  { id:'poustevnik', name:'Poustevník',      lvl:1,
+    desc:'Poustevníkova chatrč stojí kousek za hradbami. Místo klidu a modliteb — jenže krysy, ' +
+         'toulaví vlci a hladoví havrani z okolních polí sem chodí častěji než poutníci. ' +
+         'Pro začínajícího gladiátora ideální místo, kde si otestovat první meč.',
+    mobs:[['Zdivočelý Netopýr','bat'],['Toulavý Vlk','wolf'],['Hladový Havran','raven'],['Křížák','spider']] },
+
+  { id:'chram', name:'Jeskynní chrám',  lvl:4,
+    desc:'Pod zemí se skrývá chrám starší než samotné Atény. Stěny porostlé svítícím mechem, ' +
+         'ozvěna nesoucí zvuky, které nepatří ničemu živému. Poklady tu leží na dosah — ' +
+         'hlídané tvory, kteří nikdy nespatřili slunce.',
+    mobs:[['Slizoun','slime'],['Skřet Zlodějský','goblin'],['Jeskynní Krab','crab'],['Chrámový Golem','golem']] },
+
+  { id:'les', name:'Zelený les',       lvl:8,
+    desc:'Kdo má rád zeleň a vůni bylin, brzy zjistí, že Zelený les je pro něj jako stvořený. ' +
+         'Jenže z hloubi lesa se line hrůza. Vlci a medvědi tu začali chodit vzpřímeně a zabíjet ' +
+         'poutníky. Kdo se odváží dovnitř v noci, obvykle najde magické přísady — hrozba smrti ' +
+         'je ale pro průměrného občana příliš riskantní.',
+    mobs:[['Lesní Vlk','wolf'],['Masožravka','plant'],['Zelený Had','snake'],['Starý Treant','treant']] },
+
+  { id:'vesnice', name:'Zakletá vesnice', lvl:12,
+    desc:'Vesnice, kterou proklely bohové. Domy stojí, ohně hoří, ale nikdo tu už roky nedýchá. ' +
+         'Mrtví si pamatují své řemeslo — a své zbraně. Kdo sem vstoupí za soumraku, ' +
+         'málokdy vyjde stejnou cestou.',
+    mobs:[['Kostlivec Šermíř','skeleton-swordfighter'],['Kostlivec Lučištník','skeleton-archer'],
+          ['Kostlivec Zloděj','skeleton-rogue'],['Kostlivec Mág','skeleton-mage']] },
+
+  { id:'pahorek', name:'Pahorek Smrti',  lvl:16,
+    desc:'Kopec, na kterém se pohřbívali ti, které nikdo nechtěl. Vzduch je tu studený i v poledne ' +
+         'a stíny se hýbou samy od sebe. Říká se, že kdo dojde až na vrchol, uslyší své vlastní ' +
+         'jméno vyslovené nahlas.',
+    mobs:[['Stín','shadow'],['Přízrak','spirit'],['Bánší','banshee'],['Oživlá Zbroj','armor']] },
+
+  { id:'vandalove', name:'Vesnice Vandalů', lvl:20,
+    desc:'Tábor nájezdníků, kteří si z drancování udělali řemeslo. Kouř z ohňů je vidět na míle ' +
+         'daleko a v ohradách stojí ukradený dobytek. Vandalové neberou zajatce — a ty berou ' +
+         'jako obchodní příležitost.',
+    mobs:[['Rudý Skřítek','red-imp'],['Černý Skřítek','black-imp'],['Vandalský Troll','troll'],
+          ['Náčelník Skřetů','goblin']] },
+
+  { id:'dul', name:'Důl',           lvl:24,
+    desc:'Opuštěné šachty, kde se kdysi těžilo stříbro. Horníci zmizeli přes noc a zůstaly po nich ' +
+         'jen krumpáče u vchodu. Z hloubky se ozývá klepání — pravidelné, jako by někdo ' +
+         'stále pracoval.',
+    mobs:[['Důlní Pavouk','spider'],['Slizoun Hlubin','slime'],['Kamenný Golem','golem'],
+          ['Horský Troll','troll']] },
+
+  { id:'teutoni', name:'Tábor Teutonů', lvl:28,
+    desc:'Severní žoldáci, kteří se do Řecka dostali za zlatem a zůstali kvůli krvi. Jejich tábor ' +
+         'je opevněný lépe než leckterá pevnost a jejich mrtví bojují dál — prý za ' +
+         'nezaplacený žold.',
+    mobs:[['Teutonský Válečník','skeleton-swordfighter'],['Železná Zbroj','armor'],
+          ['Bojový Gryf','griffin'],['Stín Velitele','shadow']] },
+
+  { id:'koman', name:'Hora Koman',    lvl:32,
+    desc:'Nejvyšší štít v kraji. Vzduch je řídký, cesta zledovatělá a bouře přicházejí bez varování. ' +
+         'Nahoře hnízdí gryfové a mezi skalami se pohybuje něco, co tam podle map být nemá.',
+    mobs:[['Skalní Gryf','griffin'],['Přízrak Vrcholu','spirit'],['Ledový Troll','troll'],
+          ['Skalní Golem','golem']] },
+
+  { id:'draci', name:'Dračí ostatky', lvl:36,
+    desc:'Kostra tvora tak velkého, že jeho žebra tvoří údolí. Mezi kostmi se usadili ti, ' +
+         'kdo se živí zbytky jeho moci. Kdo přežije až sem, nebojuje o zlato — ' +
+         'bojuje o jméno, které přežije jeho samotného.',
+    mobs:[['Drakonid','snake'],['Mladý Drak','dragon'],['Kostěný Šaman','skeleton-mage'],
+          ['Prastarý Drak','dragon']] },
+];
+
+// z definice udělá plnou lokaci i se staty příšer
+const EXPEDITIONS = EXPED_DEFS.map(d => ({
+  id: d.id, name: d.name, minLevel: d.lvl, desc: d.desc,
+  monsters: d.mobs.map(([name, img], i) => {
+    // Staty vycházejí z toho, co hráč na dané úrovni reálně uveze:
+    //   životy   ≈ 8 kol, než ho hráč sundá
+    //   síla     ≈ hráč vydrží ~15 kol
+    const T = d.lvl;                 // úroveň lokace
+    const k  = 1 + i * 0.18;         // výdrž pozdějších příšer roste znatelně
+    const ks = 1 + i * 0.06;         // …ale jejich úder jen mírně, ať jsou porazitelné
+    const r  = (v) => Math.max(1, Math.round(v));
+
+    const hp   = 24 * T * k;              // 24 HP na úroveň lokace
+    const str  = (9 + 1.2 * T) * ks;      // aby hráč neumíral, ale cítil to
+    const def  = 2 * T * k;               // tlumí zásah o def/4
+    const loot = 18 * Math.pow(T, 0.9) * k;
+
+    return {
+      name, img: `monsters/${img}.png`,
+      lvl:  [d.lvl + i, d.lvl + i + 2],
+      hp:   [r(hp * 0.85), r(hp * 1.15)],
+      str:  r(str),
+      def:  r(def),
+      gold: [r(loot * 0.8), r(loot * 1.3)],
+      exp:  [r(loot * 0.9), r(loot * 1.4)],
+    };
+  })
+}));
+
+let currentExped = 'poustevnik';
+
+// slovní hodnocení statu vůči hráči (jako v Gladiatus)
+const RANK_WORDS = ['Bezcenný','Velmi slabý','Slabý','Neduživý','Normální','Silný','Velmi silný'];
+function rankWord(val, ref) {
+  if (!ref || ref <= 0) return 'Normální';
+  const r = val / ref;
+  if (r < 0.25) return RANK_WORDS[0];
+  if (r < 0.50) return RANK_WORDS[1];
+  if (r < 0.75) return RANK_WORDS[2];
+  if (r < 0.95) return RANK_WORDS[3];
+  if (r < 1.30) return RANK_WORDS[4];
+  if (r < 1.80) return RANK_WORDS[5];
+  return RANK_WORDS[6];
+}
+
+const rnd = ([a, b]) => a + Math.floor(Math.random() * (b - a + 1));
+
+function rollMonster(m) {
+  const hp = rnd(m.hp);
+  return {
+    name: m.name, img: m.img, icon: '👹',
+    level: rnd(m.lvl),
+    hp, maxHp: hp,
+    str: m.str, def: m.def,
+    gold: rnd(m.gold), exp: rnd(m.exp),
+  };
+}
+
+function monsterPortrait(m, cls) {
+  return `<img class="ico ${cls}" src="img/${m.img}" alt="${m.name}"
+               data-emoji="👹" data-try="svg" onerror="iconFallback(this)">`;
+}
+
+// seznam lokací do levého menu (druhá záložka s mapou)
+function expedMenuHTML() {
+  return EXPEDITIONS.map(e => {
+    const locked = character && character.level < e.minLevel;
+    return `<a class="sub-item ${locked ? 'locked' : ''} ${e.id === currentExped ? 'active' : ''}"
+               onclick="${locked ? '' : `openExped('${e.id}')`}"
+               title="${locked ? 'Odemkne se na úrovni ' + e.minLevel : 'Úroveň ' + e.minLevel + '+'}">
+              ${e.name}
+            </a>`;
+  }).join('');
+}
+
+function expedition() {
+  const loc = EXPEDITIONS.find(e => e.id === currentExped) || EXPEDITIONS[0];
+  currentExped = loc.id;
+  const locked = character.level < loc.minLevel;
+
+  const cards = loc.monsters.map((m, i) => `
+    <div class="mon-card">
+      <div class="mon-name">${m.name}</div>
+      <div class="mon-frame">${monsterPortrait(m, 'mon-img')}</div>
+
+      <button class="btn-green mon-attack" ${locked ? 'disabled' : ''}
+              onclick="attackMonster(${i})">Útok</button>
+
+      <div class="mon-rew">
+        <span title="Zlato">🪙 ${m.gold[0]}–${m.gold[1]}</span>
+        <span title="Zkušenosti">⭐ ${m.exp[0]}–${m.exp[1]}</span>
+      </div>
+
+      <div class="mon-tip">
+        <div class="mt-name">${m.name}</div>
+        <div class="mt-row"><span>Úroveň</span><b>${m.lvl[0]} - ${m.lvl[1]}</b></div>
+        <div class="mt-row"><span>Životy</span><b>${m.hp[0]} - ${m.hp[1]}</b></div>
+        <div class="mt-row"><span>Síla</span><b>${rankWord(m.str, character.strength)}</b></div>
+        <div class="mt-row"><span>Odolnost</span><b>${rankWord(m.def, character.defense)}</b></div>
+        <div class="mt-row"><span>Obratnost</span><b>${rankWord(m.str * .8, character.agility)}</b></div>
+        <div class="mt-row"><span>Zbroj</span><b>${m.def * 3}</b></div>
+        <div class="mt-row"><span>Poškození</span><b>${Math.floor(m.str * 1.1)} - ${Math.floor(m.str * 1.6)}</b></div>
+      </div>
+    </div>`).join('');
+
+  return `
+  <div class="shop2">
+    <div class="s2tabs">
+      <div class="s2tab active">${loc.name}</div>
+      <div class="s2tab" onclick="openView('dungeon')">Bludiště</div>
+    </div>
+
+    <div class="exped-body">
+      ${locked ? `<div class="exped-lock">Tato oblast se otevře na úrovni ${loc.minLevel}.</div>` : ''}
+
+      <div class="mon-row">${cards}</div>
+
+      <div class="exped-desc">
+        <div class="exped-desc-title">Popis</div>
+        <p>${loc.desc}</p>
+      </div>
+
+      ${combatPanelHTML()}
+    </div>
+  </div>`;
+}
+
+function openExped(id) {
+  const e = EXPEDITIONS.find(x => x.id === id);
+  if (!e) return;
+  if (character.level < e.minLevel) { toast(`${e.name} se odemkne na úrovni ${e.minLevel}.`); return; }
+  currentExped = id;
+  openView('expedition');
+}
+
+function attackMonster(i) {
+  const loc = EXPEDITIONS.find(e => e.id === currentExped);
+  if (!loc) return;
+  if (character.level < loc.minLevel) { toast(`Potřebuješ úroveň ${loc.minLevel}.`); return; }
+  beginFight(rollMonster(loc.monsters[i]), 'expedition');
+}
+
+// ---------- sdílený panel boje ----------
+function combatPanelHTML() {
+  return `
+  <div class="panel" id="combatPanel" style="display:none;">
+    <div class="panel-header">Průběh boje</div>
+    <div class="panel-body">
+      <div class="combat-wrap">
+        <div class="vs-row">
+          <div class="fighter-box player">
+            <div class="fighter-avatar-lg" id="pAvatar"></div>
+            <div class="fighter-name-lg" id="pName">-</div>
+            <div class="hp-row">
+              <div class="hp-bg"><div class="hp-fg player" id="pHpBar" style="width:100%"></div></div>
+              <span class="hp-txt" id="pHpTxt">-</span>
+            </div>
+          </div>
+          <div class="vs-badge">VS</div>
+          <div class="fighter-box enemy">
+            <div class="fighter-avatar-lg" id="eAvatar"></div>
+            <div class="fighter-name-lg" id="eName">-</div>
+            <div class="hp-row">
+              <div class="hp-bg"><div class="hp-fg enemy" id="eHpBar" style="width:100%"></div></div>
+              <span class="hp-txt" id="eHpTxt">-</span>
+            </div>
+          </div>
+        </div>
+        <div class="combat-log" id="combatLog"></div>
+        <div class="combat-btns" id="combatBtns"></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ---------- univerzální start boje ----------
+function beginFight(enemy, view) {
+  clearTimeout(fightTimer);
+  character.health = character.max_health;
+  currentEnemy = JSON.parse(JSON.stringify(enemy));
+  if (currentEnemy.maxHp == null) currentEnemy.maxHp = currentEnemy.hp;
+  inCombat = true;
+  lastFight = { enemy, view };
+
+  openView(view);
+  setTimeout(() => {
+    const panel = document.getElementById('combatPanel');
+    if (!panel) return;
+    panel.style.display = 'block';
+
+    document.getElementById('pAvatar').innerHTML = getAvatar(character.class, character.gender);
+    document.getElementById('pName').textContent = character.name;
+
+    const eAv = document.getElementById('eAvatar');
+    eAv.innerHTML = currentEnemy.img
+      ? monsterPortrait(currentEnemy, 'fighter-img')
+      : `<span style="font-size:44px">${currentEnemy.icon}</span>`;
+
+    document.getElementById('eName').textContent = currentEnemy.name;
+    document.getElementById('combatLog').innerHTML = '';
+    document.getElementById('combatBtns').innerHTML =
+      `<button class="btn-back" onclick="skipFight()">Přeskočit animaci</button>`;
+
+    updateHpBars();
+    addLog(`${character.name} vs ${currentEnemy.name} — boj začal!`, 'log-s');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    fightTimer = setTimeout(fightRound, 600);   // boj běží sám
+  }, 60);
 }
