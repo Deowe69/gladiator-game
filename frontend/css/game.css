@@ -1213,3 +1213,114 @@ html, body {
   .avatar-frame { width:150px; height:150px; }
   .avatar-inner { font-size:3em; }
 }
+
+/* ===== SHOP WITH MERCHANTS ===== */
+.shop-merchants {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:20px; margin-bottom:20px;
+}
+
+.merchant-card {
+  background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(0,0,0,.3));
+  border:2px solid var(--gold-dark); border-radius:8px;
+  padding:20px; text-align:center; cursor:pointer;
+  transition:all .3s; position:relative;
+  overflow:hidden;
+}
+
+.merchant-card::before {
+  content:''; position:absolute; top:0; left:-100%; width:100%; height:100%;
+  background:linear-gradient(90deg,transparent,rgba(212,175,55,.2),transparent);
+  transition:left .4s;
+}
+
+.merchant-card:hover {
+  border-color:var(--gold); background:linear-gradient(135deg,rgba(212,175,55,.2),rgba(0,0,0,.4));
+  box-shadow:0 0 20px rgba(212,175,55,.3); transform:translateY(-4px);
+}
+
+.merchant-card:hover::before { left:100%; }
+
+.merchant-icon {
+  font-size:3em; margin-bottom:10px; display:block;
+}
+
+.merchant-name {
+  color:var(--gold); font-size:1.1em; font-weight:bold;
+  margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;
+}
+
+.merchant-desc {
+  color:var(--text-dim); font-size:.85em; font-style:italic;
+}
+
+/* MERCHANT SHOP VIEW */
+.merchant-shop {
+  background:rgba(0,0,0,.3); border:1px solid var(--border);
+  border-radius:8px; padding:20px;
+}
+
+.btn-back {
+  background:rgba(212,175,55,.1); border:1px solid var(--gold-dark);
+  color:var(--gold); padding:8px 16px; cursor:pointer; font-family:'Cinzel',serif;
+  border-radius:4px; margin-bottom:20px; transition:all .2s;
+}
+
+.btn-back:hover {
+  background:var(--gold-dark); color:var(--cream);
+}
+
+#merchantContent h2 {
+  color:var(--gold); font-size:1.6em; margin-bottom:20px;
+  text-shadow:0 0 10px rgba(212,175,55,.3);
+}
+
+.shop-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:15px;
+}
+
+.shop-card {
+  background:rgba(0,0,0,.4); border:1px solid var(--border);
+  border-radius:6px; padding:12px; text-align:center;
+  transition:all .2s; cursor:pointer;
+}
+
+.shop-card:hover {
+  background:rgba(212,175,55,.08); border-color:var(--gold-dark);
+  box-shadow:0 0 12px rgba(212,175,55,.2);
+}
+
+.shop-card-icon {
+  font-size:2em; display:block; margin-bottom:8px;
+}
+
+.shop-card-name {
+  color:var(--gold); font-size:.85em; font-weight:bold;
+  margin-bottom:4px; min-height:2em; line-height:1.2;
+}
+
+.shop-card-stat {
+  color:var(--text-dim); font-size:.75em; margin-bottom:8px;
+}
+
+.shop-card-price {
+  color:var(--gold-light); font-size:.9em; font-weight:bold;
+  margin-bottom:10px;
+}
+
+.shop-btn {
+  width:100%; padding:8px; background:var(--gold-dark);
+  color:var(--cream); border:1px solid var(--gold);
+  border-radius:4px; cursor:pointer; font-family:'Cinzel',serif;
+  font-size:.8em; font-weight:bold; transition:all .2s;
+}
+
+.shop-btn:hover:not(:disabled) {
+  background:var(--gold); color:var(--bg); box-shadow:0 0 8px rgba(212,175,55,.4);
+}
+
+.shop-btn:disabled {
+  background:rgba(0,0,0,.2); color:var(--text-dim);
+  cursor:not-allowed; opacity:.6;
+}

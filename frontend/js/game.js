@@ -31,6 +31,7 @@ const SHOP_ITEMS = {
     { id:'w2', name:'Železný Kopí',    icon:'🔱', stat:'+12 Síla',   key:'strength',  val:12, price:220,  quality:'uncommon' },
     { id:'w3', name:'Ocelová Kosa',    icon:'⚔️', stat:'+20 Síla',   key:'strength',  val:20, price:450,  quality:'rare'     },
     { id:'w4', name:'Meč Achillea',    icon:'🌟', stat:'+35 Síla',   key:'strength',  val:35, price:900,  quality:'epic'     },
+    { id:'w5', name:'Luk Artemidy',    icon:'🏹', stat:'+18 Síla',   key:'strength',  val:18, price:380,  quality:'rare'     },
   ],
   armor: [
     { id:'a1', name:'Kožená Zbroj',    icon:'🧥', stat:'+6 Obrana',  key:'defense',   val:6,  price:90,   quality:'common'   },
@@ -38,15 +39,26 @@ const SHOP_ITEMS = {
     { id:'a3', name:'Athénin Štít',    icon:'⛨',  stat:'+25 Obrana', key:'defense',   val:25, price:480,  quality:'rare'     },
     { id:'a4', name:'Zbroj Spartana',  icon:'💠', stat:'+40 Obrana', key:'defense',   val:40, price:950,  quality:'epic'     },
   ],
+  armor_extra: [
+    { id:'h1', name:'Korintská Helma', icon:'⛑️', stat:'+8 Obrana',  key:'defense',   val:8,  price:150,  quality:'uncommon' },
+    { id:'h2', name:'Helma Heros',     icon:'👑', stat:'+16 Obrana', key:'defense',   val:16, price:320,  quality:'rare'     },
+    { id:'g1', name:'Kožené Rukavice', icon:'🥊', stat:'+5 Síla',    key:'strength',  val:5,  price:80,   quality:'common'   },
+    { id:'g2', name:'Železné Rukavice',icon:'👊', stat:'+12 Síla',   key:'strength',  val:12, price:200,  quality:'uncommon' },
+    { id:'b1', name:'Běžné Boty',      icon:'👟', stat:'+4 Hbitost', key:'agility',   val:4,  price:70,   quality:'common'   },
+    { id:'b2', name:'Hermovy Boty',    icon:'🥾', stat:'+10 Hbitost',key:'agility',   val:10, price:180,  quality:'rare'     },
+    { id:'b3', name:'Kožený Pás',      icon:'🔗', stat:'+3 Obrana',  key:'defense',   val:3,  price:60,   quality:'common'   },
+  ],
+  jewelry: [
+    { id:'m1', name:'Hermův Amulet',   icon:'💍', stat:'+8 Hbitost', key:'agility',   val:8,  price:180,  quality:'uncommon' },
+    { id:'m2', name:'Apollónův Prsten',icon:'💎', stat:'+10 Intel.', key:'intelligence',val:10,price:220, quality:'uncommon' },
+    { id:'m4', name:'Afroditin Amulet',icon:'✨', stat:'+12 Hbitost',key:'agility',   val:12, price:280,  quality:'rare'     },
+    { id:'m5', name:'Zeusův Prsten',   icon:'⚡', stat:'+15 Síla',   key:'strength',  val:15, price:400,  quality:'rare'     },
+  ],
   potions: [
     { id:'p1', name:'Malý Lektvar',    icon:'🧪', stat:'+30 HP',     key:'health',    val:30, price:25,   quality:'common'   },
     { id:'p2', name:'Střední Lektvar', icon:'⚗️', stat:'+80 HP',     key:'health',    val:80, price:60,   quality:'uncommon' },
     { id:'p3', name:'Ambrózie Bohů',   icon:'🍯', stat:'+200 HP',    key:'health',    val:200,price:150,  quality:'rare'     },
-  ],
-  misc: [
-    { id:'m1', name:'Hermův Amulet',   icon:'💍', stat:'+8 Hbitost', key:'agility',   val:8,  price:180,  quality:'uncommon' },
-    { id:'m2', name:'Apollónův Luk',   icon:'🏹', stat:'+10 Intel.', key:'intelligence',val:10,price:220, quality:'uncommon' },
-    { id:'m3', name:'Poseidonův Trident',icon:'🔱',stat:'+15 Síla +10 Obrana',key:'strength',val:15,price:500,quality:'rare'},
+    { id:'p4', name:'Nektár Olimpu',   icon:'🥛', stat:'+300 HP',    key:'health',    val:300,price:280,  quality:'epic'     },
   ],
 };
 
@@ -395,53 +407,72 @@ function quests() {
   </div>`;
 }
 
-// ===== SHOP =====
+// ===== SHOPS =====
+let currentShop = null;
+
 function shop() {
-  function renderTab(items) {
-    return items.map(item => `
-      <div class="shop-card">
-        <span class="shop-card-icon">${item.icon}</span>
-        <div class="shop-card-name">${item.name}</div>
-        <div class="shop-card-stat">${item.stat}</div>
-        <div class="shop-card-price">💰 ${item.price}</div>
-        <button class="shop-btn" onclick="buyItem('${item.id}')"
-          ${character.gold < item.price ? 'disabled' : ''}>
-          ${character.gold >= item.price ? '🛒 Koupit' : '❌ Nedost. zlata'}
-        </button>
-      </div>`).join('');
-  }
+  const merchants = [
+    { id: 'blacksmith', name: 'Zbrojiř', icon: '🔨', desc: 'Nejlepší zbraně Olympu', items: SHOP_ITEMS.weapons },
+    { id: 'armorer', name: 'Zbrojnice', icon: '🛡️', desc: 'Silná zbroj a ochrana', items: SHOP_ITEMS.armor.concat(SHOP_ITEMS.armor_extra || []) },
+    { id: 'jeweler', name: 'Šperkař', icon: '💍', desc: 'Vzácné šperky a relikvie', items: SHOP_ITEMS.jewelry },
+    { id: 'alchemist', name: 'Alchymista', icon: '🧪', desc: 'Magické lektvary a elixíry', items: SHOP_ITEMS.potions },
+  ];
+
   return `
   <div class="panel">
-    <div class="panel-header">🏪 Trh - Atény</div>
+    <div class="panel-header">🏪 Athenský Trh</div>
     <div class="panel-body">
-      <div class="shop-tabs">
-        <div class="shop-tab active" onclick="shopTab(this,'weapons')">⚔ Zbraně</div>
-        <div class="shop-tab" onclick="shopTab(this,'armor')">🛡️ Zbroj</div>
-        <div class="shop-tab" onclick="shopTab(this,'potions')">🧪 Lektvary</div>
-        <div class="shop-tab" onclick="shopTab(this,'misc')">💍 Relikvie</div>
+      <div class="shop-merchants">
+        ${merchants.map(m => `
+          <div class="merchant-card" onclick="openMerchant('${m.id}')">
+            <div class="merchant-icon">${m.icon}</div>
+            <div class="merchant-name">${m.name}</div>
+            <div class="merchant-desc">${m.desc}</div>
+          </div>
+        `).join('')}
       </div>
-      <div class="shop-grid" id="shopItems">${renderTab(SHOP_ITEMS.weapons)}</div>
+      <div class="merchant-shop" id="merchantShop" style="display:none;">
+        <button class="btn-back" onclick="openView('shop')">← Zpět na Trh</button>
+        <div id="merchantContent"></div>
+      </div>
     </div>
   </div>`;
 }
 
-function shopTab(el, cat) {
-  document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  function renderTab(items) {
-    return items.map(item => `
-      <div class="shop-card">
-        <span class="shop-card-icon">${item.icon}</span>
-        <div class="shop-card-name">${item.name}</div>
-        <div class="shop-card-stat">${item.stat}</div>
-        <div class="shop-card-price">💰 ${item.price}</div>
-        <button class="shop-btn" onclick="buyItem('${item.id}')"
-          ${character.gold < item.price ? 'disabled' : ''}>
-          ${character.gold >= item.price ? '🛒 Koupit' : '❌ Nedost. zlata'}
-        </button>
-      </div>`).join('');
-  }
-  document.getElementById('shopItems').innerHTML = renderTab(SHOP_ITEMS[cat]);
+function openMerchant(merchantId) {
+  const shops = {
+    blacksmith: { name: 'Zbrojiř', items: SHOP_ITEMS.weapons },
+    armorer: { name: 'Zbrojnice', items: SHOP_ITEMS.armor.concat(SHOP_ITEMS.armor_extra || []) },
+    jeweler: { name: 'Šperkař', items: SHOP_ITEMS.jewelry },
+    alchemist: { name: 'Alchymista', items: SHOP_ITEMS.potions },
+  };
+
+  const shop = shops[merchantId];
+  if (!shop) return;
+
+  currentShop = merchantId;
+  const grid = document.getElementById('merchantShop');
+  const content = document.getElementById('merchantContent');
+
+  const itemsHTML = shop.items.map(item => `
+    <div class="shop-card">
+      <span class="shop-card-icon">${item.icon}</span>
+      <div class="shop-card-name">${item.name}</div>
+      <div class="shop-card-stat">${item.stat}</div>
+      <div class="shop-card-price">💰 ${item.price}</div>
+      <button class="shop-btn" onclick="buyItem('${item.id}')"
+        ${character.gold < item.price ? 'disabled' : ''}>
+        ${character.gold >= item.price ? '🛒 Koupit' : '❌ Nedost. zlata'}
+      </button>
+    </div>`).join('');
+
+  content.innerHTML = `
+    <h2>${shop.name}</h2>
+    <div class="shop-grid">${itemsHTML}</div>
+  `;
+
+  document.querySelector('.shop-merchants').style.display = 'none';
+  grid.style.display = 'block';
 }
 
 // ===== INVENTORY =====
