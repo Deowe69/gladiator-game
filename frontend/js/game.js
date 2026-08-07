@@ -148,6 +148,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const res = await API.getCharacter();
     character = res.character;
     questData = JSON.parse(localStorage.getItem('questData') || 'null');
+    normalizeCharacter();
     updateUI();
     openView('city');
     startQuestTimer();
@@ -158,6 +159,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (savedChar) {
       character = JSON.parse(savedChar);
       questData = JSON.parse(localStorage.getItem('questData') || 'null');
+      normalizeCharacter();
       updateUI();
       openView('city');
       startQuestTimer();
@@ -180,6 +182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         gold: 500
       };
       localStorage.setItem('character', JSON.stringify(character));
+      normalizeCharacter();
       updateUI();
       openView('city');
       startQuestTimer();
@@ -453,14 +456,14 @@ function merchantPortrait(id) {
 // jedno políčko se zbožím
 function goodsSlot(item, dark) {
   if (!item) return `<div class="g-slot ${dark ? 'dark' : ''} empty"></div>`;
+  const q = qualityOf(item);
   const afford = character.gold >= item.price;
   return `
     <div class="g-slot ${dark ? 'dark' : ''} ${afford ? '' : 'poor'}"
          onclick="buyItem('${item.uid}')"
          data-tip="shop:${item.uid}">
-      <span class="g-q" style="background:${qualityOf(item).color}"></span>
+      <span class="g-lvl" style="color:${q.color}">${item.lvl || 1}</span>
       ${itemIcon(item, 'g-ico')}
-      <span class="g-price">${item.price}</span>
     </div>`;
 }
 
@@ -495,37 +498,32 @@ function newGoods() {
 function shop() {
   const id = MERCHANTS[currentShop] ? currentShop : 'blacksmith';
   currentShop = id;
-  const m = MERCHANTS[id];
 
   const tabs = Object.keys(MERCHANTS).map(k =>
     `<div class="s2tab ${k === id ? 'active' : ''}" onclick="openMerchant('${k}')">${MERCHANTS[k].name}</div>`
   ).join('');
 
-  // zboží rozdělené na stránky I / II / III
+  // nabídka rozdělená na dvě stránky
   const stock = shopStock(id);
-  const pages = [stock.slice(0, 12), stock.slice(12, 24), stock.slice(24, 36)];
+  const pages = [stock.slice(0, 16), stock.slice(16, 32)];
 
-  const pageTabs = ['I', 'II', 'III'].map((lbl, i) =>
-    `<div class="bag-tab ${shopPage === i ? 'active' : ''}" onclick="setShopPage(${i})">${lbl}</div>`
-  ).join('') +
-    `<div class="bag-tab sell ${shopPage === 'sell' ? 'active' : ''}" onclick="setShopPage('sell')">Prodat</div>`;
+  const pageTabs =
+    ['I', 'II'].map((lbl, i) =>
+      `<div class="pg-tab ${shopPage === i ? 'active' : ''}" onclick="setShopPage(${i})">${lbl}</div>`
+    ).join('') +
+    `<div class="pg-tab sell ${shopPage === 'sell' ? 'active' : ''}" onclick="setShopPage('sell')">Prodat</div>`;
 
-  // levá mřížka: buď zboží kupce, nebo prodejní zóna
-  let leftGrid;
-  if (shopPage === 'sell') {
-    leftGrid = `
-      <div class="sell-zone"
-           ondragover="dragOver(event)"
-           ondragleave="dragLeave(event)"
-           ondrop="dropSell(event)">
-        <div class="sell-hint">
-          Přetáhni sem předmět z batohu<br>
-          <small>nebo na něj klikni — vykoupím ho za 40 % ceny</small>
-        </div>
-      </div>`;
-  } else {
-    leftGrid = `<div class="goods-grid dark-grid">${fillSlots(pages[shopPage] || [], 12, true)}</div>`;
-  }
+  const mrizka = shopPage === 'sell'
+    ? `<div class="sell-zone"
+            ondragover="dragOver(event)"
+            ondragleave="dragLeave(event)"
+            ondrop="dropSell(event)">
+         <div class="sell-hint">
+           Přetáhni sem předmět z batohu<br>
+           <small>nebo na něj klikni — vykoupím ho za 40 % ceny</small>
+         </div>
+       </div>`
+    : `<div class="goods-grid">${fillSlots(pages[shopPage] || [], 16, false)}</div>`;
 
   return `
   <div class="shop2">
@@ -533,13 +531,13 @@ function shop() {
 
     <div class="s2body">
 
+      <!-- kupec: portrét, záložky a pult v jednom rámu -->
       <div class="s2left">
-        <div class="mp-frame">
+        <div class="shop-frame">
           <div class="mp-inner">${merchantPortrait(id)}</div>
+          <div class="pg-tabs">${pageTabs}</div>
+          ${mrizka}
         </div>
-
-        <div class="bag-tabs shop-pages">${pageTabs}</div>
-        ${leftGrid}
 
         <div class="restock">
           <div class="restock-lbl">Než kupec doplní zboží:</div>
@@ -548,6 +546,7 @@ function shop() {
         </div>
       </div>
 
+      <!-- tvoje výbava -->
       <div class="s2right">
         ${equipPanelHTML()}
         ${bagPanelHTML(shopPage === 'sell' ? 'sell' : 'use')}
@@ -780,14 +779,13 @@ function bagPanelHTML(mode) {
 
 function profileView() {
   const c = character;
-  const bonus = equipBonus;
-  const str = c.strength     + bonus('strength');
-  const def = c.defense      + bonus('defense');
-  const agi = c.agility      + bonus('agility');
-  const int = c.intelligence + bonus('intelligence');
+  const str = statTotal('strength');
+  const def = statTotal('defense');
+  const agi = statTotal('agility');
+  const int = statTotal('intelligence');
 
   const [dmgMin, dmgMax] = playerDamageRange();
-  const armor   = def * 3;
+  const armor   = totalArmor();
   const xpNeed  = c.level * 100;
   const xpPct   = Math.min(100, c.experience / xpNeed * 100);
   const hpPct   = Math.max(0, c.health / c.max_health * 100);
@@ -887,12 +885,9 @@ function dragLeave(e) {
   e.currentTarget.classList.remove('drag-over');
 }
 
-function applyBonus(item, sign) {
-  if (!item || !item.stats) return;
-  for (const [k, v] of Object.entries(item.stats)) {
-    if (typeof character[k] === 'number') character[k] += sign * v;
-  }
-}
+// Bonusy se nikam nezapisují — stačí, že předmět je v `equipped`.
+// Ponecháno jako no-op, aby volající kód zůstal čitelný.
+function applyBonus(_item, _sign) {}
 
 function dropOn(e, type, ref) {
   e.preventDefault();
@@ -1235,12 +1230,27 @@ const QUALITY_ROLL = {
 
 const qualityOf = it => QUALITY_ROLL[(it && it.quality) || 'common'] || QUALITY_ROLL.common;
 
+// sloty, které se počítají jako výstroj (nesou zbroj)
+const ARMOR_SLOTS = ['helmet', 'chest', 'shield', 'gloves', 'boots', 'belt'];
+
+// celková zbroj: z odolnosti + z jednotlivých kusů výstroje
+function totalArmor() {
+  const zOdolnosti = statTotal('defense') * 3;
+  const zVystroje  = Object.values(equipped).reduce((a, e) => a + ((e && e.armor) || 0), 0);
+  return zOdolnosti + zVystroje;
+}
+
 // Ze šablony z obchodu vyrobí konkrétní kus s náhodně rozhozenými staty.
 // Hlavní stat odpovídá typu předmětu (zbraň → síla, zbroj → odolnost…),
 // zbylé se losují, takže dva stejné meče nejsou nikdy stejné.
 function rollItem(tpl) {
   const it = { ...tpl, uid: 'i' + Math.random().toString(36).slice(2, 10) };
   it.lvl = Math.max(1, Math.round((tpl.price || 25) / 28));   // požadovaná úroveň
+
+  // kusy výstroje nesou vlastní zbroj (zbraně a šperky ne)
+  if (ARMOR_SLOTS.includes(slotForItem(tpl))) {
+    it.armor = Math.max(1, Math.round((tpl.price || 50) / 5 * qualityOf(tpl).mult));
+  }
   if (tpl.key === 'health') return it;          // lektvary se nerolují
 
   const q = qualityOf(tpl);
@@ -1271,6 +1281,7 @@ function statLine(it) {
   if (it.key === 'health') return '+' + it.val + ' zdraví';
   const parts = [];
   if (Array.isArray(it.dmg)) parts.push(it.dmg[0] + '-' + it.dmg[1] + ' poškození');
+  if (it.armor) parts.push('+' + it.armor + ' zbroj');
   if (it.stats) for (const [k, v] of Object.entries(it.stats)) parts.push('+' + v + ' ' + STAT_DEFS[k]);
   return parts.join(', ') || (it.stat || '');
 }
@@ -1278,6 +1289,24 @@ function statLine(it) {
 // součet jednoho statu ze všeho nasazeného
 function equipBonus(k) {
   return Object.values(equipped).reduce((a, e) => a + ((e && e.stats && e.stats[k]) || 0), 0);
+}
+
+// V postavě je uložený POUZE základ. Bonusy z vybavení se nikam nezapisují,
+// připočítávají se až tady — jinak by se počítaly dvakrát.
+function statTotal(k) {
+  return (character[k] || 0) + equipBonus(k);
+}
+
+// Starší uložené postavy měly bonusy zapsané rovnou v sobě.
+// Jednou je odečteme, ať v postavě zůstane jen základ.
+function normalizeCharacter() {
+  if (!character || localStorage.getItem('statsFixed') === '1') return;
+  for (const k of STAT_KEYS) {
+    if (typeof character[k] === 'number') {
+      character[k] = Math.max(1, character[k] - equipBonus(k));
+    }
+  }
+  localStorage.setItem('statsFixed', '1');
 }
 
 // starší uložené předměty měly jen jeden stat (key/val) — převedeme je
@@ -1315,6 +1344,9 @@ function itemTipHTML(it) {
   if (Array.isArray(it.dmg)) {
     rows.push(`<div class="tip-row"><span>Poškození</span><b>${it.dmg[0]} - ${it.dmg[1]}</b></div>`);
   }
+  if (it.armor) {
+    rows.push(`<div class="tip-row"><span>Zbroj</span><b>+${it.armor}</b></div>`);
+  }
   if (it.key === 'health') {
     rows.push(`<div class="tip-row"><span>Obnoví zdraví</span><b>+${it.val}</b></div>`);
   }
@@ -1322,6 +1354,11 @@ function itemTipHTML(it) {
     const cls = v < 0 ? ' neg' : '';
     rows.push(`<div class="tip-row${cls}"><span>${STAT_DEFS[k]}</span><b>${v > 0 ? '+' : ''}${v}</b></div>`);
   }
+
+  // zelený souhrn: čím ten kus hlavně přispěje
+  let souhrn = '';
+  if (it.armor) souhrn = '+' + it.armor + ' Zbroj';
+  else if (Array.isArray(it.dmg)) souhrn = '+' + Math.round((it.dmg[0] + it.dmg[1]) / 2) + ' Poškození';
 
   const tezky = it.lvl && character && character.level < it.lvl;
 
@@ -1332,6 +1369,7 @@ function itemTipHTML(it) {
     </div>
     <div class="tip-body">
       ${rows.join('') || '<div class="tip-row"><span>Bez bonusů</span><b>—</b></div>'}
+      ${souhrn ? `<div class="tip-sum">${souhrn}</div>` : ''}
       <div class="tip-sep"></div>
       ${it.lvl ? `<div class="tip-row${tezky ? ' neg' : ''}"><span>Úroveň</span><b>${it.lvl}</b></div>` : ''}
       <div class="tip-row"><span>Hodnota</span><b>${it.price || 0} zlata</b></div>
@@ -1417,7 +1455,7 @@ const FISTS = [1, 2];
 function playerDamageRange() {
   const w = equipped.weapon;
   const base = (w && Array.isArray(w.dmg)) ? w.dmg : FISTS;
-  const mult = 1 + character.strength / 150;
+  const mult = 1 + statTotal('strength') / 150;
   return [Math.max(1, Math.round(base[0] * mult)), Math.max(2, Math.round(base[1] * mult))];
 }
 
@@ -1428,6 +1466,10 @@ function rollPlayerDamage() {
 
 // zbroj tlumí zásah, ale nikdy ho nevynuluje
 const soak = def => Math.floor(def / 4);
+
+// hráč se kryje celou zbrojí, ne jen odolností
+// (dělíme 12, aby beze zbroje vyšlo totéž co dřív: odolnost/4)
+const playerSoak = () => Math.floor(totalArmor() / 12);
 
 // ========== AUTOMATICKÝ BOJ ==========
 let fightTimer = null;
@@ -1477,7 +1519,7 @@ function fightRound() {
   // --- odveta soupeře ---
   fightTimer = setTimeout(() => {
     if (!inCombat) return;
-    const edmg = Math.max(1, currentEnemy.str + Math.floor(Math.random() * 6) - soak(character.defense));
+    const edmg = Math.max(1, currentEnemy.str + Math.floor(Math.random() * 6) - playerSoak());
     character.health = Math.max(0, character.health - edmg);
     animateHit('.fighter-box.enemy', '.fighter-box.player', edmg, false);
     addLog(`${currentEnemy.name} zasáhl za <strong>${edmg}</strong>`, 'log-e');
@@ -1500,7 +1542,7 @@ function skipFight() {
     addLog(`${character.name} zasáhl za <strong>${pdmg}</strong>`, 'log-p');
     if (currentEnemy.hp <= 0) { endCombat(true); break; }
 
-    const edmg = Math.max(1, currentEnemy.str + Math.floor(Math.random() * 6) - soak(character.defense));
+    const edmg = Math.max(1, currentEnemy.str + Math.floor(Math.random() * 6) - playerSoak());
     character.health = Math.max(0, character.health - edmg);
     addLog(`${currentEnemy.name} zasáhl za <strong>${edmg}</strong>`, 'log-e');
     if (character.health <= 0) { endCombat(false); break; }
@@ -2017,7 +2059,7 @@ function training() {
     return `
       <div class="gl-row">
         <div class="gl-main">
-          <div class="gl-nm">${s.name} — ${character[s.key]}</div>
+          <div class="gl-nm">${s.name} — ${statTotal(s.key)}${equipBonus(s.key) ? ` <small>(základ ${character[s.key]})</small>` : ''}</div>
           <div class="gl-sub">${s.popis}</div>
         </div>
         <div class="train-cost ${ok ? '' : 'poor'}">${cost} zlata</div>
@@ -2089,7 +2131,6 @@ function hall() {
 // ===== STATISTIKY =====
 function stats() {
   const c = character;
-  const bonus = equipBonus;
   const [dmgMin, dmgMax] = playerDamageRange();
   const w = equipped.weapon;
 
@@ -2114,10 +2155,10 @@ function stats() {
         <div class="stats-block">
           <h3>Vlastnosti</h3>
           <div class="stat-cells">
-            ${cell('Síla', c.strength + bonus('strength'))}
-            ${cell('Obrana', c.defense + bonus('defense'))}
-            ${cell('Hbitost', c.agility + bonus('agility'))}
-            ${cell('Inteligence', c.intelligence + bonus('intelligence'))}
+            ${cell('Síla', statTotal('strength'))}
+            ${cell('Obrana', statTotal('defense'))}
+            ${cell('Hbitost', statTotal('agility'))}
+            ${cell('Inteligence', statTotal('intelligence'))}
           </div>
         </div>
 
@@ -2126,7 +2167,7 @@ function stats() {
           <div class="stat-cells">
             ${cell('Poškození', dmgMin + '-' + dmgMax)}
             ${cell('Zbraň', w ? w.name : 'Holé ruce')}
-            ${cell('Zbroj', (c.defense + bonus('defense')) * 3)}
+            ${cell('Zbroj', totalArmor())}
             ${cell('Vybaveno', Object.values(equipped).filter(Boolean).length + '/9')}
           </div>
         </div>
@@ -2176,9 +2217,9 @@ function expedition() {
         <div class="mt-name">${m.name}</div>
         <div class="mt-row"><span>Úroveň</span><b>${m.lvl[0]} - ${m.lvl[1]}</b></div>
         <div class="mt-row"><span>Životy</span><b>${m.hp[0]} - ${m.hp[1]}</b></div>
-        <div class="mt-row"><span>Síla</span><b>${rankWord(m.str, character.strength)}</b></div>
-        <div class="mt-row"><span>Odolnost</span><b>${rankWord(m.def, character.defense)}</b></div>
-        <div class="mt-row"><span>Obratnost</span><b>${rankWord(m.str * .8, character.agility)}</b></div>
+        <div class="mt-row"><span>Síla</span><b>${rankWord(m.str, statTotal('strength'))}</b></div>
+        <div class="mt-row"><span>Odolnost</span><b>${rankWord(m.def, statTotal('defense'))}</b></div>
+        <div class="mt-row"><span>Obratnost</span><b>${rankWord(m.str * .8, statTotal('agility'))}</b></div>
         <div class="mt-row"><span>Zbroj</span><b>${m.def * 3}</b></div>
         <div class="mt-row"><span>Poškození</span><b>${Math.floor(m.str * 1.1)} - ${Math.floor(m.str * 1.6)}</b></div>
       </div>

@@ -1229,3 +1229,93 @@ span.fighter-img{font-size:52px}
   color:#e06060;font-size:11px;font-style:italic;
   margin-top:5px;line-height:1.4;
 }
+
+/* =========================================================
+   OBCHOD – svislý rám podle předlohy
+   (přepisuje starší pravidla výše)
+   ========================================================= */
+.s2body{grid-template-columns:296px 1fr;align-items:start}
+
+/* kovový rám kolem celého pultu */
+.shop-frame{
+  background:linear-gradient(180deg,#8a7a5c 0%,#6b5c42 50%,#54472f 100%);
+  border:3px solid #3a2f1c;
+  border-radius:6px;
+  padding:7px;
+  box-shadow:
+    0 6px 18px rgba(0,0,0,.55),
+    inset 0 0 0 2px rgba(226,196,150,.35),
+    inset 0 1px 0 rgba(255,255,255,.25);
+}
+
+/* portrét kupce */
+.shop-frame .mp-inner{
+  height:186px;
+  background:radial-gradient(ellipse at 50% 35%,#7a4a32,#2e1a10);
+  border:2px solid #2e2113;
+  border-radius:2px;
+  display:flex;align-items:flex-end;justify-content:center;
+  overflow:hidden;
+}
+.shop-frame .mp-img{width:auto;height:100%;max-width:100%;object-fit:contain}
+.shop-frame span.mp-img{font-size:96px;line-height:1}
+
+/* záložky I / II / Prodat rovnou pod portrétem */
+.pg-tabs{display:flex;gap:1px;margin-top:5px}
+.pg-tab{
+  min-width:26px;height:19px;padding:0 7px;
+  background:linear-gradient(180deg,#7a6647,#5a4a33);
+  border:1px solid #2e2113;border-bottom:none;
+  color:#e8d4a0;font:bold 10.5px Georgia,serif;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+}
+.pg-tab:hover{background:linear-gradient(180deg,#8f7a55,#6b5940)}
+.pg-tab.active{
+  background:linear-gradient(180deg,#3f2a1a,#2e1e12);
+  color:#f0d886;
+}
+.pg-tab.sell{padding:0 10px}
+
+/* dřevěný pult */
+.shop-frame .goods-grid,
+.shop-frame .sell-zone{
+  grid-template-columns:repeat(4,1fr);
+  gap:2px;
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.22) 0 1px, transparent 1px 68px),
+    repeating-linear-gradient(0deg,  rgba(0,0,0,.22) 0 1px, transparent 1px 68px),
+    linear-gradient(180deg,#6b4a30 0%,#4a3020 100%);
+  border:2px solid #2e1e12;
+  border-radius:0 2px 2px 2px;
+  padding:3px;
+}
+.shop-frame .sell-zone{
+  display:flex;min-height:180px;border-style:dashed;border-color:#a8916a;
+}
+
+/* políčko: velká ikona, úroveň v rohu */
+.shop-frame .g-slot{
+  background:transparent;border:1px solid rgba(0,0,0,.28);
+  box-shadow:none;border-radius:0;
+  aspect-ratio:1;position:relative;overflow:visible;
+}
+.shop-frame .g-slot:hover{
+  border-color:#f0d886;
+  background:rgba(240,216,134,.12);
+  box-shadow:none;
+}
+.shop-frame .g-slot.empty{background:transparent;opacity:1}
+.shop-frame .g-slot.empty:hover{border-color:rgba(0,0,0,.28);background:transparent}
+.shop-frame .g-ico{width:96%;height:96%}
+
+.g-lvl{
+  position:absolute;top:1px;left:2px;z-index:3;
+  font:bold 11px Georgia,serif;
+  text-shadow:0 1px 2px #000, 0 0 3px #000;
+  pointer-events:none;
+}
+
+/* zbytek pultu */
+.shop-frame .restock{margin-top:0}
+.s2left .restock{margin-top:8px}
