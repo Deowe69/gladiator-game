@@ -70,6 +70,10 @@ class API {
     return this.request('/character/update', 'PUT', data);
   }
 
+  static async getLeaderboard() {
+    return this.request('/character/leaderboard');
+  }
+
   // Utility
   static saveToken(token) {
     localStorage.setItem('token', token);

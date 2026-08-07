@@ -58,6 +58,71 @@ const QUESTS_DEF = [
   { id:'q5', name:'Hněv Poseidona',     icon:'🌊', desc:'Přeplavej rozbouřené moře bohů.',   time:30*60, gold:600, exp:500, minLevel:12 },
 ];
 
+
+const TAVERN_QUESTS = [
+  // SNADNÉ
+  { id:'t1', name:'Doruč víno obchodníkovi', icon:'🍷', npc:'Dionýsos', npcIcon:'🧔', rarity:'common',
+    desc:'"Příteli, odnes tento džbán vína do přístavu. Obchodník Kyros čeká."',
+    flavor:'Starý hospodský ti mrkne okem a podá těžký džbán.',
+    time:3*60, gold:40, exp:30, minLevel:1,
+    steps:['Doruč džbán vína do přístavu', 'Vrať se pro odměnu'] },
+  { id:'t2', name:'Vyhnat krysy ze skladu', icon:'🐀', npc:'Hermes', npcIcon:'👴',  rarity:'common',
+    desc:'"Ty proklaté krysy! Vyčisti můj sklad a dostaneš slušně zaplaceno."',
+    flavor:'Hospodský tě vede ke tmavé chodbě plné hluku.',
+    time:5*60, gold:60, exp:45, minLevel:1,
+    steps:['Vejdi do sklepa', 'Vyhub 10 krys', 'Vrať se pro odměnu'] },
+  { id:'t3', name:'Průzkum okolí města', icon:'🗺️', npc:'Strategos', npcIcon:'⚔️', rarity:'common',
+    desc:'"Potřebuji vědět co se děje za hradbami. Prohledej okolí a podej zprávu."',
+    flavor:'Vojenský velitel tě přísně změří pohledem.',
+    time:8*60, gold:80, exp:60, minLevel:1,
+    steps:['Prozkoumej severní cestu', 'Prozkoumej jižní brod', 'Vrať zprávu veliteli'] },
+
+  // STŘEDNÍ
+  { id:'t4', name:'Ukrást mapu od Peršanů', icon:'📜', npc:'Athéna', npcIcon:'🦉', rarity:'uncommon',
+    desc:'"Perský špión má mapu našich pevností. Získej ji za každou cenu, hrdino."',
+    flavor:'Bohyně moudrosti se na tebe upřeně podívá.',
+    time:15*60, gold:180, exp:140, minLevel:3,
+    steps:['Najdi perského špióna v přístavu', 'Ukradni mapu', 'Doruč mapu Athéně'] },
+  { id:'t5', name:'Záchrana rukojmích', icon:'⛓️', npc:'Leonidas', npcIcon:'🛡️', rarity:'uncommon',
+    desc:'"Bandité drží naše vojáky! Vysvoboď je a přiveď je zpět živé."',
+    flavor:'Spartský král tě pohledí s nadějí v očích.',
+    time:20*60, gold:250, exp:200, minLevel:5,
+    steps:['Najdi banditský tábor', 'Poraz strážce', 'Osvoboď rukojmí', 'Vrať se zpět'] },
+  { id:'t6', name:'Lektvar pro nemocné děti', icon:'🧪', npc:'Asklepios', npcIcon:'🌿', rarity:'uncommon',
+    desc:'"Potřebuji kořen Asphodel z hory Pelion. Nemocné děti nemohou čekat!"',
+    flavor:'Lékař Asklepios tě prosebně uchopí za ruku.',
+    time:25*60, gold:200, exp:180, minLevel:4,
+    steps:['Vystoupej na horu Pelion', 'Najdi kořen Asphodel', 'Přines ho lékaři'] },
+
+  // TĚŽKÉ
+  { id:'t7', name:'Drakonova hlava', icon:'🐉', npc:'Zeus', npcIcon:'⚡', rarity:'rare',
+    desc:'"Drak terorizuje vesnice Thessálie. Přines mi jeho hlavu a budeš odměněn zlatem bohů!"',
+    flavor:'Blesky zahrají okolo Dia když ti zadává úkol.',
+    time:40*60, gold:500, exp:420, minLevel:10,
+    steps:['Cestuj do Thessálie', 'Najdi Drakonův doupě', 'Zabi Drakona', 'Přines hlavu Diovi'] },
+  { id:'t8', name:'Ukradený zlatý věnec', icon:'👑', npc:'Apollo', npcIcon:'🌞', rarity:'rare',
+    desc:'"Zloděj ukradl posvátný věnec z mého chrámu! Doveď mi ho - živého."',
+    flavor:'Bůh světla září zlatým světlem při řeči.',
+    time:35*60, gold:450, exp:380, minLevel:8,
+    steps:['Prošetři chrám Apollóna', 'Vystopuj zloděje', 'Chyť ho živého', 'Přiveď ho k Apollónovi'] },
+
+  // EPICKÉ  
+  { id:'t9', name:'Sestup do Tartaru', icon:'💀', npc:'Hádés', npcIcon:'👻', rarity:'epic',
+    desc:'"Duše Achillea unikla z Tartaru. Vrať ji zpět... pokud přežiješ cestu dolů."',
+    flavor:'Chladný dech smrti tě ovane když Hádés promluví.',
+    time:60*60, gold:1200, exp:1000, minLevel:18,
+    steps:['Najdi vstup do Podsvětí', 'Přejdi řeku Styx', 'Najdi duši Achillea', 'Vrať ji Hádovi'] },
+  { id:'t10', name:'Krádež Zlatého rouna', icon:'🌿', npc:'Iásón', npcIcon:'⛵', rarity:'epic',
+    desc:'"Potřebuji hrdinu co dokáže získat Zlaté rouno z Kolchidy. Odměna bude královská."',
+    flavor:'Iásón rozloží mapu s tajuplnými cestami.',
+    time:90*60, gold:2000, exp:1600, minLevel:25,
+    steps:['Nalodění v Iolku', 'Proplout Symplegádami', 'Porazit draka v Kolchidě', 'Ukrást Zlaté rouno', 'Návrat do Řecka'] },
+];
+
+const RARITY_COLORS = { common:'#aaa', uncommon:'#2d8020', rare:'#1a4a8b', epic:'#6b2fa0' };
+const RARITY_LABELS = { common:'Běžný', uncommon:'Neobvyklý', rare:'Vzácný', epic:'Epický' };
+let tavernQuests = JSON.parse(localStorage.getItem('tavernQuests') || '[]'); // pole aktivních questů
+
 // ========== INIT ==========
 document.addEventListener('DOMContentLoaded', async () => {
   if (!API.isLoggedIn()) { window.location.href = 'index.html'; return; }
@@ -68,6 +133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateUI();
     openView('city');
     startQuestTimer();
+    loadLeaderboard();
   } catch { window.location.href = 'index.html'; }
 });
 
@@ -395,16 +461,133 @@ function inventory() {
 
 // ===== TAVERN =====
 function tavern() {
+  const now = Date.now();
+
+  // Render NPC quest boards
+  const renderQuests = (rarities) => {
+    return TAVERN_QUESTS.filter(q => rarities.includes(q.rarity)).map(q => {
+      const aq = tavernQuests.find(x => x.id === q.id);
+      const running  = aq && !aq.done && now < aq.endTime;
+      const claimable= aq && !aq.done && now >= aq.endTime;
+      const done     = aq && aq.done;
+      const avail    = character.level >= q.minLevel;
+      const pct      = running ? Math.min(100,((now-aq.startTime)/(aq.endTime-aq.startTime)*100)).toFixed(1) : (claimable||done?100:0);
+      const timeLeft = running ? formatTime(Math.ceil((aq.endTime-now)/1000)) : '';
+      const rColor   = RARITY_COLORS[q.rarity];
+
+      return `
+      <div class="tq-card ${running||claimable?'tq-active':''}">
+        <div class="tq-top">
+          <div class="tq-npc">
+            <span class="tq-npc-icon">${q.npcIcon}</span>
+            <span class="tq-npc-name">${q.npc}</span>
+          </div>
+          <span class="tq-rarity" style="color:${rColor};border-color:${rColor}">${RARITY_LABELS[q.rarity]}</span>
+        </div>
+        <div class="tq-header">
+          <span class="tq-icon">${q.icon}</span>
+          <div class="tq-title">${q.name}</div>
+        </div>
+        <div class="tq-speech">${q.desc}</div>
+        <div class="tq-flavor">${q.flavor}</div>
+        <div class="tq-steps">
+          ${q.steps.map((s,i) => `<div class="tq-step ${done||claimable?'done':running&&i===0?'current':''}">
+            ${done||claimable?'✓':running&&i===0?'▶':'○'} ${s}</div>`).join('')}
+        </div>
+        <div class="tq-footer">
+          <div class="tq-rewards">
+            <span>💰 ${q.gold}</span>
+            <span>⭐ ${q.exp} XP</span>
+            <span>⏱ ${formatTime(q.time)}</span>
+            <span style="color:var(--text-dim)">Lv.${q.minLevel}+</span>
+          </div>
+          ${running||claimable||done ? `
+          <div class="tq-prog-wrap">
+            <div class="tq-prog-bar"><div class="tq-prog-fill" style="width:${pct}%"></div></div>
+            <span class="tq-prog-txt">${running?timeLeft:claimable?'Hotovo!':'Splněno'}</span>
+          </div>` : ''}
+          <div class="tq-btns">
+            ${!avail ? `<button class="tq-btn" disabled>🔒 Lv.${q.minLevel}+</button>`
+             : done ? `<button class="tq-btn tq-done" disabled>✅ Splněno</button>`
+             : claimable ? `<button class="tq-btn tq-claim" onclick="claimTavernQuest('${q.id}')">🎁 Vyzvednout</button>`
+             : running ? `<button class="tq-btn" disabled>⏳ Probíhá...</button>`
+             : `<button class="tq-btn tq-start" onclick="startTavernQuest('${q.id}')">📜 Přijmout</button>`}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  };
+
   return `
-  <div class="panel">
+  <div class="panel panel-gold">
     <div class="panel-header">🍺 Taverna U Dionýsa</div>
-    <div class="panel-body" style="text-align:center;padding:30px;">
-      <div style="font-size:3em;margin-bottom:15px;">🏺</div>
-      <p style="color:var(--gold);font-size:1.1em;margin-bottom:10px;">Vítej, bojovníku!</p>
-      <p style="color:var(--text-dim);font-style:italic;margin-bottom:20px;">"Tu se píší legendy a zalévají vínem..."</p>
-      <button onclick="healInTavern()" style="background:linear-gradient(135deg,var(--gold-dark),var(--gold));color:var(--bg);border:none;padding:12px 25px;font-family:'Cinzel',serif;font-size:.9em;cursor:pointer;border-radius:2px;font-weight:bold;letter-spacing:1px;">🍷 Uzdravit se (50 💰)</button>
+    <div class="panel-body" style="padding:0;">
+
+      <!-- Top banner -->
+      <div class="tavern-banner">
+        <div class="tavern-banner-left">
+          <div style="font-size:2.5em;">🏺</div>
+          <div>
+            <div style="color:var(--gold);font-size:1.1em;font-weight:bold;">Taverna U Dionýsa</div>
+            <div style="color:var(--text-dim);font-size:.8em;font-style:italic;">"Zde se rodí hrdinové a zalévají vínem"</div>
+          </div>
+        </div>
+        <button class="tavern-heal-btn" onclick="healInTavern()">🍷 Uzdravit se · 50💰</button>
+      </div>
+
+      <!-- Quest board tabs -->
+      <div class="tavern-tabs" id="tavernTabs">
+        <div class="tavern-tab active" onclick="tavernTab(this,'board-common')">📋 Vývěska</div>
+        <div class="tavern-tab" onclick="tavernTab(this,'board-uncommon')">⚔ Výpravy</div>
+        <div class="tavern-tab" onclick="tavernTab(this,'board-rare')">💎 Vzácné</div>
+        <div class="tavern-tab" onclick="tavernTab(this,'board-epic')">👑 Epické</div>
+        <div class="tavern-tab" onclick="tavernTab(this,'board-active')">📌 Aktivní (${tavernQuests.filter(q=>!q.done).length})</div>
+      </div>
+
+      <div class="tavern-board" id="board-common">${renderQuests(['common'])}</div>
+      <div class="tavern-board" id="board-uncommon" style="display:none">${renderQuests(['uncommon'])}</div>
+      <div class="tavern-board" id="board-rare" style="display:none">${renderQuests(['rare'])}</div>
+      <div class="tavern-board" id="board-epic" style="display:none">${renderQuests(['epic'])}</div>
+      <div class="tavern-board" id="board-active" style="display:none">
+        ${tavernQuests.filter(q=>!q.done).length === 0
+          ? '<div style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">Nemáš žádné aktivní úkoly.<br>Přijmi úkol z vývěsky!</div>'
+          : renderQuests(TAVERN_QUESTS.filter(q => tavernQuests.find(x=>x.id===q.id&&!x.done)).map(q=>q.rarity))
+        }
+      </div>
     </div>
   </div>`;
+}
+
+function tavernTab(el, boardId) {
+  document.querySelectorAll('.tavern-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tavern-board').forEach(b => b.style.display = 'none');
+  document.getElementById(boardId).style.display = 'block';
+}
+
+function startTavernQuest(id) {
+  const q = TAVERN_QUESTS.find(x => x.id === id);
+  if (!q) return;
+  if (character.level < q.minLevel) { alert(`🔒 Potřebuješ úroveň ${q.minLevel}!`); return; }
+  if (tavernQuests.find(x => x.id === id)) { alert('Tento úkol již probíhá!'); return; }
+
+  const now = Date.now();
+  tavernQuests.push({ id, startTime: now, endTime: now + q.time*1000, done: false });
+  localStorage.setItem('tavernQuests', JSON.stringify(tavernQuests));
+  openView('tavern');
+}
+
+function claimTavernQuest(id) {
+  const q = TAVERN_QUESTS.find(x => x.id === id);
+  const aq = tavernQuests.find(x => x.id === id);
+  if (!q || !aq) return;
+  aq.done = true;
+  localStorage.setItem('tavernQuests', JSON.stringify(tavernQuests));
+  character.gold += q.gold;
+  character.experience += q.exp;
+  checkLevelUp(); saveChar(); updateUI();
+  alert(`🎉 Úkol "${q.name}" splněn!\n+${q.gold} 💰\n+${q.exp} ⭐`);
+  openView('tavern');
 }
 
 // ===== FORGE =====
@@ -554,7 +737,9 @@ function startQuestTimer() {
   if (activeQuestTimer) clearInterval(activeQuestTimer);
   activeQuestTimer = setInterval(() => {
     const cc = document.getElementById('centerContent');
-    if (cc && cc.querySelector('.quest-list')) openView('quests');
+    if (!cc) return;
+    if (cc.querySelector('.quest-list')) openView('quests');
+    if (cc.querySelector('.tavern-board')) openView('tavern');
   }, 5000);
 }
 
@@ -593,6 +778,7 @@ function buyItem(itemId) {
 // ========== TAVERN ==========
 function healInTavern() {
   if (character.gold < 50) { alert('❌ Nemáš dost zlatých (potřebuješ 50)!'); return; }
+  if (character.health === character.max_health) { alert('❤️ Jsi plně zdráv!'); return; }
   character.gold -= 50;
   character.health = character.max_health;
   saveChar(); updateUI();
@@ -643,6 +829,33 @@ async function saveChar() {
     });
     localStorage.setItem('character', JSON.stringify(character));
   } catch(e) { console.error('Save err:', e); }
+}
+
+// ========== LEADERBOARD ==========
+async function loadLeaderboard() {
+  try {
+    const res = await API.getLeaderboard();
+    const lb = document.getElementById('leaderboard');
+    if (!lb) return;
+
+    if (!res.leaderboard || res.leaderboard.length === 0) {
+      lb.innerHTML = '<div style="text-align:center;color:var(--text-dim);font-size:.78em;padding:10px;font-style:italic;">Zatím žádní hráči</div>';
+      return;
+    }
+
+    const medals = ['🥇','🥈','🥉'];
+    lb.innerHTML = res.leaderboard.map((p, i) => {
+      const isMe = character && p.name === character.name;
+      return `<div class="lb-row ${isMe ? 'lb-me' : ''}">
+        <span class="lb-rank">${medals[i] || (i+1)+'.'}</span>
+        <span class="lb-name">${p.name}${isMe ? ' 👈' : ''}</span>
+        <span class="lb-lvl">Lv.${p.level}</span>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    const lb = document.getElementById('leaderboard');
+    if (lb) lb.innerHTML = '<div style="text-align:center;color:var(--text-dim);font-size:.78em;padding:10px;">Nelze načíst</div>';
+  }
 }
 
 // ========== LOGOUT ==========

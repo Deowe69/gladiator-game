@@ -70,3 +70,20 @@ router.put('/update', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+
+// Žebříček - top 10 hráčů
+router.get('/leaderboard', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT c.name, c.level, c.class, c.gender, u.username
+       FROM characters c
+       JOIN users u ON c.user_id = u.id
+       ORDER BY c.level DESC, c.experience DESC
+       LIMIT 10`
+    );
+    res.json({ leaderboard: result.rows });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});

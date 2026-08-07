@@ -501,3 +501,126 @@ html, body {
 @media(max-width:1200px) { .sidebar-right { display:none; } }
 @media(max-width:900px) { .sidebar-left { width:160px; min-width:160px; } }
 @media(max-width:700px) { .sidebar-left { display:none; } .city-grid { grid-template-columns:repeat(2,1fr); } }
+
+/* ===== TAVERNA ===== */
+.tavern-banner {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 18px;
+  background:linear-gradient(135deg,#1a1005,#2a1e10);
+  border-bottom:2px solid var(--gold);
+  gap:15px;
+}
+.tavern-banner-left { display:flex; align-items:center; gap:14px; }
+.tavern-heal-btn {
+  background:linear-gradient(135deg,#5a1a00,#8b2a00);
+  color:var(--cream); border:2px solid #8b2a00;
+  padding:10px 18px; font-family:'Cinzel',serif; font-size:.82em;
+  cursor:pointer; border-radius:2px; font-weight:bold;
+  letter-spacing:1px; transition:all .3s; white-space:nowrap;
+}
+.tavern-heal-btn:hover { background:linear-gradient(135deg,#8b2a00,#bb3a00); transform:none; box-shadow:0 0 15px rgba(139,42,0,.5); }
+
+.tavern-tabs {
+  display:flex; gap:0; border-bottom:2px solid var(--border);
+  background:var(--bg2);
+}
+.tavern-tab {
+  flex:1; padding:10px 8px; text-align:center;
+  color:var(--text-dim); font-size:.75em; cursor:pointer;
+  border-right:1px solid var(--border); letter-spacing:.5px;
+  transition:all .3s; font-family:'Cinzel',serif;
+  border-bottom:2px solid transparent; margin-bottom:-2px;
+}
+.tavern-tab:last-child { border-right:none; }
+.tavern-tab:hover { color:var(--gold); background:var(--panel); }
+.tavern-tab.active { color:var(--gold); background:var(--panel); border-bottom-color:var(--gold); }
+
+.tavern-board {
+  padding:14px; display:flex; flex-direction:column; gap:12px;
+}
+
+/* Quest cards */
+.tq-card {
+  background:linear-gradient(135deg,rgba(0,0,0,.25),rgba(0,0,0,.15));
+  border:2px solid var(--border); border-radius:3px;
+  padding:16px; transition:border-color .3s;
+  position:relative; overflow:hidden;
+}
+.tq-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  opacity:0; transition:opacity .3s;
+}
+.tq-card:hover { border-color:var(--gold-dark); }
+.tq-card:hover::before { opacity:1; }
+.tq-card.tq-active { border-color:var(--gold-dark); background:linear-gradient(135deg,rgba(212,175,55,.06),rgba(0,0,0,.15)); }
+
+.tq-top {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:10px;
+}
+.tq-npc { display:flex; align-items:center; gap:7px; }
+.tq-npc-icon { font-size:1.4em; }
+.tq-npc-name { color:var(--text-dim); font-size:.78em; font-style:italic; }
+.tq-rarity {
+  font-size:.7em; font-weight:bold; padding:2px 8px;
+  border:1px solid; border-radius:2px; letter-spacing:1px;
+  text-transform:uppercase;
+}
+
+.tq-header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.tq-icon { font-size:2em; flex-shrink:0; }
+.tq-title { color:var(--gold); font-weight:bold; font-size:1em; letter-spacing:.5px; }
+
+.tq-speech {
+  color:var(--cream); font-size:.82em; font-style:italic;
+  background:rgba(0,0,0,.2); border-left:3px solid var(--gold-dark);
+  padding:8px 12px; margin-bottom:8px; border-radius:0 2px 2px 0;
+  line-height:1.6;
+}
+.tq-flavor {
+  color:var(--text-dim); font-size:.75em; margin-bottom:12px;
+  font-style:italic; padding-left:4px;
+}
+
+.tq-steps {
+  display:flex; flex-direction:column; gap:4px; margin-bottom:12px;
+}
+.tq-step {
+  font-size:.76em; color:var(--text-dim); padding:3px 0;
+  display:flex; align-items:center; gap:8px;
+}
+.tq-step.current { color:var(--gold); font-weight:bold; }
+.tq-step.done { color:#4ade80; text-decoration:line-through; opacity:.7; }
+
+.tq-footer { display:flex; flex-direction:column; gap:8px; }
+.tq-rewards {
+  display:flex; gap:14px; font-size:.8em; color:var(--gold-light);
+  flex-wrap:wrap;
+}
+.tq-prog-wrap { display:flex; align-items:center; gap:8px; }
+.tq-prog-bar { flex:1; height:8px; background:rgba(0,0,0,.4); border-radius:4px; overflow:hidden; border:1px solid var(--border); }
+.tq-prog-fill { height:100%; background:linear-gradient(90deg,var(--gold-dark),var(--gold)); border-radius:4px; transition:width 1s linear; }
+.tq-prog-txt { font-size:.75em; color:var(--gold); white-space:nowrap; min-width:55px; text-align:right; }
+
+.tq-btns { display:flex; gap:8px; }
+.tq-btn {
+  padding:8px 18px; font-family:'Cinzel',serif; font-size:.78em;
+  cursor:pointer; border-radius:2px; font-weight:bold;
+  letter-spacing:1px; transition:all .3s; border:2px solid;
+}
+.tq-btn:disabled { opacity:.4; cursor:not-allowed; background:rgba(60,60,60,.4); border-color:var(--border); color:var(--text-dim); }
+.tq-btn.tq-start { background:linear-gradient(135deg,var(--gold-dark),var(--gold)); color:var(--bg); border-color:var(--gold); }
+.tq-btn.tq-start:hover { background:linear-gradient(135deg,var(--gold),var(--gold-light)); transform:none; box-shadow:0 0 12px rgba(212,175,55,.4); }
+.tq-btn.tq-claim { background:linear-gradient(135deg,#2d5016,#4a8020); color:var(--cream); border-color:#4a8020; }
+.tq-btn.tq-claim:hover { background:linear-gradient(135deg,#3d6020,#5a9030); transform:none; box-shadow:0 0 12px rgba(74,128,32,.4); }
+.tq-btn.tq-done { background:rgba(45,80,22,.2); color:#4ade80; border-color:#4ade80; }
+
+/* Leaderboard - zvýraznění vlastního hráče */
+.lb-me {
+  background:rgba(212,175,55,0.08);
+  border-radius:2px;
+  padding:3px 4px;
+  margin:-3px -4px;
+}
+.lb-me .lb-name { color:var(--gold); font-weight:bold; }
