@@ -1319,3 +1319,150 @@ span.fighter-img{font-size:52px}
 /* zbytek pultu */
 .shop-frame .restock{margin-top:0}
 .s2left .restock{margin-top:8px}
+
+/* =========================================================
+   ŽIVOTNOST A KOVÁRNA
+   ========================================================= */
+.dur-full{color:#7dc23a}
+.dur-mid {color:#e8c860}
+.dur-low {color:#e08a2b}
+.dur-zero{color:#e06060}
+
+.dur-bar{
+  height:6px;margin:3px 0;
+  background:#b09a70;border:1px solid #8a7550;border-radius:1px;overflow:hidden;
+}
+.dur-bar > i{display:block;height:100%}
+.dur-bar > i.dur-full{background:#7dc23a}
+.dur-bar > i.dur-mid {background:#e8c860}
+.dur-bar > i.dur-low {background:#e08a2b}
+.dur-bar > i.dur-zero{background:#e06060}
+
+.broken-tag{
+  background:#a02525;color:#f0e0c0;
+  font-size:9.5px;font-weight:bold;
+  padding:1px 5px;border-radius:2px;margin-left:5px;
+}
+
+.forge-total{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-top:10px;padding:8px 11px;
+  background:linear-gradient(180deg,#e8dab6,#d3bf93);
+  border:2px solid #a8916a;border-radius:3px;
+  font-size:12.5px;color:#5c4423;
+}
+.forge-total b{color:#7d1616}
+.forge-total .btn-green{flex:0 0 auto}
+
+/* =========================================================
+   ZPRÁVA Z BOJE
+   ========================================================= */
+.fight-report{display:flex;flex-direction:column;gap:11px}
+
+.fr-banner{
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+  padding:9px;border:2px solid var(--gold-dk);border-radius:3px;
+  font:bold 17px Georgia,serif;color:#f0d886;letter-spacing:.5px;
+  text-shadow:0 1px 3px rgba(0,0,0,.8);
+}
+.fr-banner.win {background:linear-gradient(180deg,#4d6714,#2f4109)}
+.fr-banner.lose{background:linear-gradient(180deg,#7d1616,#4a0b0b)}
+.fr-back{
+  position:absolute;left:7px;top:50%;transform:translateY(-50%);
+  width:28px;height:24px;
+  background:linear-gradient(180deg,#e8dab6,#c4ad80);
+  border:2px solid #6b5333;border-radius:2px;
+  color:#3a2a12;font-size:12px;cursor:pointer;line-height:1;
+}
+.fr-back:hover{background:linear-gradient(180deg,#f8eed4,#d5c096)}
+
+/* odměny */
+.rw-box{
+  background:linear-gradient(180deg,#f2e6c8,#e3d3ac);
+  border:2px solid #a8916a;border-radius:3px;overflow:hidden;
+}
+.rw-head{
+  background:linear-gradient(180deg,#d9c49a,#b9a274);
+  border-bottom:1px solid #a8916a;
+  padding:5px 11px;font-size:12.5px;font-weight:bold;color:#5c4423;
+}
+.rw-row{
+  padding:5px 11px;font-size:12.5px;color:#4a3520;
+  border-bottom:1px solid rgba(140,115,80,.25);
+}
+.rw-row:last-child{border-bottom:none}
+.rw-row b{color:#7d1616;text-decoration:underline}
+
+/* bojovníci */
+.rf-row{display:grid;grid-template-columns:1fr 62px 1fr;gap:10px;align-items:center}
+.rf-card{display:flex;flex-direction:column}
+.rf-name{
+  background:linear-gradient(180deg,#a02525,#620f0f);
+  border:2px solid var(--gold);border-radius:3px 3px 0 0;
+  color:#f0d886;font-size:13px;font-weight:bold;text-align:center;
+  padding:5px;text-shadow:0 1px 2px rgba(0,0,0,.8);
+}
+.rf-title{
+  background:linear-gradient(180deg,#7d1616,#4a0b0b);
+  border:2px solid var(--gold);border-top:none;
+  color:#e0c9a0;font-size:10.5px;font-style:italic;text-align:center;padding:2px;
+}
+.rf-frame{
+  margin-top:6px;
+  background:radial-gradient(ellipse at 50% 35%,#c9a978,#7a5c38);
+  border:3px solid #4a3520;border-radius:2px;
+  height:190px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+.rf-img{max-height:100%;max-width:100%;width:auto}
+.rf-frame svg{max-height:180px;max-width:100%}
+.rf-vs{
+  font:bold 15px Georgia,serif;color:#5c4423;
+  text-align:center;letter-spacing:1px;
+}
+
+/* srovnání statů */
+.rs-row-wrap{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rs-table{
+  background:linear-gradient(180deg,#f2e6c8,#e3d3ac);
+  border:2px solid #a8916a;border-radius:3px;
+  padding:5px 8px;
+}
+.rs-row{
+  display:grid;grid-template-columns:82px 1fr auto;
+  align-items:center;gap:7px;
+  padding:2.5px 0;font-size:11.5px;
+  border-bottom:1px solid rgba(140,115,80,.22);
+}
+.rs-table.mirror .rs-row{grid-template-columns:auto 1fr 82px}
+.rs-row:last-child{border-bottom:none}
+.rs-row span{color:#5c4423}
+.rs-table.mirror .rs-row span:last-child{text-align:right}
+.rs-row b{color:#3a2a12;font-weight:bold;white-space:nowrap}
+
+.rs-bar{
+  height:6px;background:#b09a70;
+  border:1px solid #8a7550;border-radius:1px;overflow:hidden;
+}
+.rs-bar > i{display:block;height:100%;background:linear-gradient(180deg,#7dc23a,#4d8a14)}
+.rs-table.mirror .rs-bar > i{margin-left:auto}
+
+.fr-actions{display:flex;gap:9px;justify-content:center}
+.fr-actions .btn-green,.fr-actions .btn-back{flex:0 0 auto;padding:7px 18px}
+
+@media (max-width:1100px){
+  .rs-row-wrap{grid-template-columns:1fr}
+  .rf-row{grid-template-columns:1fr}
+}
+
+/* oprava: portrét hráče (SVG v divu) a zrcadlené pruhy */
+.rf-frame > div.rf-img{
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+}
+.rf-frame > div.rf-img svg{max-height:100%;max-width:100%;height:auto}
+
+.rs-bar{display:flex}
+.rs-table.mirror .rs-bar{justify-content:flex-end}
+.rs-bar > i{margin:0}

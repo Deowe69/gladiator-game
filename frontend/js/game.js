@@ -258,7 +258,8 @@ function openView(view) {
 
   const cc = document.getElementById('centerContent');
   const views = { city, arena, dungeon, quests, shop, inventory: profileView, profile: profileView,
-                  guild, tavern, forge, expedition, hall, stats, training, work, premium };
+                  guild, tavern, forge, expedition, hall, stats, training, work, premium,
+                  report: fightReport };
   const viewFn = views[view] || (() => `
     <div class="coming-soon">
       <div class="cs-icon">🚧</div>
@@ -1199,7 +1200,6 @@ function claimTavernQuest(id) {
 }
 
 // ===== FORGE =====
-function forge() { return lockedSoon('Kovárna'); }
 
 // ===== GUILD =====
 function guild() { return lockedSoon('Gilda'); }
@@ -1236,7 +1236,8 @@ const ARMOR_SLOTS = ['helmet', 'chest', 'shield', 'gloves', 'boots', 'belt'];
 // celková zbroj: z odolnosti + z jednotlivých kusů výstroje
 function totalArmor() {
   const zOdolnosti = statTotal('defense') * 3;
-  const zVystroje  = Object.values(equipped).reduce((a, e) => a + ((e && e.armor) || 0), 0);
+  const zVystroje  = Object.values(equipped).reduce(
+    (a, e) => a + ((e && !isBroken(e) && e.armor) || 0), 0);
   return zOdolnosti + zVystroje;
 }
 
@@ -1250,6 +1251,12 @@ function rollItem(tpl) {
   // kusy výstroje nesou vlastní zbroj (zbraně a šperky ne)
   if (ARMOR_SLOTS.includes(slotForItem(tpl))) {
     it.armor = Math.max(1, Math.round((tpl.price || 50) / 5 * qualityOf(tpl).mult));
+  }
+
+  // všechno nositelné se opotřebovává
+  if (slotForItem(tpl)) {
+    it.durMax = Math.round(150 + (tpl.price || 50) * 1.5 * qualityOf(tpl).mult);
+    it.dur    = it.durMax;
   }
   if (tpl.key === 'health') return it;          // lektvary se nerolují
 
@@ -1288,7 +1295,8 @@ function statLine(it) {
 
 // součet jednoho statu ze všeho nasazeného
 function equipBonus(k) {
-  return Object.values(equipped).reduce((a, e) => a + ((e && e.stats && e.stats[k]) || 0), 0);
+  return Object.values(equipped).reduce(
+    (a, e) => a + ((e && !isBroken(e) && e.stats && e.stats[k]) || 0), 0);
 }
 
 // V postavě je uložený POUZE základ. Bonusy z vybavení se nikam nezapisují,
@@ -1311,9 +1319,18 @@ function normalizeCharacter() {
 
 // starší uložené předměty měly jen jeden stat (key/val) — převedeme je
 function migrateItem(it) {
-  if (!it || it.stats || it.key === 'health') return it;
-  it.stats = (it.key && it.val) ? { [it.key]: it.val } : {};
-  delete it.key; delete it.val;
+  if (!it) return it;
+  if (it.key === 'health') return it;
+
+  if (!it.stats) {
+    it.stats = (it.key && it.val) ? { [it.key]: it.val } : {};
+    delete it.key; delete it.val;
+  }
+  // dřív předměty životnost neměly – dostanou plnou
+  if (!it.durMax && slotForItem(it)) {
+    it.durMax = Math.round(150 + (it.price || 50) * 1.5 * qualityOf(it).mult);
+    it.dur = it.durMax;
+  }
   return it;
 }
 inventory = inventory.map(migrateItem).filter(Boolean);
@@ -1373,6 +1390,10 @@ function itemTipHTML(it) {
       <div class="tip-sep"></div>
       ${it.lvl ? `<div class="tip-row${tezky ? ' neg' : ''}"><span>Úroveň</span><b>${it.lvl}</b></div>` : ''}
       <div class="tip-row"><span>Hodnota</span><b>${it.price || 0} zlata</b></div>
+      ${it.durMax ? (() => {
+        const pct = Math.round(it.dur / it.durMax * 100);
+        return `<div class="tip-row"><span>Životnost</span><b class="${durClass(pct)}">${it.dur}/${it.durMax} (${pct} %)</b></div>`;
+      })() : ''}
       ${tezky ? '<div class="tip-warn">Na tenhle kus ti chybí úroveň.</div>' : ''}
     </div>`;
 }
@@ -1454,7 +1475,7 @@ const FISTS = [1, 2];
 
 function playerDamageRange() {
   const w = equipped.weapon;
-  const base = (w && Array.isArray(w.dmg)) ? w.dmg : FISTS;
+  const base = (w && !isBroken(w) && Array.isArray(w.dmg)) ? w.dmg : FISTS;
   const mult = 1 + statTotal('strength') / 150;
   return [Math.max(1, Math.round(base[0] * mult)), Math.max(2, Math.round(base[1] * mult))];
 }
@@ -1569,8 +1590,41 @@ function endCombat(won) {
   }
   // po výpravě si gladiátor musí odpočinout
   if (lastFight && lastFight.view === 'expedition') startExpedCooldown();
+  wearEquipment();
 
   saveChar(); updateUI();
+
+  // podklady pro zprávu z boje
+  const [dmgMin, dmgMax] = playerDamageRange();
+  const odmeny = won
+    ? [`<b>${character.name}</b> získává ${currentEnemy.gold} zlata`,
+       `<b>${character.name}</b> získává ${currentEnemy.exp} zkušenostních bodů`]
+    : [`<b>${character.name}</b> nezískává nic`,
+       `Probral ses s ${character.health} životy`];
+
+  lastReport = {
+    won,
+    zpet: lastFight ? lastFight.view : 'expedition',
+    odmeny,
+    hrac: {
+      name: character.name, title: character.class,
+      class: character.class, gender: character.gender,
+      level: character.level,
+      hp: Math.max(0, character.health), maxHp: character.max_health,
+      str: statTotal('strength'), agi: statTotal('agility'),
+      def: statTotal('defense'),  int: statTotal('intelligence'),
+      armor: totalArmor(), dmg: dmgMin + ' - ' + dmgMax,
+    },
+    souper: {
+      name: currentEnemy.name, title: 'Nestvůra', img: currentEnemy.img,
+      level: currentEnemy.level || 1,
+      hp: Math.max(0, currentEnemy.hp), maxHp: currentEnemy.maxHp,
+      str: currentEnemy.str, agi: Math.round(currentEnemy.str * 0.8),
+      def: currentEnemy.def, int: Math.round(currentEnemy.def * 0.6),
+      armor: currentEnemy.def * 3,
+      dmg: Math.floor(currentEnemy.str * 1.1) + ' - ' + Math.floor(currentEnemy.str * 1.6),
+    },
+  };
 
   const box = document.getElementById('combatBtns');
   if (box) {
@@ -1579,9 +1633,11 @@ function endCombat(won) {
         <div class="fr-title">${won ? 'Vítězství!' : 'Porážka'}</div>
         <div class="fr-sub">${rewards}</div>
       </div>
-      <button class="btn-green" onclick="refight()">Bojovat znovu</button>
+      <button class="btn-green" onclick="openView('report')">Zpráva z boje</button>
       <button class="btn-back" onclick="openView('${lastFight ? lastFight.view : 'expedition'}')">Zpět</button>`;
   }
+
+  setTimeout(() => { if (!inCombat) openView('report'); }, 1400);
 }
 
 function refight() {
@@ -2099,6 +2155,205 @@ function lockedSoon(nazev) {
 }
 const work    = () => lockedSoon('Práce');
 const premium = () => lockedSoon('Prémium');
+
+
+// ========== ŽIVOTNOST PŘEDMĚTŮ ==========
+// Zničený kus zůstane nasazený, ale nedává žádné bonusy,
+// dokud ho hráč nenechá spravit v Kovárně.
+const isBroken = it => !!(it && it.durMax && it.dur <= 0);
+
+const DUR_WEAR_MIN = 2;   // ubere se po každém boji
+const DUR_WEAR_MAX = 4;
+
+function wearEquipment() {
+  const znicene = [];
+  for (const it of Object.values(equipped)) {
+    if (!it || !it.durMax) continue;
+    const pred = it.dur;
+    const ubylo = DUR_WEAR_MIN + Math.floor(Math.random() * (DUR_WEAR_MAX - DUR_WEAR_MIN + 1));
+    it.dur = Math.max(0, it.dur - ubylo);
+    if (pred > 0 && it.dur === 0) znicene.push(it.name);
+  }
+  localStorage.setItem('eqp', JSON.stringify(equipped));
+  if (znicene.length) toast('Opotřebením se zničilo: ' + znicene.join(', '));
+}
+
+// cena opravy roste s chybějící životností a hodnotou kusu
+function repairCost(it) {
+  if (!it || !it.durMax || it.dur >= it.durMax) return 0;
+  const chybi = (it.durMax - it.dur) / it.durMax;
+  return Math.max(1, Math.ceil(chybi * (it.price || 50) * 0.6));
+}
+
+// všechny kusy, které jde spravit (nasazené i v batohu)
+function repairable() {
+  const out = [];
+  for (const [slot, it] of Object.entries(equipped)) {
+    if (it && it.durMax && it.dur < it.durMax) out.push({ it, kde: 'eq', ref: slot });
+  }
+  inventory.forEach((it, i) => {
+    if (it && it.durMax && it.dur < it.durMax) out.push({ it, kde: 'inv', ref: String(i) });
+  });
+  return out;
+}
+
+function repairItem(kde, ref) {
+  const it = kde === 'eq' ? equipped[ref] : inventory[+ref];
+  if (!it) return;
+  const cena = repairCost(it);
+  if (cena <= 0) return;
+  if (character.gold < cena) { toast(`Na opravu ${it.name} ti chybí zlato.`); return; }
+
+  character.gold -= cena;
+  it.dur = it.durMax;
+  toast(`${it.name} spraven (−${cena} zlata)`);
+  persist();
+  openView('forge');
+}
+
+function repairAll() {
+  const kusy = repairable();
+  if (!kusy.length) { toast('Není co spravovat.'); return; }
+
+  const celkem = kusy.reduce((a, x) => a + repairCost(x.it), 0);
+  if (character.gold < celkem) { toast(`Na kompletní opravu potřebuješ ${celkem} zlata.`); return; }
+
+  character.gold -= celkem;
+  kusy.forEach(x => { x.it.dur = x.it.durMax; });
+  toast(`Spraveno ${kusy.length} kusů (−${celkem} zlata)`);
+  persist();
+  openView('forge');
+}
+
+// ===== KOVÁRNA =====
+function forge() {
+  const kusy = repairable();
+  const celkem = kusy.reduce((a, x) => a + repairCost(x.it), 0);
+
+  if (!kusy.length) {
+    return `
+    <div class="panel">
+      <div class="panel-header">Kovárna</div>
+      <div class="panel-body">
+        <div class="coming-soon">
+          <div class="cs-icon">🔨</div>
+          <h2>Všechno je jako nové</h2>
+          <p>Kovář si otírá ruce — nemá do čeho píchnout.</p>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const rows = kusy.map(x => {
+    const it = x.it, pct = Math.round(it.dur / it.durMax * 100);
+    const cena = repairCost(it);
+    const ok = character.gold >= cena;
+    return `
+      <div class="gl-row" data-tip="${x.kde === 'eq' ? 'eq:' + x.ref : 'inv:' + x.ref}">
+        <div class="gl-ico">${itemIcon(it, 'b-ico')}</div>
+        <div class="gl-main">
+          <div class="gl-nm">${it.name}${isBroken(it) ? ' <span class="broken-tag">zničeno</span>' : ''}</div>
+          <div class="dur-bar"><i class="${durClass(pct)}" style="width:${pct}%"></i></div>
+          <div class="gl-sub">${it.dur} / ${it.durMax} (${pct} %)${x.kde === 'eq' ? ' · nasazeno' : ''}</div>
+        </div>
+        <div class="train-cost ${ok ? '' : 'poor'}">${cena} zlata</div>
+        <button class="btn-green" ${ok ? '' : 'disabled'} onclick="repairItem('${x.kde}','${x.ref}')">Spravit</button>
+      </div>`;
+  }).join('');
+
+  return `
+  <div class="panel">
+    <div class="panel-header">Kovárna</div>
+    <div class="panel-body">
+      <p class="hall-note">
+        Každý boj kus vybavení odře. Když životnost klesne na nulu,
+        předmět přestane dávat bonusy, dokud ho kovář nespraví.
+      </p>
+      <div class="gl-list">${rows}</div>
+      <div class="forge-total">
+        <span>Vše dohromady: <b>${celkem} zlata</b></span>
+        <button class="btn-green" ${character.gold >= celkem ? '' : 'disabled'} onclick="repairAll()">Spravit vše</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+const durClass = pct => pct === 0 ? 'dur-zero' : pct < 25 ? 'dur-low' : pct < 60 ? 'dur-mid' : 'dur-full';
+
+
+// ========== ZPRÁVA Z BOJE ==========
+let lastReport = null;   // { won, odmeny, hrac, soupeR }
+
+// srovnávací tabulka statů — zrcadlená, aby stály proti sobě
+function reportStats(s, mirror) {
+  const max = { hp: s.maxHp, str: 400, agi: 400, def: 400, int: 400 };
+  const bar = (v, m) => `<div class="rs-bar"><i style="width:${Math.min(100, v / m * 100)}%"></i></div>`;
+
+  const radek = (jmeno, hodnota, pruh) => mirror
+    ? `<div class="rs-row"><b>${hodnota}</b>${pruh || '<span></span>'}<span>${jmeno}</span></div>`
+    : `<div class="rs-row"><span>${jmeno}</span>${pruh || '<span></span>'}<b>${hodnota}</b></div>`;
+
+  return `
+    <div class="rs-table ${mirror ? 'mirror' : ''}">
+      ${radek('Úroveň', s.level)}
+      ${radek('Životy', s.hp + ' / ' + s.maxHp, bar(s.hp, max.hp))}
+      ${radek('Síla', s.str, bar(s.str, max.str))}
+      ${radek('Obratnost', s.agi, bar(s.agi, max.agi))}
+      ${radek('Odolnost', s.def, bar(s.def, max.def))}
+      ${radek('Inteligence', s.int, bar(s.int, max.int))}
+      ${radek('Zbroj', s.armor)}
+      ${radek('Poškození', s.dmg)}
+    </div>`;
+}
+
+function reportFighter(s, mirror) {
+  const portret = s.img
+    ? `<img class="ico rf-img" src="img/${s.img}" alt="${s.name}" data-emoji="👹" data-try="svg" onerror="iconFallback(this)">`
+    : `<div class="rf-img">${getAvatar(s.class, s.gender)}</div>`;
+  return `
+    <div class="rf-card">
+      <div class="rf-name">${s.name}</div>
+      <div class="rf-title">${s.title}</div>
+      <div class="rf-frame">${portret}</div>
+    </div>`;
+}
+
+function fightReport() {
+  const r = lastReport;
+  if (!r) return `<div class="coming-soon"><div class="cs-icon">⚔</div><h2>Žádný boj</h2><p>Nejdřív někoho vyzvi na výpravě.</p></div>`;
+
+  const odmeny = r.odmeny.map(o => `<div class="rw-row">${o}</div>`).join('');
+
+  return `
+  <div class="fight-report">
+
+    <div class="fr-banner ${r.won ? 'win' : 'lose'}">
+      <button class="fr-back" onclick="openView('${r.zpet}')">◀</button>
+      <span>${r.won ? 'Vítěz: ' + r.hrac.name : 'Poražen: ' + r.hrac.name}</span>
+    </div>
+
+    <div class="rw-box">
+      <div class="rw-head">Odměna</div>
+      ${odmeny}
+    </div>
+
+    <div class="rf-row">
+      ${reportFighter(r.hrac, false)}
+      <div class="rf-vs">VS</div>
+      ${reportFighter(r.souper, true)}
+    </div>
+
+    <div class="rs-row-wrap">
+      ${reportStats(r.hrac, false)}
+      ${reportStats(r.souper, true)}
+    </div>
+
+    <div class="fr-actions">
+      <button class="btn-green" onclick="refight()">Bojovat znovu</button>
+      <button class="btn-back" onclick="openView('${r.zpet}')">Zpět</button>
+    </div>
+  </div>`;
+}
 
 // ===== SÍŇ SLÁVY =====
 function hall() {
