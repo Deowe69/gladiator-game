@@ -1212,7 +1212,7 @@ span.fighter-img{font-size:52px}
    OBCHOD – svislý rám podle předlohy
    (přepisuje starší pravidla výše)
    ========================================================= */
-.s2body{grid-template-columns:296px 1fr;align-items:start}
+.s2body{grid-template-columns:298px 1fr;align-items:start}
 
 /* kovový rám kolem celého pultu */
 .shop-frame{
@@ -1948,25 +1948,10 @@ body::after{display:none}
    obrázek má vlastní tmavé okraje, takže stačí málo */
 html::after{
   background:
-    radial-gradient(ellipse 80% 70% at 50% 40%, transparent 60%, rgba(30,18,6,.42) 100%);
+    radial-gradient(ellipse 90% 80% at 50% 40%, transparent 72%, rgba(30,18,6,.28) 100%);
 }
 
-/* obsah dostane vlastní podklad, aby text držel kontrast
-   i nad světlými místy malby */
-.game-container::before{
-  content:'';
-  position:fixed;
-  top:122px;left:50%;transform:translateX(-50%);
-  width:min(1180px, 100%);height:calc(100% - 122px);
-  background:linear-gradient(180deg, rgba(46,28,12,.30), rgba(46,28,12,.46));
-  backdrop-filter:blur(1.5px);
-  z-index:-1;
-  pointer-events:none;
-}
-
-/* pevná záhlaví ať nejsou průsvitná nad malbou */
-.topbar{backdrop-filter:blur(2px)}
-.headerband{backdrop-filter:blur(2px)}
+/* pevná záhlaví nad malbou (bez rozostření – prosakovalo do obsahu) */
 
 /* ---- portréty kupců ---- */
 .shop-frame .mp-inner{align-items:stretch}
@@ -1984,3 +1969,239 @@ html::after{
 }
 .strow[data-tip],.tr-row[data-tip]{cursor:help}
 .strow[data-tip]:hover{background:rgba(140,115,80,.16)}
+
+/* =========================================================
+   PULT S RŮZNĚ VELKÝMI PŘEDMĚTY
+   Mřížka se kreslí zvlášť pod zbožím, aby skládání kusů
+   nemusela řešit ještě výplňová políčka.
+   ========================================================= */
+.goods-wrap{
+  position:relative;
+  --cell:52px; --gap:2px;
+}
+.goods-lattice,
+.shop-frame .goods-grid{
+  display:grid;
+  grid-template-columns:repeat(5, var(--cell));
+  grid-auto-rows:var(--cell);
+  gap:var(--gap);
+  padding:3px;
+}
+.goods-lattice{
+  position:absolute;inset:0;
+  grid-template-rows:repeat(var(--rows), var(--cell));
+  pointer-events:none;
+}
+.gl-cell{
+  background:rgba(0,0,0,.13);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.22);
+}
+.shop-frame .goods-grid{
+  position:relative;
+  grid-auto-flow:row dense;          /* mezery se zaplní menšími kusy */
+  background:
+    var(--fiber),
+    linear-gradient(180deg,#74502f 0%,#4a3020 100%);
+  background-blend-mode:soft-light, normal;
+  border:2px solid #2e1e12;
+  border-radius:0 2px 2px 2px;
+}
+.shop-frame .goods-grid > .g-slot{
+  width:auto;height:auto;aspect-ratio:auto;   /* rozměr určuje span */
+}
+.shop-frame .g-ico{width:100%;height:100%;object-fit:contain}
+
+/* =========================================================
+   VÝPISY: novinky, souboje, zprávy, kořist
+   ========================================================= */
+.log-list{display:flex;flex-direction:column;gap:5px}
+.log-row{
+  display:grid;grid-template-columns:96px auto 1fr;
+  align-items:center;gap:10px;
+  padding:8px 11px;
+  background:linear-gradient(180deg,#f5ebd0,#e2d1a8);
+  border:1px solid #b09a70;border-radius:3px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6);
+  font-size:12.5px;color:#4a3520;
+}
+.log-row:not(:has(.log-ico)){grid-template-columns:96px 1fr}
+.log-when{font-size:11px;color:#7d6a48;white-space:nowrap}
+.log-ico{width:34px;height:34px;display:flex;align-items:center;justify-content:center}
+.log-ico .b-ico{max-width:100%;max-height:100%}
+.log-text b{color:#3a2a12}
+.log-sub{display:block;font-size:11px;color:#6b5333;margin-top:2px}
+.log-row.win  b{color:#3d6b12}
+.log-row.lose b{color:#a02525}
+
+/* =========================================================
+   SROVNÁNÍ VE ZPRÁVĚ Z BOJE
+   ========================================================= */
+.rs-gap{height:7px;border-bottom:1px solid rgba(140,115,80,.45);margin-bottom:5px}
+
+/* odznaky u ikonek v hlavičce */
+.hb-icon{cursor:pointer}
+.hb-icon .badge:empty{display:none}
+
+/* =========================================================
+   OBCHOD – vzhled
+   ========================================================= */
+
+/* záložky kupců nahoře */
+.s2tabs{gap:3px;padding-left:4px}
+.s2tab{
+  padding:7px 17px;
+  border-radius:6px 6px 0 0;
+  letter-spacing:.2px;
+  transition:background .15s, color .15s, transform .1s;
+}
+.s2tab:not(.active):hover{transform:translateY(-1px)}
+
+/* ---- kovový rám kolem pultu ---- */
+.shop-frame{
+  position:relative;
+  padding:9px;
+  border:3px solid #2f2616;
+  border-radius:8px;
+  background:
+    var(--grain),
+    linear-gradient(180deg,#a8956e 0%,#7d6c4d 45%,#584a30 100%);
+  background-blend-mode:soft-light, normal;
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.6),
+    inset 0 0 0 2px rgba(240,216,134,.45),
+    inset 0 2px 0 rgba(255,255,255,.32),
+    inset 0 -3px 8px rgba(0,0,0,.35);
+}
+/* zlaté rohy */
+.shop-frame::before,
+.shop-frame::after{
+  content:'';position:absolute;width:14px;height:14px;
+  border:2px solid rgba(240,216,134,.75);
+  pointer-events:none;
+}
+.shop-frame::before{top:4px;left:4px;border-right:none;border-bottom:none;border-radius:4px 0 0 0}
+.shop-frame::after {bottom:4px;right:4px;border-left:none;border-top:none;border-radius:0 0 4px 0}
+
+/* ---- portrét kupce ---- */
+.shop-frame .mp-inner{
+  height:184px;
+  border:2px solid #2e2113;
+  border-radius:4px 4px 0 0;
+  box-shadow:inset 0 0 22px rgba(0,0,0,.55), 0 3px 8px rgba(0,0,0,.4);
+}
+.shop-frame img.mp-img{object-position:center 34%}
+
+/* jmenovka pod portrétem */
+.mp-plate{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.14) 0%, transparent 45%),
+    linear-gradient(180deg,#a02525 0%,#7d1616 55%,#5a0e0e 100%);
+  border:2px solid var(--gold-dk);
+  border-top:none;
+  border-radius:0 0 4px 4px;
+  padding:5px 9px 6px;
+  text-align:center;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 3px 6px rgba(0,0,0,.38);
+}
+.mp-name{
+  color:#f0d886;font:bold 13.5px Georgia,serif;letter-spacing:.3px;
+  text-shadow:0 1px 3px rgba(0,0,0,.85);
+}
+.mp-desc{
+  color:#e0c9a0;font-size:10.5px;font-style:italic;margin-top:1px;
+  text-shadow:0 1px 2px rgba(0,0,0,.8);
+}
+
+/* ---- záložky stránek ---- */
+.pg-tabs{display:flex;gap:2px;margin-top:8px;padding-left:2px}
+.pg-tab{
+  min-width:28px;height:21px;padding:0 9px;
+  background:linear-gradient(180deg,#8a7554,#63533a);
+  border:1px solid #2e2113;border-bottom:none;
+  border-radius:4px 4px 0 0;
+  color:#e8d4a0;font:bold 11px Georgia,serif;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28);
+  transition:background .14s, color .14s, transform .1s;
+}
+.pg-tab:hover{background:linear-gradient(180deg,#a08a63,#75623f);transform:translateY(-1px)}
+.pg-tab.active{
+  background:linear-gradient(180deg,#4a3320,#2e1e12);
+  color:#f0d886;
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.5);
+  transform:none;
+}
+.pg-tab.sell{margin-left:5px;padding:0 12px}
+.pg-tab.sell.active{background:linear-gradient(180deg,#7d1616,#4a0b0b)}
+
+/* ---- pult ---- */
+.shop-frame .goods-grid{
+  border:2px solid #241708;
+  border-radius:0 3px 0 0;
+  box-shadow:inset 0 3px 12px rgba(0,0,0,.55);
+}
+.gl-cell{
+  background:rgba(0,0,0,.15);
+  border-radius:2px;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+/* políčko se zbožím */
+.shop-frame .g-slot{
+  position:relative;
+  background:transparent;border:none;border-radius:2px;
+  box-shadow:none;overflow:visible;
+  display:flex;align-items:center;justify-content:center;
+  padding:2px;
+  transition:transform .12s, filter .12s;
+}
+.shop-frame .g-slot:hover{
+  transform:translateY(-2px) scale(1.04);
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.65)) brightness(1.08);
+  background:transparent;
+  z-index:5;
+}
+.shop-frame .g-slot.poor{filter:grayscale(.55) brightness(.75)}
+.shop-frame .g-slot.poor:hover{filter:grayscale(.55) brightness(.85)}
+
+.g-lvl{
+  position:absolute;top:0;left:2px;z-index:3;
+  font:bold 11px Georgia,serif;
+  text-shadow:0 1px 2px #000, 0 0 4px #000, 0 0 2px #000;
+}
+
+/* ---- patička pultu: zlato a doplnění ---- */
+.shop-foot{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:7px;padding:6px 9px;
+  background:linear-gradient(180deg,#4a3320,#2e1e12);
+  border:2px solid #241708;border-radius:0 0 4px 4px;
+  font-size:12px;color:#e8d4a0;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
+}
+.sf-gold,.sf-restock{display:flex;align-items:center;gap:5px}
+.sf-gold b{color:#f0d886;font-size:13px}
+.sf-restock b{color:#e8c860;font-variant-numeric:tabular-nums}
+
+.shop-refresh{width:100%;margin-top:9px;padding:8px}
+
+/* ---- pravý sloupec ---- */
+.s2right{display:flex;flex-direction:column;gap:11px}
+.sell-note{
+  padding:8px 11px;
+  background:linear-gradient(180deg,#e8dab6,#d3bf93);
+  border:1px solid #a8916a;border-radius:3px;
+  font-size:11.5px;color:#5c4423;font-style:italic;text-align:center;
+}
+
+/* zóna pro výkup */
+.shop-frame .sell-zone{
+  display:flex;align-items:center;justify-content:center;
+  min-height:344px;
+  border:2px dashed #b09a70;border-radius:0 3px 0 0;
+  background:linear-gradient(180deg,rgba(74,51,32,.85),rgba(46,30,18,.9));
+  text-align:center;
+}
+.sell-hint{color:#e8d4a0;font-size:12.5px;line-height:1.7;padding:14px}
+.sell-hint small{color:#c0a878;font-size:11px}

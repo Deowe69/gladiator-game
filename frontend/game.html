@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Olympus</title>
-  <link rel="stylesheet" href="css/game.css?v=tjh4v5">
+  <link rel="stylesheet" href="css/game.css?v=tjh5is">
 </head>
 <body>
 
@@ -27,10 +27,10 @@
 
     <!-- Ikonky -->
     <div class="hb-box hb-icons">
-      <div class="hb-icon"><span>📜</span><i class="badge">1</i></div>
-      <div class="hb-icon"><span>⚔️</span><i class="badge">31</i></div>
-      <div class="hb-icon"><span>✉️</span><i class="badge">77</i></div>
-      <div class="hb-icon"><span>🏆</span><i class="badge">4</i></div>
+      <div class="hb-icon" onclick="openView('news')"     title="Novinky a aktualizace"><span>📜</span><i class="badge" id="badgeNews"></i></div>
+      <div class="hb-icon" onclick="openView('fights')"   title="Historie soubojů"><span>⚔️</span><i class="badge" id="badgeFights"></i></div>
+      <div class="hb-icon" onclick="openView('messages')" title="Zprávy"><span>✉️</span><i class="badge" id="badgeInbox"></i></div>
+      <div class="hb-icon" onclick="openView('loot')"     title="Kořist z výprav"><span>🧰</span><i class="badge" id="badgeLoot"></i></div>
     </div>
 
     <!-- Zdroje + pruhy -->
@@ -158,9 +158,9 @@
   </div>
 </div>
 
-<script src="js/api.js?v=tjh4v5"></script>
-<script src="js/avatars.js?v=tjh4v5"></script>
-<script src="js/game.js?v=tjh4v5"></script>
+<script src="js/api.js?v=tjh5is"></script>
+<script src="js/avatars.js?v=tjh5is"></script>
+<script src="js/game.js?v=tjh5is"></script>
 
 <script>
   // datum v horním pruhu

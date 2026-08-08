@@ -282,7 +282,7 @@ function openView(view, highlight) {
   const cc = document.getElementById('centerContent');
   const views = { city, arena, dungeon, quests, shop, inventory: profileView, profile: profileView,
                   guild, tavern, forge, expedition, hall, stats, training, work, premium,
-                  report: fightReport };
+                  report: fightReport, news, fights, messages, loot };
   const viewFn = views[view] || (() => `
     <div class="coming-soon">
       <div class="cs-icon">🚧</div>
@@ -475,12 +475,42 @@ function merchantPortrait(id) {
 }
 
 // jedno políčko se zbožím
+
+// ========== ROZMĚRY PŘEDMĚTŮ ==========
+// [šířka, výška] v políčkách. Odvozuje se ze slotu, do kterého kus patří,
+// takže nový předmět dostane rozměr sám podle svého druhu.
+const SHOP_COLS = 5;   // pult je 5 x 8 políček
+const SHOP_ROWS = 8;
+const ITEM_SIZE = {
+  weapon: [1, 3],   // meče, kopí, luky – dlouhé
+  shield: [2, 2],
+  chest:  [2, 2],
+  helmet: [1, 2],
+  gloves: [1, 2],
+  boots:  [1, 2],
+  belt:   [2, 1],
+  ring:   [1, 1],
+  amulet: [1, 1],
+};
+
+function itemSize(it) {
+  if (!it) return [1, 1];
+  if (Array.isArray(it.size)) return it.size;          // vlastní rozměr má přednost
+  const s = slotForItem(it);
+  return ITEM_SIZE[s] || [1, 1];                       // lektvary a drobnosti
+}
+
+// Pult má u všech kupců stejný rozměr, ať je nabídka jakákoliv.
+const shopRows = () => SHOP_ROWS;
+
 function goodsSlot(item, dark) {
   if (!item) return `<div class="g-slot ${dark ? 'dark' : ''} empty"></div>`;
   const q = qualityOf(item);
   const afford = character.gold >= item.price;
+  const [w, h] = itemSize(item);
   return `
     <div class="g-slot ${dark ? 'dark' : ''} ${afford ? '' : 'poor'}"
+         style="grid-column:span ${w};grid-row:span ${h}"
          onclick="buyItem('${item.uid}')"
          data-tip="shop:${item.uid}">
       <span class="g-lvl" style="color:${q.color}">${item.lvl || 1}</span>
@@ -488,10 +518,12 @@ function goodsSlot(item, dark) {
     </div>`;
 }
 
-function fillSlots(items, count, dark) {
-  let html = '';
-  for (let i = 0; i < count; i++) html += goodsSlot(items[i], dark);
-  return html;
+// Prázdná mřížka pod zbožím. Kreslí se zvlášť, aby skládání
+// různě velkých kusů nemusela řešit ještě výplňová políčka.
+function latticeHTML(rows) {
+  return '<div class="goods-lattice">' +
+         '<div class="gl-cell"></div>'.repeat(SHOP_COLS * rows) +
+         '</div>';
 }
 
 // odpočet do nového zboží (4h cyklus)
@@ -524,9 +556,18 @@ function shop() {
     `<div class="s2tab ${k === id ? 'active' : ''}" onclick="openMerchant('${k}')">${MERCHANTS[k].name}</div>`
   ).join('');
 
-  // nabídka rozdělená na dvě stránky
+  // Nabídka rozdělená na stránky podle zabrané plochy,
+  // ne podle počtu kusů – meč zabere třikrát víc než prsten.
   const stock = shopStock(id);
-  const pages = [stock.slice(0, 16), stock.slice(16, 32)];
+  const KAPACITA = SHOP_COLS * SHOP_ROWS;
+  const pages = [[], []];
+  let plocha = 0, strana = 0;
+  for (const it of stock) {
+    const [w, h] = itemSize(it);
+    if (strana === 0 && plocha + w * h > KAPACITA) { strana = 1; plocha = 0; }
+    pages[strana].push(it);
+    plocha += w * h;
+  }
 
   const pageTabs =
     ['I', 'II'].map((lbl, i) =>
@@ -544,7 +585,14 @@ function shop() {
            <small>nebo na něj klikni — vykoupím ho za 40 % ceny</small>
          </div>
        </div>`
-    : `<div class="goods-grid">${fillSlots(pages[shopPage] || [], 16, false)}</div>`;
+    : (() => {
+        const kusy = pages[shopPage] || [];
+        const rows = shopRows();
+        return `<div class="goods-wrap" style="--rows:${rows}">
+                  ${latticeHTML(rows)}
+                  <div class="goods-grid">${kusy.map(i => goodsSlot(i, false)).join('')}</div>
+                </div>`;
+      })();
 
   return `
   <div class="shop2">
@@ -556,15 +604,27 @@ function shop() {
       <div class="s2left">
         <div class="shop-frame">
           <div class="mp-inner">${merchantPortrait(id)}</div>
+
+          <div class="mp-plate">
+            <div class="mp-name">${m.name}</div>
+            <div class="mp-desc">${m.desc}</div>
+          </div>
+
           <div class="pg-tabs">${pageTabs}</div>
           ${mrizka}
+
+          <div class="shop-foot">
+            <span class="sf-gold">
+              <img class="res-ico" src="img/ui/coin.png" alt="zlata">
+              <b>${character.gold.toLocaleString('cs-CZ')}</b>
+            </span>
+            <span class="sf-restock" title="Než kupec doplní zboží">
+              ⏳ <b id="restockTimer">${restockLeft()}</b>
+            </span>
+          </div>
         </div>
 
-        <div class="restock">
-          <div class="restock-lbl">Než kupec doplní zboží:</div>
-          <div class="restock-time" id="restockTimer">${restockLeft()}</div>
-          <button class="btn-green" onclick="newGoods()">Nové zboží</button>
-        </div>
+        <button class="btn-green shop-refresh" onclick="newGoods()">Nové zboží</button>
       </div>
 
       <!-- tvoje výbava -->
@@ -1649,8 +1709,17 @@ const CRIT_MAX = 0.35;
 const CRIT_MULT = 1.6;
 const critChance = () => Math.min(CRIT_MAX, 0.08 + statTotal('intelligence') / 500);
 
-// Protivník útočí dvakrát podle své síly; hráč to může zablokovat.
-const enemyDoubleChance = e => sance((e && e.str) || 0, 220, 0.35);
+// Příšery mají tytéž vlastnosti jako hráč, jen odvozené ze své síly
+// a odolnosti — díky tomu jde obě strany poctivě srovnat.
+const monsterStats = e => ({
+  skill:        Math.round((e.str || 0) * 0.6),
+  agility:      Math.round((e.def || 0) * 0.8),
+  intelligence: Math.round((e.def || 0) * 0.5),
+});
+
+const enemyDoubleChance = e => sance(monsterStats(e).skill, 150, DOUBLE_MAX);
+const enemyBlockChance  = e => sance(monsterStats(e).agility, 130, BLOCK_MAX);
+const enemyCritChance   = e => Math.min(CRIT_MAX, 0.05 + monsterStats(e).intelligence / 500);
 
 // ========== AUTOMATICKÝ BOJ ==========
 let fightTimer = null;
@@ -1690,7 +1759,11 @@ function fightRound() {
   const rany = dvojity ? 2 : 1;
   let pdmg = 0, kritCelkem = false;
 
-  for (let i = 0; i < rany; i++) {
+  // protivník může druhou ránu vykrýt
+  const vykryto = rany > 1 && Math.random() < enemyBlockChance(currentEnemy);
+  const skutecneRany = vykryto ? 1 : rany;
+
+  for (let i = 0; i < skutecneRany; i++) {
     const crit = Math.random() < critChance();
     let d = Math.max(1, rollPlayerDamage() - soak(currentEnemy.def));
     if (crit) { d = Math.floor(d * CRIT_MULT); kritCelkem = true; }
@@ -1700,7 +1773,8 @@ function fightRound() {
   currentEnemy.hp = Math.max(0, currentEnemy.hp - pdmg);
   animateHit('.fighter-box.player', '.fighter-box.enemy', pdmg, kritCelkem);
   addLog(`${character.name} zasáhl za <strong>${pdmg}</strong>` +
-         (dvojity ? ' (dvojitý zásah!)' : '') +
+         (dvojity && !vykryto ? ' (dvojitý zásah!)' : '') +
+         (vykryto ? ' — druhou ránu vykryl' : '') +
          (kritCelkem ? ' (kritický zásah!)' : ''), 'log-p');
   updateHpBars();
 
@@ -1720,12 +1794,14 @@ function fightRound() {
       }
     }
 
-    let edmg = 0;
+    let edmg = 0, eKrit = false;
     for (let i = 0; i < eRany; i++) {
-      edmg += Math.max(1, currentEnemy.str + Math.floor(Math.random() * 6) - playerSoak());
+      let d = Math.max(1, currentEnemy.str + Math.floor(Math.random() * 6) - playerSoak());
+      if (Math.random() < enemyCritChance(currentEnemy)) { d = Math.floor(d * CRIT_MULT); eKrit = true; }
+      edmg += d;
     }
     character.health = Math.max(0, character.health - edmg);
-    animateHit('.fighter-box.enemy', '.fighter-box.player', edmg, false);
+    animateHit('.fighter-box.enemy', '.fighter-box.player', edmg, eKrit);
     addLog(`${currentEnemy.name} zasáhl za <strong>${edmg}</strong>` +
            (eRany > 1 ? ' (dvojitý zásah)' : ''), 'log-e');
     updateHpBars();
@@ -1770,11 +1846,34 @@ function endCombat(won) {
   clearTimeout(fightTimer);
   updateHpBars();
 
+  // záznam do historie soubojů
+  zapisSouboj({
+    kdy: Date.now(), vyhra: won, soupeR: currentEnemy.name,
+    zlato: won ? currentEnemy.gold : 0, exp: won ? currentEnemy.exp : 0,
+  });
+
+  // z vyhrané výpravy může spadnout předmět
+  let korist = null;
+  if (won && lastFight && lastFight.view === 'expedition') {
+    korist = rollLoot(currentEnemy);
+    if (korist) {
+      if (inventory.length < BAG_SIZE) {
+        inventory.push(korist);
+        zapisKorist({ kdy: Date.now(), kus: korist, od: currentEnemy.name });
+        addLog(`Našel jsi <strong>${korist.name}</strong>`, 'log-w');
+      } else {
+        toast('Batoh je plný, kořist zůstala ležet.');
+        korist = null;
+      }
+    }
+  }
+
   let rewards = '';
   if (won) {
     character.gold       += currentEnemy.gold;
     character.experience += currentEnemy.exp;
-    rewards = `+${currentEnemy.gold} zlata · +${currentEnemy.exp} zkušeností`;
+    rewards = `+${currentEnemy.gold} zlata · +${currentEnemy.exp} zkušeností` +
+              (korist ? ` · ${korist.name}` : '');
     addLog(`Vítězství! ${rewards}`, 'log-w');
     checkLevelUp();
   } else {
@@ -1792,7 +1891,8 @@ function endCombat(won) {
   const [dmgMin, dmgMax] = playerDamageRange();
   const odmeny = won
     ? [`<b>${character.name}</b> získává ${currentEnemy.gold} zlata`,
-       `<b>${character.name}</b> získává ${currentEnemy.exp} zkušenostních bodů`]
+       `<b>${character.name}</b> získává ${currentEnemy.exp} zkušenostních bodů`,
+       ...(korist ? [`<b>${character.name}</b> nachází <b>${korist.name}</b>`] : [])]
     : [`<b>${character.name}</b> nezískává nic`,
        `Probral ses s ${character.health} životy`];
 
@@ -1805,19 +1905,28 @@ function endCombat(won) {
       class: character.class, gender: character.gender,
       level: character.level,
       hp: Math.max(0, character.health), maxHp: maxHP(),
-      str: statTotal('strength'), agi: statTotal('agility'),
-      def: statTotal('defense'),  int: statTotal('intelligence'),
+      str: statTotal('strength'),  skl: statTotal('skill'),
+      agi: statTotal('agility'),   def: statTotal('defense'),
+      int: statTotal('intelligence'),
       armor: totalArmor(), dmg: dmgMin + ' - ' + dmgMax,
+      pDouble: doubleChance(), pCrit: critChance(), pBlock: blockChance(),
     },
-    souper: {
-      name: currentEnemy.name, title: 'Nestvůra', img: currentEnemy.img,
-      level: currentEnemy.level || 1,
-      hp: Math.max(0, currentEnemy.hp), maxHp: currentEnemy.maxHp,
-      str: currentEnemy.str, agi: Math.round(currentEnemy.str * 0.8),
-      def: currentEnemy.def, int: Math.round(currentEnemy.def * 0.6),
-      armor: currentEnemy.def * 3,
-      dmg: Math.floor(currentEnemy.str * 1.1) + ' - ' + Math.floor(currentEnemy.str * 1.6),
-    },
+    souper: (() => {
+      const ms = monsterStats(currentEnemy);
+      return {
+        name: currentEnemy.name, title: 'Nestvůra', img: currentEnemy.img,
+        level: currentEnemy.level || 1,
+        hp: Math.max(0, currentEnemy.hp), maxHp: currentEnemy.maxHp,
+        str: currentEnemy.str, skl: ms.skill,
+        agi: ms.agility,       def: currentEnemy.def,
+        int: ms.intelligence,
+        armor: currentEnemy.def * 3,
+        dmg: Math.floor(currentEnemy.str * 1.1) + ' - ' + Math.floor(currentEnemy.str * 1.6),
+        pDouble: enemyDoubleChance(currentEnemy),
+        pCrit:   enemyCritChance(currentEnemy),
+        pBlock:  enemyBlockChance(currentEnemy),
+      };
+    })(),
   };
 
   const box = document.getElementById('combatBtns');
@@ -1831,7 +1940,11 @@ function endCombat(won) {
       <button class="btn-back" onclick="openView('${lastFight ? lastFight.view : 'expedition'}')">Zpět</button>`;
   }
 
-  setTimeout(() => { if (!inCombat) openView('report'); }, 1400);
+  // Na zprávu skoč jen když hráč pořád kouká na souboj – jinak
+  // by ho to vytrhlo z toho, kam si mezitím odešel.
+  setTimeout(() => {
+    if (!inCombat && document.getElementById('combatBtns')) openView('report');
+  }, 1400);
 }
 
 function refight() {
@@ -1866,7 +1979,9 @@ function addLog(msg, cls) {
 function startDungeon(idx) {
   const d = DUNGEONS[idx];
   if (character.level < d.level) { toast(`Bludiště ${d.name} se otevře na úrovni ${d.level}.`); return; }
+  if (!spendPoint('dungeon')) { toast('Došly body bludiště. Další se doplní za 10 minut.'); return; }
   toast(`${d.name}: výprava potrvá ${d.time}.`);
+  refreshExpedUI();
 }
 
 // ========== QUESTS ==========
@@ -2054,6 +2169,49 @@ function logout() {
 const EXPED_MAX      = 12;
 const EXPED_REGEN_MS = 10 * 60 * 1000;   // +1 bod za 10 minut
 
+// Body se vedou zvlášť pro každou činnost ('exped', 'dungeon'),
+// aby si navzájem neubíraly.
+function points(druh) {
+  const kP = 'pts_' + druh, kAt = 'ptsAt_' + druh;
+  let p  = parseInt(localStorage.getItem(kP), 10);
+  let at = parseInt(localStorage.getItem(kAt), 10);
+
+  // přechod ze starého společného počítadla
+  if (isNaN(p) && druh === 'exped') {
+    p  = parseInt(localStorage.getItem('expedPts'), 10);
+    at = parseInt(localStorage.getItem('expedPtsAt'), 10);
+  }
+  if (isNaN(p))  p  = EXPED_MAX;
+  if (isNaN(at)) at = Date.now();
+
+  if (p < EXPED_MAX) {
+    const pribylo = Math.floor((Date.now() - at) / EXPED_REGEN_MS);
+    if (pribylo > 0) {
+      p = Math.min(EXPED_MAX, p + pribylo);
+      at += pribylo * EXPED_REGEN_MS;
+    }
+  }
+  if (p >= EXPED_MAX) at = Date.now();
+
+  localStorage.setItem(kP, p);
+  localStorage.setItem(kAt, at);
+  return p;
+}
+
+function spendPoint(druh) {
+  const p = points(druh);
+  if (p <= 0) return false;
+  if (p === EXPED_MAX) localStorage.setItem('ptsAt_' + druh, Date.now());
+  localStorage.setItem('pts_' + druh, p - 1);
+  return true;
+}
+
+function regenLeft(druh) {
+  if (points(druh) >= EXPED_MAX) return 0;
+  const at = parseInt(localStorage.getItem('ptsAt_' + druh), 10) || Date.now();
+  return Math.max(0, at + EXPED_REGEN_MS - Date.now());
+}
+
 // Cooldown roste s úrovní — vyšší level = delší odpočinek mezi výpravami
 function expedCooldownMs() {
   const L = character ? character.level : 1;
@@ -2064,34 +2222,8 @@ function expedCooldownMs() {
   return 150 * 1000;
 }
 
-// načte body a doplní ty, co se mezitím zregenerovaly
-function expedPoints() {
-  let pts = parseInt(localStorage.getItem('expedPts'), 10);
-  let at  = parseInt(localStorage.getItem('expedPtsAt'), 10);
-  if (isNaN(pts)) pts = EXPED_MAX;
-  if (isNaN(at))  at  = Date.now();
-
-  if (pts < EXPED_MAX) {
-    const gained = Math.floor((Date.now() - at) / EXPED_REGEN_MS);
-    if (gained > 0) {
-      pts = Math.min(EXPED_MAX, pts + gained);
-      at += gained * EXPED_REGEN_MS;
-    }
-  }
-  if (pts >= EXPED_MAX) at = Date.now();
-
-  localStorage.setItem('expedPts', pts);
-  localStorage.setItem('expedPtsAt', at);
-  return pts;
-}
-
-function spendExpedPoint() {
-  const pts = expedPoints();
-  if (pts <= 0) return false;
-  if (pts === EXPED_MAX) localStorage.setItem('expedPtsAt', Date.now());
-  localStorage.setItem('expedPts', pts - 1);
-  return true;
-}
+const expedPoints     = () => points('exped');
+const spendExpedPoint = () => spendPoint('exped');
 
 function startExpedCooldown() {
   localStorage.setItem('expedCdUntil', Date.now() + expedCooldownMs());
@@ -2115,12 +2247,14 @@ function expedRegenLeft() {
 function refreshExpedUI() {
   if (!character) return;
 
-  const pts = expedPoints();
+  const pts = points('exped');
   const el  = document.getElementById('expedPts');
   if (el) el.textContent = pts + ' / ' + EXPED_MAX;
 
   const dg = document.getElementById('dungeonPts');
-  if (dg) dg.textContent = pts + ' / ' + EXPED_MAX;
+  if (dg) dg.textContent = points('dungeon') + ' / ' + EXPED_MAX;
+
+  refreshBadges();
 
   const cd = expedCdLeft();
   document.querySelectorAll('.mon-attack').forEach(b => {
@@ -2131,7 +2265,7 @@ function refreshExpedUI() {
 
   const info = document.getElementById('expedInfo');
   if (info) {
-    const regen = expedRegenLeft();
+    const regen = regenLeft('exped');
     info.textContent =
       (cd > 0 ? 'Odpočinek: ' + fmtSec(cd) + ' · ' : '') +
       'Body výpravy: ' + pts + '/' + EXPED_MAX +
@@ -2517,23 +2651,31 @@ let lastReport = null;   // { won, odmeny, hrac, soupeR }
 
 // srovnávací tabulka statů — zrcadlená, aby stály proti sobě
 function reportStats(s, mirror) {
-  const max = { hp: s.maxHp, str: 400, agi: 400, def: 400, int: 400 };
+  const STROP = 400;   // kam až sahá pruh u vlastností
   const bar = (v, m) => `<div class="rs-bar"><i style="width:${Math.min(100, v / m * 100)}%"></i></div>`;
 
   const radek = (jmeno, hodnota, pruh) => mirror
     ? `<div class="rs-row"><b>${hodnota}</b>${pruh || '<span></span>'}<span>${jmeno}</span></div>`
     : `<div class="rs-row"><span>${jmeno}</span>${pruh || '<span></span>'}<b>${hodnota}</b></div>`;
 
+  const pct = v => (v * 100).toFixed(0) + ' %';
+
   return `
     <div class="rs-table ${mirror ? 'mirror' : ''}">
       ${radek('Úroveň', s.level)}
-      ${radek('Životy', s.hp + ' / ' + s.maxHp, bar(s.hp, max.hp))}
-      ${radek('Síla', s.str, bar(s.str, max.str))}
-      ${radek('Obratnost', s.agi, bar(s.agi, max.agi))}
-      ${radek('Odolnost', s.def, bar(s.def, max.def))}
-      ${radek('Inteligence', s.int, bar(s.int, max.int))}
+      ${radek('Životy', s.hp + ' / ' + s.maxHp, bar(s.hp, s.maxHp))}
+      ${radek('Síla', s.str, bar(s.str, STROP))}
+      ${radek('Dovednost', s.skl, bar(s.skl, STROP))}
+      ${radek('Obratnost', s.agi, bar(s.agi, STROP))}
+      ${radek('Odolnost', s.def, bar(s.def, STROP))}
+      ${radek('Inteligence', s.int, bar(s.int, STROP))}
+      <div class="rs-gap"></div>
       ${radek('Zbroj', s.armor)}
       ${radek('Poškození', s.dmg)}
+      <div class="rs-gap"></div>
+      ${radek('Dvojitý zásah', pct(s.pDouble))}
+      ${radek('Kritický zásah', pct(s.pCrit))}
+      ${radek('Zablokování', pct(s.pBlock))}
     </div>`;
 }
 
@@ -2584,6 +2726,129 @@ function fightReport() {
       <button class="btn-back" onclick="openView('${r.zpet}')">Zpět</button>
     </div>
   </div>`;
+}
+
+
+// ========== KOŘIST, ZÁZNAMY A ZPRÁVY ==========
+// Vše se drží v prohlížeči; čísla u ikonek v hlavičce ukazují,
+// kolik nepřečtených položek na hráče čeká.
+
+const NOVINKY = [
+  { datum:'09.08.2026', text:'Vlastnosti přepracovány. Dovednost dává dvojité zásahy, Obratnost je blokuje, Odolnost přidává životy.' },
+  { datum:'09.08.2026', text:'Vetešník otevřel krám s použitými prsteny.' },
+  { datum:'09.08.2026', text:'Předměty mají životnost. Opravu zařídí Kovárna.' },
+  { datum:'08.08.2026', text:'Výpravy stojí body a mezi nimi si gladiátor musí odpočinout.' },
+  { datum:'08.08.2026', text:'Každý předmět má vlastní vylosované vlastnosti.' },
+];
+
+const nactiSeznam = k => { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { return []; } };
+const ulozSeznam  = (k, v) => localStorage.setItem(k, JSON.stringify(v.slice(0, 60)));
+
+let fightLog = nactiSeznam('fightLog');   // historie soubojů
+let lootLog  = nactiSeznam('lootLog');    // co z výprav padlo
+let inbox    = nactiSeznam('inbox');      // zprávy
+
+// ---- kořist z výprav ----
+const DROP_CHANCE = 0.22;
+
+// Vybere šablonu přiměřenou úrovni příšery a vyrobí z ní konkrétní kus.
+function rollLoot(enemy) {
+  if (Math.random() > DROP_CHANCE) return null;
+
+  const vse = Object.values(SHOP_ITEMS).flat().filter(t => slotForItem(t));
+  const strop = (enemy.level || 1) + 3;
+  const vhodne = vse.filter(t => Math.max(1, Math.round((t.price || 25) / 28)) <= strop);
+  const zdroj = vhodne.length ? vhodne : vse;
+
+  return rollItem(zdroj[Math.floor(Math.random() * zdroj.length)]);
+}
+
+function zapisSouboj(zaznam) { fightLog.unshift(zaznam); ulozSeznam('fightLog', fightLog); }
+function zapisKorist(zaznam) { lootLog.unshift(zaznam);  ulozSeznam('lootLog', lootLog); }
+
+// ---- nepřečtené ----
+const videno = k => parseInt(localStorage.getItem('videno_' + k), 10) || 0;
+const oznacPrectene = k => { localStorage.setItem('videno_' + k, Date.now()); refreshBadges(); };
+
+function nepreectene(k) {
+  const od = videno(k);
+  if (k === 'news')  return NOVINKY.filter(n => Date.parse(n.datum.split('.').reverse().join('-')) > od).length;
+  if (k === 'fights') return fightLog.filter(z => z.kdy > od).length;
+  if (k === 'inbox')  return inbox.filter(z => z.kdy > od).length;
+  if (k === 'loot')   return lootLog.filter(z => z.kdy > od).length;
+  return 0;
+}
+
+function refreshBadges() {
+  const mapa = { news:'badgeNews', fights:'badgeFights', inbox:'badgeInbox', loot:'badgeLoot' };
+  for (const [k, id] of Object.entries(mapa)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const n = nepreectene(k);
+    el.textContent = n;
+    el.style.display = n > 0 ? '' : 'none';
+  }
+}
+
+const cas = ms => new Date(ms).toLocaleString('cs-CZ', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+
+// ---- jednotný rám pro tyto výpisy ----
+function seznamPanel(nadpis, radky, prazdne) {
+  return `
+  <div class="panel">
+    <div class="panel-header">${nadpis}</div>
+    <div class="panel-body">
+      ${radky.length ? `<div class="log-list">${radky.join('')}</div>`
+                     : `<div class="coming-soon"><div class="cs-icon">📭</div><h2>Zatím prázdné</h2><p>${prazdne}</p></div>`}
+    </div>
+  </div>`;
+}
+
+// ---- novinky ----
+function news() {
+  oznacPrectene('news');
+  return seznamPanel('Novinky', NOVINKY.map(n => `
+    <div class="log-row">
+      <div class="log-when">${n.datum}</div>
+      <div class="log-text">${n.text}</div>
+    </div>`), 'Zatím se nic nestalo.');
+}
+
+// ---- historie soubojů ----
+function fights() {
+  oznacPrectene('fights');
+  return seznamPanel('Historie soubojů', fightLog.map(z => `
+    <div class="log-row ${z.vyhra ? 'win' : 'lose'}">
+      <div class="log-when">${cas(z.kdy)}</div>
+      <div class="log-text">
+        <b>${z.vyhra ? 'Vítězství' : 'Porážka'}</b> — ${z.soupeR}
+        <span class="log-sub">${z.vyhra ? `+${z.zlato} zlata · +${z.exp} zkušeností` : 'bez odměny'}</span>
+      </div>
+    </div>`), 'Ještě jsi nebojoval.');
+}
+
+// ---- zprávy ----
+function messages() {
+  oznacPrectene('inbox');
+  return seznamPanel('Zprávy', inbox.map(z => `
+    <div class="log-row">
+      <div class="log-when">${cas(z.kdy)}</div>
+      <div class="log-text"><b>${z.od}</b><span class="log-sub">${z.text}</span></div>
+    </div>`), 'Nikdo ti zatím nenapsal.');
+}
+
+// ---- kořist ----
+function loot() {
+  oznacPrectene('loot');
+  return seznamPanel('Kořist z výprav', lootLog.map(z => `
+    <div class="log-row">
+      <div class="log-when">${cas(z.kdy)}</div>
+      <div class="log-ico">${itemIcon(z.kus, 'b-ico')}</div>
+      <div class="log-text">
+        <b style="color:${qualityOf(z.kus).color}">${z.kus.name}</b>
+        <span class="log-sub">${statLine(z.kus)} · z ${z.od}</span>
+      </div>
+    </div>`), 'Z výprav ti zatím nic nepadlo.');
 }
 
 // ===== SÍŇ SLÁVY =====
@@ -2661,7 +2926,7 @@ function stats() {
         <div class="stats-block">
           <h3>Výprava</h3>
           <div class="stat-cells">
-            ${cell('Body', expedPoints() + '/' + EXPED_MAX)}
+            ${cell('Body výpravy', points('exped') + '/' + EXPED_MAX)}
             ${cell('Odpočinek', Math.ceil(expedCooldownMs() / 1000) + ' s')}
             ${cell('Batoh', inventory.length + '/' + BAG_SIZE)}
             ${cell('Lokace', EXPEDITIONS.filter(e => c.level >= e.minLevel).length + '/' + EXPEDITIONS.length)}
