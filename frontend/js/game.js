@@ -607,8 +607,8 @@ function shop() {
           <div class="mp-inner">${merchantPortrait(id)}</div>
 
           <div class="mp-plate">
-            <div class="mp-name">${m.name}</div>
-            <div class="mp-desc">${m.desc}</div>
+            <div class="mp-name">${MERCHANTS[id].name}</div>
+            <div class="mp-desc">${MERCHANTS[id].desc}</div>
           </div>
 
           <div class="pg-tabs">${pageTabs}</div>
