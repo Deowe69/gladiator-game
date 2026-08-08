@@ -194,6 +194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         strength: 15,
         defense: 12,
         agility: 10,
+        skill: 10,
         intelligence: 8,
         gold: 500
       };
@@ -211,7 +212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function updateUI() {
   const c = character;
   const xpNeeded = c.level * 100;
-  const hpPct = Math.max(0, (c.health / c.max_health * 100)).toFixed(1);
+  const hpPct = Math.max(0, (c.health / maxHP() * 100)).toFixed(1);
   const xpPct = Math.min(100, (c.experience / xpNeeded * 100)).toFixed(1);
 
   // Cache DOM elements to avoid repeated queries
@@ -238,14 +239,14 @@ function updateUI() {
   if (els.navName) els.navName.textContent = c.name;
   if (els.navLevel) els.navLevel.textContent = c.level;
   if (els.hpBar) els.hpBar.style.width = hpPct + '%';
-  if (els.hpVal) els.hpVal.textContent = `${c.health}/${c.max_health}`;
+  if (els.hpVal) els.hpVal.textContent = `${c.health}/${maxHP()}`;
   if (els.xpBar) els.xpBar.style.width = xpPct + '%';
   if (els.xpVal) els.xpVal.textContent = `${c.experience}/${xpNeeded} XP`;
   if (els.navGold) els.navGold.textContent = c.gold;
   if (els.charNameSm) els.charNameSm.textContent = c.name;
   if (els.charClassSm) els.charClassSm.textContent = c.class;
   if (els.charAvatarSm) els.charAvatarSm.innerHTML = getAvatar(c.class, c.gender);
-  if (els.sHealth) els.sHealth.textContent = `${c.health}/${c.max_health}`;
+  if (els.sHealth) els.sHealth.textContent = `${c.health}/${maxHP()}`;
   if (els.sStr) els.sStr.textContent = c.strength;
   if (els.sDef) els.sDef.textContent = c.defense;
   if (els.sAgi) els.sAgi.textContent = c.agility;
@@ -468,7 +469,9 @@ const MERCHANTS = {
 // portrét kupce: img/merchants/<id>.png, jinak emoji
 function merchantPortrait(id) {
   const m = MERCHANTS[id];
-  return artImg(`img/merchants/${id}.png`, m.emoji, 'mp-img', m.name);
+  // malované výjevy jsou uložené jako .jpg (o řád menší než PNG);
+  // kdo obrázek nemá, spadne na emoji jako dřív
+  return artImg(`img/merchants/${id}.jpg`, m.emoji, 'mp-img', m.name);
 }
 
 // jedno políčko se zbožím
@@ -813,17 +816,18 @@ function profileView() {
   const str = statTotal('strength');
   const def = statTotal('defense');
   const agi = statTotal('agility');
+  const skl = statTotal('skill');
   const int = statTotal('intelligence');
 
   const [dmgMin, dmgMax] = playerDamageRange();
   const armor   = totalArmor();
   const xpNeed  = c.level * 100;
   const xpPct   = Math.min(100, c.experience / xpNeed * 100);
-  const hpPct   = Math.max(0, c.health / c.max_health * 100);
+  const hpPct   = Math.max(0, c.health / maxHP() * 100);
 
   const bar = (cls, pct) => `<div class="sbar ${cls}"><i style="width:${pct}%"></i></div>`;
-  const rowBar   = (label, cls, pct, val) =>
-    `<div class="strow"><span class="sl">${label}</span>${bar(cls, pct)}<span class="sv">${val}</span></div>`;
+  const rowBar   = (label, cls, pct, val, statKey) =>
+    `<div class="strow"${statKey ? ` data-tip="stat:${statKey}"` : ''}><span class="sl">${label}</span>${bar(cls, pct)}<span class="sv">${val}</span></div>`;
   const rowPlain = (label, val) =>
     `<div class="strow plain"><span class="sl">${label}</span><span class="sv">${val}</span></div>`;
 
@@ -846,12 +850,13 @@ function profileView() {
 
       <div class="stattable">
         ${rowPlain('Úroveň', c.level)}
-        ${rowBar('Životy',     'hp', hpPct, c.health + '/' + c.max_health)}
+        ${rowBar('Životy',     'hp', hpPct, c.health + '/' + maxHP(), 'defense')}
         ${rowBar('Zkušenost',  'xp', xpPct, xpPct.toFixed(1) + ' %')}
-        ${rowBar('Síla',       'st', Math.min(100, str / 3), str)}
-        ${rowBar('Obratnost',  'st', Math.min(100, agi / 3), agi)}
-        ${rowBar('Odolnost',   'st', Math.min(100, def / 3), def)}
-        ${rowBar('Inteligence','st', Math.min(100, int / 3), int)}
+        ${rowBar('Síla',       'st', Math.min(100, str / 3), str, 'strength')}
+        ${rowBar('Dovednost',  'st', Math.min(100, skl / 3), skl, 'skill')}
+        ${rowBar('Obratnost',  'st', Math.min(100, agi / 3), agi, 'agility')}
+        ${rowBar('Odolnost',   'st', Math.min(100, def / 3), def, 'defense')}
+        ${rowBar('Inteligence','st', Math.min(100, int / 3), int, 'intelligence')}
         ${rowPlain('Zbroj', armor)}
         ${rowPlain('Poškození', dmgMin + ' - ' + dmgMax)}
         ${equipped.weapon && equipped.weapon.dmg
@@ -999,7 +1004,7 @@ function useItem(i) {
   }
 
   if (item.key === 'health') {
-    character.health = Math.min(character.max_health, character.health + item.val);
+    character.health = Math.min(maxHP(), character.health + item.val);
     inventory.splice(i, 1);
     toast(`Vypil jsi ${item.name}. +${item.val} HP`);
     persist();
@@ -1063,7 +1068,7 @@ function handleInvClick(idx) {
   // Lektvar - použít okamžitě
   if (slotKey === null) {
     if (item.key === 'health') {
-      character.health = Math.min(character.max_health, character.health + item.val);
+      character.health = Math.min(maxHP(), character.health + item.val);
       inventory.splice(idx, 1);
       localStorage.setItem('inv', JSON.stringify(inventory));
       saveChar(); updateUI();
@@ -1245,6 +1250,7 @@ const STAT_DEFS = {
   strength:     'Síla',
   agility:      'Obratnost',
   defense:      'Odolnost',
+  skill:        'Dovednost',
   intelligence: 'Inteligence',
 };
 const STAT_KEYS = Object.keys(STAT_DEFS);
@@ -1264,11 +1270,10 @@ const qualityOf = it => QUALITY_ROLL[(it && it.quality) || 'common'] || QUALITY_
 const ARMOR_SLOTS = ['helmet', 'chest', 'shield', 'gloves', 'boots', 'belt'];
 
 // celková zbroj: z odolnosti + z jednotlivých kusů výstroje
+// Zbroj dává výhradně výstroj — odolnost jde do životů.
 function totalArmor() {
-  const zOdolnosti = statTotal('defense') * 3;
-  const zVystroje  = Object.values(equipped).reduce(
+  return Object.values(equipped).reduce(
     (a, e) => a + ((e && !isBroken(e) && e.armor) || 0), 0);
-  return zOdolnosti + zVystroje;
 }
 
 // Ze šablony z obchodu vyrobí konkrétní kus s náhodně rozhozenými staty.
@@ -1338,7 +1343,10 @@ function statTotal(k) {
 // Starší uložené postavy měly bonusy zapsané rovnou v sobě.
 // Jednou je odečteme, ať v postavě zůstane jen základ.
 function normalizeCharacter() {
-  if (!character || localStorage.getItem('statsFixed') === '1') return;
+  if (!character) return;
+  // Dovednost přibyla později – starší postavy ji dostanou dopočtenou
+  if (typeof character.skill !== 'number') character.skill = 10;
+  if (localStorage.getItem('statsFixed') === '1') return;
   for (const k of STAT_KEYS) {
     if (typeof character[k] === 'number') {
       character[k] = Math.max(1, character[k] - equipBonus(k));
@@ -1461,8 +1469,63 @@ function monsterTipHTML(m) {
     </div>`;
 }
 
-// Co se má v bublině ukázat – předmět, nebo protivník.
+
+// Co která vlastnost dělá. `ucinek` ukazuje, kolik to zrovna dělá,
+// aby popis nebyl jen prázdné tvrzení.
+const STAT_INFO = {
+  strength: {
+    nazev: 'Síla',
+    popis: 'Čím větší síla, tím větší poškození rozdáš.',
+    ucinek: () => { const [a, b] = playerDamageRange(); return `Poškození ${a} – ${b}`; },
+  },
+  skill: {
+    nazev: 'Dovednost',
+    popis: 'Dává šanci udeřit v jednom kole dvakrát.',
+    ucinek: () => `Dvojitý zásah ${(doubleChance() * 100).toFixed(1)} %`,
+  },
+  agility: {
+    nazev: 'Obratnost',
+    popis: 'Blokuje dvojité zásahy protivníka.',
+    ucinek: () => `Blokace ${(blockChance() * 100).toFixed(1)} %`,
+  },
+  defense: {
+    nazev: 'Odolnost',
+    popis: 'Zvyšuje počet životů, každý bod přidá pět.',
+    ucinek: () => `Životy ${maxHP()} (+${statTotal('defense') * HP_ZA_ODOLNOST} z odolnosti)`,
+  },
+  intelligence: {
+    nazev: 'Inteligence',
+    popis: 'Zvyšuje šanci na kritický zásah za 1,6násobné poškození.',
+    ucinek: () => `Kritický zásah ${(critChance() * 100).toFixed(1)} %`,
+  },
+};
+
+function statTipHTML(key) {
+  const s = STAT_INFO[key];
+  if (!s) return '';
+  const zaklad = character[key] || 0;
+  const zVybaveni = equipBonus(key);
+
+  const row = (jmeno, hodnota, tridaHodnoty) =>
+    `<div class="tip-row"><span>${jmeno}</span><b${tridaHodnoty ? ` class="${tridaHodnoty}"` : ''}>${hodnota}</b></div>`;
+
+  return `
+    <div class="tip-head" style="background:linear-gradient(180deg,#7a5a12,#1a1409)">
+      <div class="tip-name">${s.nazev}</div>
+      <div class="tip-q">${statTotal(key)} celkem</div>
+    </div>
+    <div class="tip-body">
+      ${row('Základní', zaklad)}
+      ${row('Z vybavení', (zVybaveni > 0 ? '+' : '') + zVybaveni, zVybaveni > 0 ? 'rank-weak' : '')}
+      <div class="tip-sep"></div>
+      ${row('Účinek', s.ucinek())}
+      <div class="tip-note">${s.popis}</div>
+    </div>`;
+}
+
+// Co se má v bublině ukázat – předmět, protivník, nebo vlastnost.
 function tipHTMLFor(ref) {
+  if (ref.startsWith('stat:')) return statTipHTML(ref.slice(5));
   if (ref.startsWith('mon:')) {
     const loc = EXPEDITIONS.find(e => e.id === currentExped);
     const m = loc && loc.monsters[+ref.slice(4)];
@@ -1562,9 +1625,32 @@ function rollPlayerDamage() {
 // zbroj tlumí zásah, ale nikdy ho nevynuluje
 const soak = def => Math.floor(def / 4);
 
-// hráč se kryje celou zbrojí, ne jen odolností
-// (dělíme 12, aby beze zbroje vyšlo totéž co dřív: odolnost/4)
+// Zbroj tlumí zásah. Pochází z kusů výstroje.
 const playerSoak = () => Math.floor(totalArmor() / 12);
+
+// Odolnost přidává životy — 5 za bod.
+const HP_ZA_ODOLNOST = 5;
+const maxHP = () => (character.max_health || 0) + statTotal('defense') * HP_ZA_ODOLNOST;
+
+// Šance rostou se zmenšujícím se přírůstkem, aby se nedaly vyhnat na 100 %.
+const sance = (hodnota, polovina, strop) =>
+  Math.min(strop, hodnota / (hodnota + polovina));
+
+// Dovednost = šance udeřit dvakrát v jednom kole.
+const DOUBLE_MAX = 0.40;
+const doubleChance = () => sance(statTotal('skill'), 150, DOUBLE_MAX);
+
+// Obratnost = šance zablokovat dvojitý zásah protivníka.
+const BLOCK_MAX = 0.50;
+const blockChance = () => sance(statTotal('agility'), 130, BLOCK_MAX);
+
+// Inteligence = šance na kritický zásah.
+const CRIT_MAX = 0.35;
+const CRIT_MULT = 1.6;
+const critChance = () => Math.min(CRIT_MAX, 0.08 + statTotal('intelligence') / 500);
+
+// Protivník útočí dvakrát podle své síly; hráč to může zablokovat.
+const enemyDoubleChance = e => sance((e && e.str) || 0, 220, 0.35);
 
 // ========== AUTOMATICKÝ BOJ ==========
 let fightTimer = null;
@@ -1600,13 +1686,22 @@ function fightRound() {
   if (!inCombat) return;
 
   // --- útok hráče ---
-  const crit = Math.random() < 0.15;
-  let pdmg = Math.max(1, rollPlayerDamage() - soak(currentEnemy.def));
-  if (crit) pdmg = Math.floor(pdmg * 1.6);
+  const dvojity = Math.random() < doubleChance();
+  const rany = dvojity ? 2 : 1;
+  let pdmg = 0, kritCelkem = false;
+
+  for (let i = 0; i < rany; i++) {
+    const crit = Math.random() < critChance();
+    let d = Math.max(1, rollPlayerDamage() - soak(currentEnemy.def));
+    if (crit) { d = Math.floor(d * CRIT_MULT); kritCelkem = true; }
+    pdmg += d;
+  }
 
   currentEnemy.hp = Math.max(0, currentEnemy.hp - pdmg);
-  animateHit('.fighter-box.player', '.fighter-box.enemy', pdmg, crit);
-  addLog(`${character.name} zasáhl za <strong>${pdmg}</strong>${crit ? ' (kritický zásah!)' : ''}`, 'log-p');
+  animateHit('.fighter-box.player', '.fighter-box.enemy', pdmg, kritCelkem);
+  addLog(`${character.name} zasáhl za <strong>${pdmg}</strong>` +
+         (dvojity ? ' (dvojitý zásah!)' : '') +
+         (kritCelkem ? ' (kritický zásah!)' : ''), 'log-p');
   updateHpBars();
 
   if (currentEnemy.hp <= 0) { fightTimer = setTimeout(() => endCombat(true), 800); return; }
@@ -1614,10 +1709,25 @@ function fightRound() {
   // --- odveta soupeře ---
   fightTimer = setTimeout(() => {
     if (!inCombat) return;
-    const edmg = Math.max(1, currentEnemy.str + Math.floor(Math.random() * 6) - playerSoak());
+
+    // protivník se občas rozmáchne dvakrát – obratnost to může zarazit
+    let eRany = 1;
+    if (Math.random() < enemyDoubleChance(currentEnemy)) {
+      if (Math.random() < blockChance()) {
+        addLog(`${character.name} zablokoval druhou ránu`, 'log-p');
+      } else {
+        eRany = 2;
+      }
+    }
+
+    let edmg = 0;
+    for (let i = 0; i < eRany; i++) {
+      edmg += Math.max(1, currentEnemy.str + Math.floor(Math.random() * 6) - playerSoak());
+    }
     character.health = Math.max(0, character.health - edmg);
     animateHit('.fighter-box.enemy', '.fighter-box.player', edmg, false);
-    addLog(`${currentEnemy.name} zasáhl za <strong>${edmg}</strong>`, 'log-e');
+    addLog(`${currentEnemy.name} zasáhl za <strong>${edmg}</strong>` +
+           (eRany > 1 ? ' (dvojitý zásah)' : ''), 'log-e');
     updateHpBars();
     updateUI();
 
@@ -1632,12 +1742,22 @@ function skipFight() {
   clearTimeout(fightTimer);
   let guard = 0;
   while (inCombat && guard++ < 500) {
-    const pdmg = Math.max(1, rollPlayerDamage() - soak(currentEnemy.def));
+    let pdmg = 0;
+    for (let i = 0, n = Math.random() < doubleChance() ? 2 : 1; i < n; i++) {
+      let d = Math.max(1, rollPlayerDamage() - soak(currentEnemy.def));
+      if (Math.random() < critChance()) d = Math.floor(d * CRIT_MULT);
+      pdmg += d;
+    }
     currentEnemy.hp = Math.max(0, currentEnemy.hp - pdmg);
     addLog(`${character.name} zasáhl za <strong>${pdmg}</strong>`, 'log-p');
     if (currentEnemy.hp <= 0) { endCombat(true); break; }
 
-    const edmg = Math.max(1, currentEnemy.str + Math.floor(Math.random() * 6) - playerSoak());
+    let eRany = 1;
+    if (Math.random() < enemyDoubleChance(currentEnemy) && Math.random() >= blockChance()) eRany = 2;
+    let edmg = 0;
+    for (let i = 0; i < eRany; i++) {
+      edmg += Math.max(1, currentEnemy.str + Math.floor(Math.random() * 6) - playerSoak());
+    }
     character.health = Math.max(0, character.health - edmg);
     addLog(`${currentEnemy.name} zasáhl za <strong>${edmg}</strong>`, 'log-e');
     if (character.health <= 0) { endCombat(false); break; }
@@ -1658,7 +1778,7 @@ function endCombat(won) {
     addLog(`Vítězství! ${rewards}`, 'log-w');
     checkLevelUp();
   } else {
-    character.health = Math.max(1, Math.floor(character.max_health * 0.25));
+    character.health = Math.max(1, Math.floor(maxHP() * 0.25));
     rewards = `Probral ses s ${character.health} HP.`;
     addLog(`Porážka. ${rewards}`, 'log-d');
   }
@@ -1684,7 +1804,7 @@ function endCombat(won) {
       name: character.name, title: character.class,
       class: character.class, gender: character.gender,
       level: character.level,
-      hp: Math.max(0, character.health), maxHp: character.max_health,
+      hp: Math.max(0, character.health), maxHp: maxHP(),
       str: statTotal('strength'), agi: statTotal('agility'),
       def: statTotal('defense'),  int: statTotal('intelligence'),
       armor: totalArmor(), dmg: dmgMin + ' - ' + dmgMax,
@@ -1726,12 +1846,12 @@ function updateHpBars() {
   const pt = document.getElementById('pHpTxt');
   const et = document.getElementById('eHpTxt');
 
-  const pp = Math.max(0, Math.min(100, (character.health / character.max_health * 100).toFixed(1)));
+  const pp = Math.max(0, Math.min(100, (character.health / maxHP() * 100).toFixed(1)));
   const ep = Math.max(0, Math.min(100, (currentEnemy.hp / currentEnemy.maxHp * 100).toFixed(1)));
 
   if (pb) pb.style.width = pp + '%';
   if (eb) eb.style.width = ep + '%';
-  if (pt) pt.textContent = `${Math.max(0, character.health)}/${character.max_health}`;
+  if (pt) pt.textContent = `${Math.max(0, character.health)}/${maxHP()}`;
   if (et) et.textContent = `${Math.max(0, currentEnemy.hp)}/${currentEnemy.maxHp}`;
 }
 
@@ -1840,7 +1960,7 @@ function checkLevelUp() {
     character.experience -= needed;
     character.level++;
     character.max_health += 10;
-    character.health = character.max_health;
+    character.health = maxHP();   // maxHP() už počítá i s odolností
     character.strength += 2;
     character.defense += 1;
     character.agility += 1;
@@ -1860,6 +1980,7 @@ async function saveChar() {
       health: character.health, max_health: character.max_health,
       gold: character.gold, strength: character.strength,
       defense: character.defense, agility: character.agility,
+      skill: character.skill,
       intelligence: character.intelligence,
     });
     localStorage.setItem('character', JSON.stringify(character));
@@ -2170,6 +2291,7 @@ function expedMenuHTML() {
 // ===== CVIČIŠTĚ =====
 const TRAIN_STATS = [
   { key:'strength',     name:'Síla',        popis:'Zvyšuje poškození, které rozdáš.' },
+  { key:'skill',        name:'Dovednost',   popis:'Šance udeřit dvakrát v jednom kole.' },
   { key:'defense',      name:'Obrana',      popis:'Tlumí zásahy soupeřů.' },
   { key:'agility',      name:'Hbitost',     popis:'Pomáhá ti uhýbat a útočit dřív.' },
   { key:'intelligence', name:'Inteligence', popis:'Otevírá cestu k magickému vybavení.' },
@@ -2190,7 +2312,7 @@ function training() {
     const pct        = Math.min(100, Math.round(celkem / 2));   // pruh, 200 = plný
 
     return `
-      <div class="tr-row">
+      <div class="tr-row" data-tip="stat:${s.key}">
         <div class="tr-label">
           <span class="tr-name">${s.name}</span>
           <div class="tr-bar"><i style="width:${pct}%"></i></div>
@@ -2511,7 +2633,7 @@ function stats() {
           <div class="stat-cells">
             ${cell('Úroveň', c.level)}
             ${cell('Zkušenosti', c.experience + '/' + c.level * 100)}
-            ${cell('Životy', c.health + '/' + c.max_health)}
+            ${cell('Životy', c.health + '/' + maxHP())}
             ${cell('Zlato', c.gold)}
           </div>
         </div>
@@ -2652,7 +2774,7 @@ function combatPanelHTML() {
 // ---------- univerzální start boje ----------
 function beginFight(enemy, view) {
   clearTimeout(fightTimer);
-  character.health = character.max_health;
+  character.health = maxHP();
   currentEnemy = JSON.parse(JSON.stringify(enemy));
   if (currentEnemy.maxHp == null) currentEnemy.maxHp = currentEnemy.hp;
   inCombat = true;

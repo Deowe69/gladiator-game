@@ -1927,3 +1927,60 @@ span.tr-img{font-size:88px;line-height:1;filter:drop-shadow(0 3px 6px rgba(0,0,0
 /* kotvy nemají skončit pod pevnou hlavičkou
    (plynulé rolování schválně nezapínáme – kolečko pak působí líně) */
 html{scroll-padding-top:140px}
+
+/* =========================================================
+   POZADÍ STRÁNKY
+   Obrázek antického města. Přebíjí dřívější CSS kulisu,
+   protože ta má vlastní sloupoví a s malbou by se tloukla.
+   ========================================================= */
+html{
+  background:
+    url('../img/ui/background.jpg') center 30% / cover no-repeat fixed,
+    #6f5433;
+}
+body{background:none}
+
+/* malované sloupoví v obrázku nahrazuje to, co dřív kreslilo CSS */
+body::before,
+body::after{display:none}
+
+/* jemné ztmavení, ať panely nesplývají s malbou;
+   obrázek má vlastní tmavé okraje, takže stačí málo */
+html::after{
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 40%, transparent 60%, rgba(30,18,6,.42) 100%);
+}
+
+/* obsah dostane vlastní podklad, aby text držel kontrast
+   i nad světlými místy malby */
+.game-container::before{
+  content:'';
+  position:fixed;
+  top:122px;left:50%;transform:translateX(-50%);
+  width:min(1180px, 100%);height:calc(100% - 122px);
+  background:linear-gradient(180deg, rgba(46,28,12,.30), rgba(46,28,12,.46));
+  backdrop-filter:blur(1.5px);
+  z-index:-1;
+  pointer-events:none;
+}
+
+/* pevná záhlaví ať nejsou průsvitná nad malbou */
+.topbar{backdrop-filter:blur(2px)}
+.headerband{backdrop-filter:blur(2px)}
+
+/* ---- portréty kupců ---- */
+.shop-frame .mp-inner{align-items:stretch}
+.shop-frame img.mp-img{
+  width:100%;height:100%;
+  object-fit:cover;object-position:center 38%;
+}
+
+/* popisek vlastnosti: vysvětlující věta pod účinkem */
+.tip-note{
+  margin-top:7px;padding-top:6px;
+  border-top:1px solid #575757;
+  font-size:11px;line-height:1.55;
+  color:#e8c860;font-style:italic;
+}
+.strow[data-tip],.tr-row[data-tip]{cursor:help}
+.strow[data-tip]:hover{background:rgba(140,115,80,.16)}
