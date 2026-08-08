@@ -49,10 +49,26 @@ const SHOP_ITEMS = {
     { id:'h1', name:'Korintská Helma', icon:'⛑️', stat:'+8 Obrana',  key:'defense',   val:8,  price:150,  quality:'uncommon' },
     { id:'h2', name:'Helma Heros',     icon:'👑', stat:'+16 Obrana', key:'defense',   val:16, price:320,  quality:'rare'     },
     { id:'g1', name:'Kožené Rukavice', icon:'🥊', stat:'+5 Síla',    key:'strength',  val:5,  price:80,   quality:'common',   tint:'leather' },
+    { id:'g3', name:'Bronzové Rukavice',icon:'🥊',stat:'+9 Síla',    key:'strength',  val:9,  price:170,  quality:'uncommon', tint:'bronze'  },
     { id:'g2', name:'Železné Rukavice',icon:'👊', stat:'+12 Síla',   key:'strength',  val:12, price:200,  quality:'uncommon' },
+    { id:'g4', name:'Rukavice Titána', icon:'👊', stat:'+26 Síla',   key:'strength',  val:26, price:640,  quality:'epic'     },
     { id:'b1', name:'Běžné Boty',      icon:'👟', stat:'+4 Hbitost', key:'agility',   val:4,  price:70,   quality:'common',   tint:'leather' },
+    { id:'b4', name:'Bronzové Holeně', icon:'🥾', stat:'+8 Hbitost', key:'agility',   val:8,  price:160,  quality:'uncommon', tint:'bronze'  },
     { id:'b2', name:'Hermovy Boty',    icon:'🥾', stat:'+10 Hbitost',key:'agility',   val:10, price:180,  quality:'rare'     },
+    { id:'b5', name:'Ocelové Holeně',  icon:'🥾', stat:'+16 Hbitost',key:'agility',   val:16, price:340,  quality:'rare'     },
+    { id:'b6', name:'Boty Nesmrtelných',icon:'🥾',stat:'+28 Hbitost',key:'agility',   val:28, price:720,  quality:'epic'     },
     { id:'b3', name:'Kožený Pás',      icon:'🔗', stat:'+3 Obrana',  key:'defense',   val:3,  price:60,   quality:'common',   tint:'leather' },
+  ],
+  // Vetešník – použité prsteny, od obnošených po nečekané nálezy
+  rings: [
+    { id:'r1', name:'Otlučený Prsten',   icon:'💍', key:'agility',      val:4,  price:40,  quality:'common'   },
+    { id:'r2', name:'Měděný Kroužek',    icon:'💍', key:'defense',      val:6,  price:75,  quality:'common',   tint:'bronze' },
+    { id:'r3', name:'Prsten Poutníka',   icon:'💍', key:'agility',      val:9,  price:140, quality:'uncommon' },
+    { id:'r4', name:'Stříbrný Prsten',   icon:'💍', key:'intelligence', val:12, price:210, quality:'uncommon' },
+    { id:'r5', name:'Prsten Věštkyně',   icon:'💍', key:'intelligence', val:18, price:340, quality:'rare'     },
+    { id:'r6', name:'Onyxový Prsten',    icon:'💍', key:'defense',      val:22, price:460, quality:'rare'     },
+    { id:'r7', name:'Prsten Legionáře',  icon:'💍', key:'strength',     val:30, price:700, quality:'epic'     },
+    { id:'r8', name:'Prsten Sudiček',    icon:'💍', key:'intelligence', val:38, price:980, quality:'epic'     },
   ],
   jewelry: [
     { id:'m1', name:'Hermův Amulet',   icon:'💍', stat:'+8 Hbitost', key:'agility',   val:8,  price:180,  quality:'uncommon' },
@@ -242,12 +258,13 @@ function updateUI() {
 // ========== VIEWS ==========
 let viewCache = {}; // Cache rendered views to avoid regeneration
 // který folder tab patří ke které view
-const TAB_OF_VIEW = { profile:0, inventory:0, city:0, stats:1, hall:2, tavern:3 };
+const TAB_OF_VIEW = { profile:0, inventory:0, city:0, stats:1, hall:2 };
 
-function openView(view) {
+function openView(view, highlight) {
   // zvýraznění v levém banneru
+  // (kupci sdílejí pohled 'shop', proto si říkají o vlastní položku)
   document.querySelectorAll('.menu-btn, .sub-item').forEach(i => i.classList.remove('active'));
-  const m = document.getElementById('menu-' + view);
+  const m = document.getElementById('menu-' + (highlight || view));
   if (m) m.classList.add('active');
 
   // folder taby nad pergamenem
@@ -306,11 +323,6 @@ function city() {
           <span class="building-icon">🔨</span>
           <div class="building-name">Kovárna</div>
           <div class="building-desc">Vylepšuj zbraně</div>
-        </div>
-        <div class="city-building" onclick="openView('tavern')">
-          <span class="building-icon">🍺</span>
-          <div class="building-name">Taverna</div>
-          <div class="building-desc">Odpočinek & příběhy</div>
         </div>
         <div class="city-building" onclick="openView('guild')">
           <span class="building-icon">🏛️</span>
@@ -441,10 +453,11 @@ let currentShop = null;
 let shopPage = 0;      // 0/1/2 = stránky zboží, 'sell' = výkup
 
 const MERCHANTS = {
-  blacksmith: { name:'Zbrojíř',    emoji:'🧔', desc:'Zbraně všeho druhu',        get items(){ return SHOP_ITEMS.weapons; } },
-  armorer:    { name:'Platnéř',    emoji:'👨‍🏭', desc:'Zbroje, helmy a štíty',   get items(){ return SHOP_ITEMS.armor.concat(SHOP_ITEMS.armor_extra || []); } },
-  jeweler:    { name:'Šperkař',    emoji:'👳', desc:'Prsteny a amulety',         get items(){ return SHOP_ITEMS.jewelry; } },
-  alchemist:  { name:'Alchymista', emoji:'🧙', desc:'Lektvary a elixíry',        get items(){ return SHOP_ITEMS.potions; } },
+  blacksmith: { name:'Zbrojíř',    emoji:'🧔', menu:'shop',    desc:'Zbraně všeho druhu',        get items(){ return SHOP_ITEMS.weapons; } },
+  armorer:    { name:'Platnéř',    emoji:'👨‍🏭', menu:'armorer', desc:'Zbroje, boty a rukavice',  get items(){ return SHOP_ITEMS.armor.concat(SHOP_ITEMS.armor_extra || []); } },
+  jeweler:    { name:'Šperkař',    emoji:'👳', menu:'jeweler', desc:'Amulety a ozdoby',          get items(){ return SHOP_ITEMS.jewelry; } },
+  junk:       { name:'Vetešník',   emoji:'🧓', menu:'junk',    desc:'Použité prsteny z druhé ruky', get items(){ return SHOP_ITEMS.rings; } },
+  alchemist:  { name:'Alchymista', emoji:'🧙', menu:'alchemy', desc:'Lektvary a elixíry',        get items(){ return SHOP_ITEMS.potions; } },
 };
 
 // portrét kupce: img/merchants/<id>.png, jinak emoji
@@ -564,7 +577,8 @@ function shop() {
 function openMerchant(id) {
   if (!MERCHANTS[id]) return;
   currentShop = id;
-  openView('shop');
+  shopPage = 0;                 // u nového kupce začni na jeho zboží, ne na výkupu
+  openView('shop', MERCHANTS[id].menu);
 }
 
 function setShopPage(p) {
@@ -697,6 +711,7 @@ function slotForItem(item) {
   if (/^g/.test(id)) return 'gloves';
   if (id === 'b3')   return 'belt';
   if (/^b/.test(id)) return 'boots';
+  if (/^r/.test(id))              return 'ring';
   if (id === 'm2' || id === 'm5') return 'ring';
   if (/^m/.test(id)) return 'amulet';
   return null; // lektvary a neznámé
@@ -1759,11 +1774,8 @@ function startQuestTimer() {
   activeQuestTimer = setInterval(() => {
     const cc = document.getElementById('centerContent');
     if (!cc) return;
-    // Only refresh if current view has quests (avoid unnecessary DOM operations)
-    const hasQuests = cc.querySelector('.quest-list');
-    const hasTavern = cc.querySelector('.tavern-board');
-    if (hasQuests) openView('quests');
-    else if (hasTavern) openView('tavern');
+    // překreslíme jen když jsou na obrazovce mise s běžícím časem
+    if (cc.querySelector('.quest-list')) openView('quests');
   }, 5000);
 }
 
@@ -2162,26 +2174,65 @@ const TRAIN_STATS = [
 const trainCost = key => Math.floor(15 * character[key] + 25);
 
 function training() {
+  const zlato = character.gold;
+
   const rows = TRAIN_STATS.map(s => {
-    const cost = trainCost(s.key);
-    const ok = character.gold >= cost;
+    const zaklad     = character[s.key];
+    const zVybaveni  = equipBonus(s.key);
+    const celkem     = zaklad + zVybaveni;
+    const cena       = trainCost(s.key);
+    const dost       = zlato >= cena;
+    const pct        = Math.min(100, Math.round(celkem / 2));   // pruh, 200 = plný
+
     return `
-      <div class="gl-row">
-        <div class="gl-main">
-          <div class="gl-nm">${s.name} — ${statTotal(s.key)}${equipBonus(s.key) ? ` <small>(základ ${character[s.key]})</small>` : ''}</div>
-          <div class="gl-sub">${s.popis}</div>
+      <div class="tr-row">
+        <div class="tr-label">
+          <span class="tr-name">${s.name}</span>
+          <div class="tr-bar"><i style="width:${pct}%"></i></div>
         </div>
-        <div class="train-cost ${ok ? '' : 'poor'}">${cost} zlata</div>
-        <button class="btn-green" ${ok ? '' : 'disabled'} onclick="trainStat('${s.key}')">Trénovat +1</button>
+
+        <div class="tr-calc" title="základ + z vybavení">
+          <b>${zaklad}</b><em>+</em><b>${zVybaveni}</b><em>=</em><b class="tr-total">${celkem}</b>
+        </div>
+
+        <div class="tr-cost ${dost ? '' : 'poor'}">
+          ${cena.toLocaleString('cs-CZ')}
+          <img class="res-ico" src="img/ui/coin.png" alt="zlata">
+        </div>
+
+        <button class="tr-plus" ${dost ? '' : 'disabled'}
+                onclick="trainStat('${s.key}')"
+                title="Trénovat ${s.name} za ${cena} zlata">+</button>
       </div>`;
   }).join('');
 
   return `
   <div class="panel">
-    <div class="panel-header">Cvičiště</div>
+    <div class="panel-header">Popis</div>
     <div class="panel-body">
-      <p class="hall-note">Trenér tě za zlato vypiluje. Čím jsi lepší, tím dráž si účtuje.</p>
-      <div class="gl-list">${rows}</div>
+      <div class="tr-intro">
+        <div class="tr-portrait">
+          ${artImg('img/merchants/trainer.png', '🛡️', 'tr-img', 'Veterán')}
+        </div>
+        <div class="tr-text">
+          <p>
+            Jakmile vstoupíš na cvičiště arény, spatříš několik gladiátorů,
+            kteří zlepšují své bojové schopnosti. Pozoruje je veterán z římské
+            legie a čas od času jim dá nějakou radu.
+          </p>
+          <p>Zde můžeš zlepšit své válečnické schopnosti.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel tr-panel">
+    <div class="panel-body">
+      <div class="tr-list">${rows}</div>
+      <div class="tr-foot">
+        Tvé zlato: <b>${zlato.toLocaleString('cs-CZ')}</b>
+        <img class="res-ico" src="img/ui/coin.png" alt="zlata">
+      </div>
     </div>
   </div>`;
 }
@@ -2495,12 +2546,6 @@ function stats() {
   </div>`;
 }
 
-// otevře výkup u vetešníka
-function openSell() {
-  currentShop = 'blacksmith';
-  shopPage = 'sell';
-  openView('shop');
-}
 
 function expedition() {
   setTimeout(refreshExpedUI, 0);   // ať ukazatel nečeká na další tik

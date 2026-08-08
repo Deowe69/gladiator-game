@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Olympus</title>
-  <link rel="stylesheet" href="css/game.css?v=tjfstb">
+  <link rel="stylesheet" href="css/game.css?v=tjftho">
 </head>
 <body>
 
@@ -13,7 +13,6 @@
   <div class="topbar-inner">
     <a class="topbar-link" onclick="openView('profile')">Profil</a>
     <a class="topbar-link" onclick="openView('quests')">Mise</a>
-    <a class="topbar-link" onclick="openView('tavern')">Taverna</a>
     <a class="topbar-link" onclick="openView('hall')">Síň slávy</a>
     <a class="topbar-link gold" onclick="openMerchant('jeweler')">Klenotník</a>
     <a class="topbar-link" onclick="openView('city')">Město</a>
@@ -110,12 +109,10 @@
           <a class="sub-item" id="menu-training"  onclick="openView('training')">Cvičiště</a>
           <a class="sub-item" id="menu-shop"      onclick="openMerchant('blacksmith')">Zbrojíř</a>
           <a class="sub-item" id="menu-armorer"   onclick="openMerchant('armorer')">Platnéř</a>
-          <a class="sub-item" id="menu-junk"      onclick="openSell()">Vetešník</a>
+          <a class="sub-item" id="menu-junk"      onclick="openMerchant('junk')">Vetešník</a>
           <a class="sub-item" id="menu-alchemy"   onclick="openMerchant('alchemist')">Alchymista</a>
           <a class="sub-item" id="menu-dungeon"   onclick="openView('dungeon')">Bludiště</a>
-          <a class="sub-item" id="menu-tavern"    onclick="openView('tavern')">Taverna</a>
           <a class="sub-item" id="menu-jeweler"   onclick="openMerchant('jeweler')">Klenotník</a>
-          <a class="sub-item" id="menu-inventory" onclick="openView('inventory')">Batoh</a>
         </div>
 
         <!-- záložka 1: mapa výprav (plní game.js) -->
@@ -133,7 +130,6 @@
       <div class="ftab active" onclick="openView('profile')">Přehled</div>
       <div class="ftab" onclick="openView('stats')">Statistiky</div>
       <div class="ftab" onclick="openView('hall')">Síň slávy</div>
-      <div class="ftab" onclick="openView('tavern')">Taverna</div>
     </div>
 
     <div class="parchment" id="centerContent"></div>
@@ -163,9 +159,9 @@
   </div>
 </div>
 
-<script src="js/api.js?v=tjfstb"></script>
-<script src="js/avatars.js?v=tjfstb"></script>
-<script src="js/game.js?v=tjfstb"></script>
+<script src="js/api.js?v=tjftho"></script>
+<script src="js/avatars.js?v=tjftho"></script>
+<script src="js/game.js?v=tjftho"></script>
 
 <script>
   // datum v horním pruhu

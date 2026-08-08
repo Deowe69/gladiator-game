@@ -29,14 +29,14 @@
 }
 
 html,body{
-  height:100%;
+  min-height:100%;
   font-family:Georgia,'Times New Roman',serif;
   color:var(--brown-txt);
   background:
     /* jemné pruhy písku arény */
     repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 2px, transparent 2px 7px),
     radial-gradient(ellipse at 50% 8%, #e3c691 0%, #c9a56c 38%, #a07d4c 68%, #6f5433 100%);
-  overflow:hidden;
+  overflow-x:hidden;
 }
 
 /* sloupoví po stranách (čistě CSS kulisa) */
@@ -175,8 +175,9 @@ body::after{right:0;transform:scaleX(-1)}
 /* ================= LAYOUT ================= */
 .game-container{
   position:relative;
-  padding-top:122px;
-  height:100vh;
+  padding-top:132px;
+  min-height:100vh;
+  align-items:start;
   max-width:1180px;margin:0 auto;
   display:grid;
   grid-template-columns:196px 1fr;
@@ -187,7 +188,7 @@ body::after{right:0;transform:scaleX(-1)}
 /* ================= LEVÝ ČERVENÝ BANNER ================= */
 .left-banner{
   display:flex;flex-direction:column;
-  overflow-y:auto;overflow-x:hidden;
+  position:sticky;top:132px;
 }
 .banner-top{
   position:relative;
@@ -286,7 +287,7 @@ body::after{right:0;transform:scaleX(-1)}
 }
 
 /* ================= OBSAH ================= */
-.content-area{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.content-area{display:flex;flex-direction:column;min-width:0}
 
 .folder-tabs{display:flex;gap:4px;padding-left:6px}
 .ftab{
@@ -307,7 +308,7 @@ body::after{right:0;transform:scaleX(-1)}
 }
 
 .parchment{
-  flex:1;min-height:0;overflow-y:auto;
+  flex:1;min-height:calc(100vh - 190px);
   background:linear-gradient(180deg,#f8eed4 0%,var(--parch) 12%,#ecdcb4 100%);
   border:2px solid var(--brown);
   border-radius:0 6px 6px 6px;
@@ -1792,3 +1793,137 @@ body::before,body::after{opacity:.42}
 
 /* karta protivníka reaguje na najetí, bublina se řeší plovoucím tipem */
 .mon-card{cursor:help}
+
+/* =========================================================
+   CVIČIŠTĚ
+   ========================================================= */
+.tr-intro{display:grid;grid-template-columns:186px 1fr;gap:14px;align-items:start}
+
+.tr-portrait{
+  background:radial-gradient(ellipse at 50% 30%,#a5865c,#4a3520);
+  border:3px solid #4a3520;border-radius:3px;
+  height:212px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  box-shadow:0 5px 14px rgba(0,0,0,.5), inset 0 0 0 1px rgba(0,0,0,.35);
+}
+.tr-img{max-width:100%;max-height:100%}
+span.tr-img{font-size:88px;line-height:1;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5))}
+
+.tr-text p{font-size:12.5px;line-height:1.75;color:#4a3520;margin-bottom:12px}
+.tr-text p:last-child{margin-bottom:0;font-style:italic;color:#5c4423}
+
+.tr-panel{margin-top:12px}
+
+.tr-list{display:flex;flex-direction:column}
+.tr-row{
+  display:grid;
+  grid-template-columns:150px 1fr 132px 30px;
+  align-items:center;gap:12px;
+  padding:7px 4px;
+  border-bottom:1px solid rgba(140,115,80,.28);
+}
+.tr-row:last-child{border-bottom:none}
+
+.tr-name{
+  display:block;font-size:12px;color:#5c4423;
+  border-bottom:1px solid rgba(140,115,80,.5);
+  padding-bottom:2px;margin-bottom:4px;
+}
+.tr-bar{
+  height:7px;
+  background:linear-gradient(180deg,#3a2c16,#4d3c1f);
+  border:1px solid #2a1f0f;border-radius:2px;overflow:hidden;
+}
+.tr-bar > i{
+  display:block;height:100%;
+  background:linear-gradient(180deg,#9ed84a,#4d8a14);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45);
+  transition:width .3s;
+}
+
+.tr-calc{
+  display:flex;align-items:center;gap:7px;
+  font-size:13.5px;color:#4a3520;
+}
+.tr-calc b{min-width:34px;text-align:right;font-weight:bold}
+.tr-calc em{font-style:normal;color:#8a7550}
+.tr-calc .tr-total{color:#a02525;font-size:15px;min-width:44px}
+
+.tr-cost{
+  display:flex;align-items:center;justify-content:flex-end;gap:5px;
+  font-size:12.5px;color:#6b5333;white-space:nowrap;
+}
+.tr-cost.poor{color:#a02525}
+
+.tr-plus{
+  width:26px;height:26px;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#e8dab6,#c4ad80);
+  border:2px solid #6b5333;border-radius:3px;
+  color:#3a2a12;font:bold 17px Georgia,serif;line-height:1;
+  cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6), 0 2px 3px rgba(0,0,0,.3);
+  transition:filter .12s, transform .08s;
+}
+.tr-plus:hover:not(:disabled){filter:brightness(1.1)}
+.tr-plus:active:not(:disabled){transform:translateY(1px);box-shadow:inset 0 2px 4px rgba(0,0,0,.4)}
+.tr-plus:disabled{opacity:.4;cursor:default}
+
+.tr-foot{
+  display:flex;align-items:center;justify-content:flex-end;gap:6px;
+  margin-top:9px;padding-top:8px;
+  border-top:1px solid rgba(140,115,80,.4);
+  font-size:12.5px;color:#5c4423;
+}
+.tr-foot b{color:#7d1616}
+
+/* =========================================================
+   DOLADĚNÍ LAYOUTU
+   ========================================================= */
+
+/* pergamen: měkčí okraj a znatelnější papír */
+.parchment{
+  border-radius:0 7px 7px 7px;
+  padding:16px 18px;
+}
+
+/* folder taby: jemnější přechod do pergamenu */
+.ftab{
+  padding:7px 24px;
+  border-radius:7px 7px 0 0;
+  letter-spacing:.2px;
+  transition:background .15s, color .15s, top .1s, padding .1s;
+}
+.ftab.active{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.85), 0 -2px 5px rgba(0,0,0,.12);
+}
+
+/* levý banner drží u horní hrany, ať je menu po ruce i při rolování */
+.left-banner{align-self:start}
+
+/* panely: vzdušnější vnitřek a jemnější linky */
+.panel-body{padding:13px 14px}
+.panel + .panel{margin-top:12px}
+.panel-header{
+  font-size:13px;letter-spacing:.3px;
+  padding-top:6px;padding-bottom:6px;
+}
+
+/* karty a mřížky: sjednocené mezery */
+.gl-list{display:flex;flex-direction:column;gap:7px}
+.gl-row{
+  display:flex;align-items:center;gap:11px;
+  padding:9px 11px;
+  background:linear-gradient(180deg,#f5ebd0,#e2d1a8);
+  border:1px solid #b09a70;border-radius:3px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6);
+  transition:border-color .13s, box-shadow .13s;
+}
+.gl-row:hover{border-color:#8a7550;box-shadow:inset 0 1px 0 rgba(255,255,255,.7), 0 2px 6px rgba(0,0,0,.18)}
+.gl-main{flex:1;min-width:0}
+.gl-nm{font-size:12.5px;color:#3a2a12;font-weight:bold}
+.gl-sub{font-size:11px;color:#6b5333;margin-top:2px}
+
+/* kotvy nemají skončit pod pevnou hlavičkou
+   (plynulé rolování schválně nezapínáme – kolečko pak působí líně) */
+html{scroll-padding-top:140px}
