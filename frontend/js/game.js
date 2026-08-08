@@ -40,19 +40,19 @@ const SHOP_ITEMS = {
     { id:'w5', name:'Luk Artemidy',    icon:'🏹', stat:'20-31 poškození', key:'strength', val:18, dmg:[20,31], price:380, quality:'rare'     },
   ],
   armor: [
-    { id:'a1', name:'Kožená Zbroj',    icon:'🧥', stat:'+6 Obrana',  key:'defense',   val:6,  price:90,   quality:'common'   },
-    { id:'a2', name:'Bronzová Zbroj',  icon:'🛡️', stat:'+14 Obrana', key:'defense',   val:14, price:200,  quality:'uncommon' },
+    { id:'a1', name:'Kožená Zbroj',    icon:'🧥', stat:'+6 Obrana',  key:'defense',   val:6,  price:90,   quality:'common',   tint:'leather' },
+    { id:'a2', name:'Bronzová Zbroj',  icon:'🛡️', stat:'+14 Obrana', key:'defense',   val:14, price:200,  quality:'uncommon', tint:'bronze'  },
     { id:'a3', name:'Athénin Štít',    icon:'⛨',  stat:'+25 Obrana', key:'defense',   val:25, price:480,  quality:'rare'     },
     { id:'a4', name:'Zbroj Spartana',  icon:'💠', stat:'+40 Obrana', key:'defense',   val:40, price:950,  quality:'epic'     },
   ],
   armor_extra: [
     { id:'h1', name:'Korintská Helma', icon:'⛑️', stat:'+8 Obrana',  key:'defense',   val:8,  price:150,  quality:'uncommon' },
     { id:'h2', name:'Helma Heros',     icon:'👑', stat:'+16 Obrana', key:'defense',   val:16, price:320,  quality:'rare'     },
-    { id:'g1', name:'Kožené Rukavice', icon:'🥊', stat:'+5 Síla',    key:'strength',  val:5,  price:80,   quality:'common'   },
+    { id:'g1', name:'Kožené Rukavice', icon:'🥊', stat:'+5 Síla',    key:'strength',  val:5,  price:80,   quality:'common',   tint:'leather' },
     { id:'g2', name:'Železné Rukavice',icon:'👊', stat:'+12 Síla',   key:'strength',  val:12, price:200,  quality:'uncommon' },
-    { id:'b1', name:'Běžné Boty',      icon:'👟', stat:'+4 Hbitost', key:'agility',   val:4,  price:70,   quality:'common'   },
+    { id:'b1', name:'Běžné Boty',      icon:'👟', stat:'+4 Hbitost', key:'agility',   val:4,  price:70,   quality:'common',   tint:'leather' },
     { id:'b2', name:'Hermovy Boty',    icon:'🥾', stat:'+10 Hbitost',key:'agility',   val:10, price:180,  quality:'rare'     },
-    { id:'b3', name:'Kožený Pás',      icon:'🔗', stat:'+3 Obrana',  key:'defense',   val:3,  price:60,   quality:'common'   },
+    { id:'b3', name:'Kožený Pás',      icon:'🔗', stat:'+3 Obrana',  key:'defense',   val:3,  price:60,   quality:'common',   tint:'leather' },
   ],
   jewelry: [
     { id:'m1', name:'Hermův Amulet',   icon:'💍', stat:'+8 Hbitost', key:'agility',   val:8,  price:180,  quality:'uncommon' },
@@ -650,9 +650,10 @@ const DOLL = [
 // profilu vystřelilo desítky zbytečných 404.
 const missingArt = new Set();
 
-function artImg(path, emoji, cls, alt) {
-  if (missingArt.has(path)) return `<span class="ico ${cls}">${emoji}</span>`;
-  return `<img class="ico ${cls}" src="${path}" alt="${alt || ''}"
+function artImg(path, emoji, cls, alt, tint) {
+  const t = tint ? ' tint-' + tint : '';
+  if (missingArt.has(path)) return `<span class="ico ${cls}${t}">${emoji}</span>`;
+  return `<img class="ico ${cls}${t}" src="${path}" alt="${alt || ''}"
                data-src="${path}" data-emoji="${emoji}" data-try="svg"
                onerror="iconFallback(this)">`;
 }
@@ -663,7 +664,7 @@ function itemIcon(item, cls = '') {
   if (!item.img && !item.id) return `<span class="ico ${cls}">${emoji}</span>`;
   // item.img = vlastní cesta (relativně k img/), jinak img/items/<id>.png
   const path = item.img ? `img/${item.img}` : `img/items/${item.id}.png`;
-  return artImg(path, emoji, cls, item.name);
+  return artImg(path, emoji, cls, item.name, item.tint);
 }
 
 // Prázdný slot: img/slots/<klíč>.png, jinak emoji ze SLOT_DEFS
@@ -1407,19 +1408,63 @@ function itemTipHTML(it) {
     </div>`;
 }
 
+
+// Popis protivníka. Porovnání se vztahuje k tvým statům:
+// zelená = slabší než ty, červená = silnější.
+function monsterTipHTML(m) {
+  const row = (jmeno, hodnota, tridaHodnoty) =>
+    `<div class="tip-row"><span>${jmeno}</span><b${tridaHodnoty ? ` class="${tridaHodnoty}"` : ''}>${hodnota}</b></div>`;
+
+  const porovnej = (jmeno, hodnotaSoupere, muj) => {
+    const slovo = rankWord(hodnotaSoupere, muj);
+    const i = RANK_WORDS.indexOf(slovo);
+    return row(jmeno, slovo, i <= 1 ? 'rank-weak' : i <= 3 ? 'rank-mid' : 'rank-strong');
+  };
+
+  return `
+    <div class="tip-head" style="background:linear-gradient(180deg,#8f2020,#1a1409)">
+      <div class="tip-name">${m.name}</div>
+      <div class="tip-q">Nestvůra</div>
+    </div>
+    <div class="tip-body">
+      ${row('Úroveň', m.lvl[0] + ' – ' + m.lvl[1])}
+      ${row('Životy', m.hp[0] + ' – ' + m.hp[1])}
+      ${row('Poškození', Math.floor(m.str * 1.1) + ' – ' + Math.floor(m.str * 1.6))}
+      ${row('Zbroj', m.def * 3)}
+      <div class="tip-sep"></div>
+      ${porovnej('Síla', m.str, statTotal('strength'))}
+      ${porovnej('Odolnost', m.def, statTotal('defense'))}
+      ${porovnej('Obratnost', m.str * 0.8, statTotal('agility'))}
+      <div class="tip-sep"></div>
+      ${row('Zlato', m.gold[0] + ' – ' + m.gold[1])}
+      ${row('Zkušenosti', m.exp[0] + ' – ' + m.exp[1])}
+    </div>`;
+}
+
+// Co se má v bublině ukázat – předmět, nebo protivník.
+function tipHTMLFor(ref) {
+  if (ref.startsWith('mon:')) {
+    const loc = EXPEDITIONS.find(e => e.id === currentExped);
+    const m = loc && loc.monsters[+ref.slice(4)];
+    return m ? monsterTipHTML(m) : '';
+  }
+  const it = itemByRef(ref);
+  return it ? itemTipHTML(it) : '';
+}
+
 let tipEl = null;
 function showItemTip(e) {
   const host = e.target.closest('[data-tip]');
   if (!host) return;
-  const it = itemByRef(host.dataset.tip);
-  if (!it) return;
+  const html = tipHTMLFor(host.dataset.tip);
+  if (!html) return;
 
   if (!tipEl) {
     tipEl = document.createElement('div');
     tipEl.className = 'item-tip';
     document.body.appendChild(tipEl);
   }
-  tipEl.innerHTML = itemTipHTML(it);
+  tipEl.innerHTML = html;
   tipEl.style.display = 'block';
   moveItemTip(e);
 }
@@ -2464,7 +2509,7 @@ function expedition() {
   const locked = character.level < loc.minLevel;
 
   const cards = loc.monsters.map((m, i) => `
-    <div class="mon-card">
+    <div class="mon-card" data-tip="mon:${i}">
       <div class="mon-name">${m.name}</div>
       <div class="mon-frame">${monsterPortrait(m, 'mon-img')}</div>
 
@@ -2476,16 +2521,6 @@ function expedition() {
         <span title="Zkušenosti">⭐ ${m.exp[0]}–${m.exp[1]}</span>
       </div>
 
-      <div class="mon-tip">
-        <div class="mt-name">${m.name}</div>
-        <div class="mt-row"><span>Úroveň</span><b>${m.lvl[0]} - ${m.lvl[1]}</b></div>
-        <div class="mt-row"><span>Životy</span><b>${m.hp[0]} - ${m.hp[1]}</b></div>
-        <div class="mt-row"><span>Síla</span><b>${rankWord(m.str, statTotal('strength'))}</b></div>
-        <div class="mt-row"><span>Odolnost</span><b>${rankWord(m.def, statTotal('defense'))}</b></div>
-        <div class="mt-row"><span>Obratnost</span><b>${rankWord(m.str * .8, statTotal('agility'))}</b></div>
-        <div class="mt-row"><span>Zbroj</span><b>${m.def * 3}</b></div>
-        <div class="mt-row"><span>Poškození</span><b>${Math.floor(m.str * 1.1)} - ${Math.floor(m.str * 1.6)}</b></div>
-      </div>
     </div>`).join('');
 
   return `

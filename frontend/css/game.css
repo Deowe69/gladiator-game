@@ -982,29 +982,6 @@ span.mon-img{
   padding:4px;font-size:10px;color:#5c4423;
 }
 
-/* tooltip se staty */
-.mon-tip{
-  display:none;
-  position:absolute;top:34px;left:50%;transform:translateX(-8px);
-  z-index:60;width:190px;
-  background:linear-gradient(180deg,#2e2416,#1a1409);
-  border:2px solid var(--gold-dk);border-radius:3px;
-  padding:7px 9px;
-  box-shadow:0 6px 18px rgba(0,0,0,.7);
-  pointer-events:none;
-}
-.mon-card:hover .mon-tip{display:block}
-.mt-name{
-  color:var(--gold-lt);font-size:12px;font-weight:bold;
-  border-bottom:1px solid rgba(201,162,39,.4);
-  padding-bottom:4px;margin-bottom:4px;
-}
-.mt-row{
-  display:flex;justify-content:space-between;gap:10px;
-  font-size:11px;color:#d8c49a;padding:1.5px 0;
-}
-.mt-row b{color:#fff;font-weight:bold}
-
 /* popis lokace */
 .exped-desc{
   margin-top:12px;
@@ -1783,3 +1760,35 @@ body::before,body::after{opacity:.42}
   border-radius:6px;
 }
 ::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#b09765,#7d6741)}
+
+/* =========================================================
+   IKONY PŘEDMĚTŮ
+   ========================================================= */
+
+/* Několik kusů sdílí stejnou kresbu a liší se materiálem.
+   Obarvení dá kůži i bronzu vlastní tón bez další grafiky. */
+.tint-leather{filter:sepia(.85) saturate(1.9) hue-rotate(-14deg) brightness(.74) contrast(1.05)}
+.tint-bronze {filter:sepia(.75) saturate(2.4) hue-rotate(-18deg) brightness(1.02)}
+
+/* obrysy v prázdných slotech – potlačené, ať nepřebijí nasazené kusy */
+.slot .ico[src*="img/slots/"],
+.slot-sm .ico[src*="img/slots/"]{
+  opacity:.26;
+  filter:grayscale(1) contrast(.85);
+}
+
+/* zlato a smaragdy v hlavičce */
+.res-ico{
+  width:17px;height:17px;
+  object-fit:contain;
+  vertical-align:middle;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));
+}
+
+/* srovnání síly protivníka v bublině */
+.tip-row b.rank-weak  {color:#7dc23a}
+.tip-row b.rank-mid   {color:#e8c860}
+.tip-row b.rank-strong{color:#e06060}
+
+/* karta protivníka reaguje na najetí, bublina se řeší plovoucím tipem */
+.mon-card{cursor:help}
