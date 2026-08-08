@@ -450,8 +450,7 @@ const MERCHANTS = {
 // portrét kupce: img/merchants/<id>.png, jinak emoji
 function merchantPortrait(id) {
   const m = MERCHANTS[id];
-  return `<img class="ico mp-img" src="img/merchants/${id}.png" alt="${m.name}"
-               data-emoji="${m.emoji}" data-try="svg" onerror="iconFallback(this)">`;
+  return artImg(`img/merchants/${id}.png`, m.emoji, 'mp-img', m.name);
 }
 
 // jedno políčko se zbožím
@@ -646,22 +645,31 @@ const DOLL = [
 // ---------- IKONKY PŘEDMĚTŮ ----------
 // Obrázek se hledá v img/items/<id>.png (např. img/items/w1.png).
 // Když soubor neexistuje, automaticky se použije emoji.
+// Cesty, na kterých žádný obrázek není. Jakmile jednou selžou,
+// už se o ně znovu nepokoušíme — jinak by každé překreslení
+// profilu vystřelilo desítky zbytečných 404.
+const missingArt = new Set();
+
+function artImg(path, emoji, cls, alt) {
+  if (missingArt.has(path)) return `<span class="ico ${cls}">${emoji}</span>`;
+  return `<img class="ico ${cls}" src="${path}" alt="${alt || ''}"
+               data-src="${path}" data-emoji="${emoji}" data-try="svg"
+               onerror="iconFallback(this)">`;
+}
+
 function itemIcon(item, cls = '') {
   if (!item) return '';
   const emoji = String(item.icon || '');
   if (!item.img && !item.id) return `<span class="ico ${cls}">${emoji}</span>`;
   // item.img = vlastní cesta (relativně k img/), jinak img/items/<id>.png
-  const src = item.img ? `img/${item.img}` : `img/items/${item.id}.png`;
-  return `<img class="ico ${cls}" src="${src}" alt="${item.name || ''}"
-               data-emoji="${emoji}" data-try="svg" onerror="iconFallback(this)">`;
+  const path = item.img ? `img/${item.img}` : `img/items/${item.id}.png`;
+  return artImg(path, emoji, cls, item.name);
 }
 
 // Prázdný slot: img/slots/<klíč>.png, jinak emoji ze SLOT_DEFS
 function slotIcon(key, cls = '') {
   const d = SLOT_DEFS[key];
-  const emoji = String((d && d.icon) || '');
-  return `<img class="ico ${cls}" src="img/slots/${key}.png" alt="${(d && d.label) || ''}"
-               data-emoji="${emoji}" data-try="svg" onerror="iconFallback(this)">`;
+  return artImg(`img/slots/${key}.png`, String((d && d.icon) || ''), cls, (d && d.label) || '');
 }
 
 // Postupně zkusí .png → .svg → emoji
@@ -671,6 +679,7 @@ function iconFallback(img) {
     img.src = img.src.replace(/\.png(\?.*)?$/, '.svg');
     return;
   }
+  if (img.dataset.src) missingArt.add(img.dataset.src);
   const s = document.createElement('span');
   s.className = img.className;
   s.textContent = img.dataset.emoji || '';
@@ -2079,8 +2088,7 @@ function rollMonster(m) {
 }
 
 function monsterPortrait(m, cls) {
-  return `<img class="ico ${cls}" src="img/${m.img}" alt="${m.name}"
-               data-emoji="👹" data-try="svg" onerror="iconFallback(this)">`;
+  return artImg(`img/${m.img}`, '👹', cls, m.name);
 }
 
 // seznam lokací do levého menu (druhá záložka s mapou)
