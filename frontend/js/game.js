@@ -261,8 +261,13 @@ let viewCache = {}; // Cache rendered views to avoid regeneration
 const TAB_OF_VIEW = { profile:0, inventory:0, city:0, stats:1, hall:2 };
 
 function openView(view, highlight) {
+  // Všichni kupci sdílejí pohled 'shop', takže sám o sobě neurčuje,
+  // co má v menu svítit — doplníme podle právě otevřeného krámu.
+  if (!highlight && view === 'shop' && MERCHANTS[currentShop]) {
+    highlight = MERCHANTS[currentShop].menu;
+  }
+
   // zvýraznění v levém banneru
-  // (kupci sdílejí pohled 'shop', proto si říkají o vlastní položku)
   document.querySelectorAll('.menu-btn, .sub-item').forEach(i => i.classList.remove('active'));
   const m = document.getElementById('menu-' + (highlight || view));
   if (m) m.classList.add('active');
@@ -309,7 +314,7 @@ function city() {
           <div class="building-name">Radnice</div>
           <div class="building-desc">Úkoly & mise</div>
         </div>
-        <div class="city-building" onclick="openView('shop')">
+        <div class="city-building" onclick="openMerchant('blacksmith')">
           <span class="building-icon">🏪</span>
           <div class="building-name">Trh</div>
           <div class="building-desc">Nakup vybavení</div>
