@@ -2298,3 +2298,229 @@ html::after{
   border-bottom:1px solid rgba(140,115,80,.2);
 }
 .fr-akce b{color:#a02525;white-space:nowrap}
+
+/* =========================================================
+   ŘECKÝ STYL
+   Meandr, mramor a sloupoví. Vzory jsou SVG přímo v CSS,
+   takže nepřibývá žádný soubor ke stažení.
+   ========================================================= */
+:root{
+  /* meandr – klasický řecký klíč, zlatý */
+  --meander:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='14' viewBox='0 0 28 14'%3E%3Cpath d='M1 13V1h12v8H6v-4h4' fill='none' stroke='%23d8b13a' stroke-width='2'/%3E%3Cpath d='M15 13V1h12v8h-7v-4h4' fill='none' stroke='%23d8b13a' stroke-width='2'/%3E%3C/svg%3E");
+  --meander-dk:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='14' viewBox='0 0 28 14'%3E%3Cpath d='M1 13V1h12v8H6v-4h4' fill='none' stroke='%235a3b10' stroke-width='2'/%3E%3Cpath d='M15 13V1h12v8h-7v-4h4' fill='none' stroke='%235a3b10' stroke-width='2'/%3E%3C/svg%3E");
+
+  /* mramorové žilkování */
+  --marble:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.008 .05' numOctaves='5' seed='7'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0 0 .5 0'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23m)' opacity='.28'/%3E%3C/svg%3E");
+
+  /* svislé drážky sloupu */
+  --flute:repeating-linear-gradient(90deg,
+    rgba(0,0,0,.16) 0 1px,
+    rgba(255,255,255,.10) 1px 3px,
+    transparent 3px 11px);
+}
+
+/* ---------------- pergamen jako mramorová deska ---------------- */
+.parchment{
+  background:
+    var(--marble),
+    var(--grain),
+    radial-gradient(ellipse 70% 45% at 20% 10%, rgba(255,255,255,.55), transparent 70%),
+    linear-gradient(170deg,#fcf6e6 0%,#f4ead0 30%,#e9dbb8 100%);
+  background-blend-mode:multiply, soft-light, screen, normal;
+  border:2px solid #8a7550;
+  border-radius:0 8px 8px 8px;
+  box-shadow:
+    0 8px 26px rgba(0,0,0,.45),
+    inset 0 0 60px rgba(170,140,90,.20),
+    inset 0 2px 0 rgba(255,255,255,.75);
+}
+
+/* ---------------- panely s římsou a meandrem ---------------- */
+.panel{
+  border:2px solid #8a7550;
+  border-radius:5px;
+  overflow:hidden;
+  background:
+    var(--marble),
+    linear-gradient(180deg,#fdf7e8,#eadfbe);
+  background-blend-mode:multiply, normal;
+  box-shadow:0 4px 14px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.7);
+}
+
+.panel-header{
+  position:relative;
+  padding:8px 14px 8px 30px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.16) 0%, transparent 42%),
+    linear-gradient(180deg,#a8272a 0%,#82191c 52%,#5e0f11 100%);
+  border-bottom:none;
+  font-size:13px;letter-spacing:1.1px;text-transform:uppercase;
+  color:#f4dfa4;
+  text-shadow:0 1px 3px rgba(0,0,0,.85);
+  box-shadow:inset 0 -1px 0 rgba(0,0,0,.45);
+}
+/* zlatý pás meandru pod hlavičkou */
+.panel-header::after{
+  content:'';position:absolute;left:0;right:0;bottom:0;height:7px;
+  background:var(--meander) repeat-x center/28px 14px;
+  opacity:.85;
+}
+/* kosočtverec vlevo */
+.panel-header::before{
+  left:11px;width:9px;height:9px;margin-top:-6px;
+  background:linear-gradient(135deg,#f8e6ae,#b8901c);
+  box-shadow:0 0 6px rgba(240,216,134,.7);
+}
+
+.panel-body{padding:14px 15px}
+
+/* ---------------- folder taby jako kamenné tabulky ---------------- */
+.ftab{
+  padding:8px 26px;
+  background:
+    var(--marble),
+    linear-gradient(180deg,#e2d3ae 0%,#c3ac82 100%);
+  background-blend-mode:multiply, normal;
+  border:2px solid #8a7550;border-bottom:none;
+  border-radius:8px 8px 0 0;
+  font-size:13px;letter-spacing:.6px;
+  color:#5c4423;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.55), 0 -2px 6px rgba(0,0,0,.2);
+}
+.ftab.active{
+  background:
+    var(--marble),
+    linear-gradient(180deg,#fdf7e8 0%,#f4ead0 100%);
+  background-blend-mode:multiply, normal;
+  color:#7d1616;font-weight:bold;
+}
+
+/* ---------------- levý banner jako sloup ---------------- */
+.left-banner .banner-body{
+  background:
+    var(--flute),
+    var(--fiber),
+    linear-gradient(180deg,#a82428 0%,#88191c 45%,#6b1113 100%);
+  background-blend-mode:overlay, soft-light, normal;
+  border-left:2px solid rgba(240,216,134,.35);
+  border-right:2px solid rgba(0,0,0,.3);
+}
+/* hlavice a pata sloupu */
+.banner-top,
+.banner-bottom{
+  background:
+    var(--marble),
+    linear-gradient(180deg,#f2e6c8 0%,#cdb98e 60%,#a8916a 100%);
+  background-blend-mode:multiply, normal;
+  border:2px solid #8a7550;
+  box-shadow:0 3px 8px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.7);
+}
+.banner-top{border-radius:5px 5px 0 0;border-bottom:none}
+.banner-bottom{
+  height:16px;border-radius:0 0 5px 5px;border-top:none;
+  background-image:var(--meander-dk);
+  background-repeat:repeat-x;background-position:center;background-size:28px 14px;
+  background-color:#cdb98e;
+}
+
+.menu-btn{
+  border-radius:3px;
+  letter-spacing:.4px;
+  border:1px solid rgba(240,216,134,.4);
+}
+
+/* ---------------- tlačítka: patinovaný bronz ---------------- */
+.btn-green,
+.parchment button:not(.pg-tab):not(.tr-plus):not(.set-toggle){
+  background:
+    linear-gradient(180deg,#9fbe57 0%,#7a9c30 40%,#55701c 72%,#3d5312 100%);
+  border:1px solid #2c3a0c;
+  border-top-color:#c8e08a;
+  border-radius:3px;
+  letter-spacing:.3px;
+  text-shadow:0 1px 2px rgba(0,0,0,.55);
+}
+
+/* ---------------- horní lišty ---------------- */
+.topbar{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.12) 0%, transparent 40%),
+    linear-gradient(180deg,#8f2427 0%,#5e1417 55%,#3f0c0e 100%);
+  border-bottom:2px solid #d8b13a;
+}
+.topbar-link{letter-spacing:.5px}
+
+.headerband{
+  background:
+    var(--marble),
+    var(--grain),
+    linear-gradient(180deg,#f4e9cd 0%,#d8c69c 55%,#b39c72 100%);
+  background-blend-mode:multiply, soft-light, normal;
+  border-bottom:3px solid #d8b13a;
+  box-shadow:0 5px 16px rgba(0,0,0,.5), inset 0 -3px 8px rgba(120,90,50,.3);
+}
+/* meandr po spodní hraně hlavičky */
+.headerband::after{
+  content:'';position:absolute;left:0;right:0;bottom:-3px;height:7px;
+  background:var(--meander) repeat-x center/28px 14px;
+  opacity:.7;pointer-events:none;
+}
+.hb-box{
+  border:2px solid #a8853a;
+  border-radius:5px;
+  background:
+    var(--marble),
+    linear-gradient(180deg,#faf0d6 0%,#ddc99e 55%,#c4ad80 100%);
+  background-blend-mode:multiply, normal;
+}
+
+/* ---------------- rámy obchodu a zásilek ---------------- */
+.shop-frame,
+.zas-wrap{
+  border:3px solid #4a3a1c;
+  background:
+    var(--marble),
+    linear-gradient(180deg,#b0a077 0%,#837352 45%,#5d4f33 100%);
+  background-blend-mode:multiply, normal;
+  box-shadow:
+    0 10px 28px rgba(0,0,0,.6),
+    inset 0 0 0 2px rgba(216,177,58,.55),
+    inset 0 2px 0 rgba(255,255,255,.3);
+}
+
+/* jmenovka kupce jako deska s meandrem */
+.mp-plate{
+  position:relative;
+  border-color:#d8b13a;
+}
+.mp-plate::after{
+  content:'';position:absolute;left:0;right:0;bottom:0;height:6px;
+  background:var(--meander) repeat-x center/28px 14px;
+  opacity:.7;
+}
+.mp-name{letter-spacing:.7px;text-transform:uppercase;font-size:12.5px}
+
+/* ---------------- jmenovky a hlavičky karet ---------------- */
+.mon-name,.rf-name,.nameplate,.np-name{
+  letter-spacing:.6px;
+}
+.fr-banner{
+  border:2px solid #d8b13a;
+  letter-spacing:1.2px;text-transform:uppercase;font-size:16px;
+}
+
+/* ---------------- řádky seznamů ---------------- */
+.gl-row,.log-row,.rs-table,.rw-box,.hall-box,.zas-foot,.forge-total,.sell-note{
+  background:
+    var(--marble),
+    linear-gradient(180deg,#f8efd8,#e3d3ab);
+  background-blend-mode:multiply, normal;
+  border-color:#a8916a;
+}
+
+/* ---------------- drobnosti ---------------- */
+.hall-note{
+  border-left:3px solid #d8b13a;
+  padding-left:10px;
+}
+h3{letter-spacing:.5px}
