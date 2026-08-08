@@ -282,7 +282,8 @@ function openView(view, highlight) {
   const cc = document.getElementById('centerContent');
   const views = { city, arena, dungeon, quests, shop, inventory: profileView, profile: profileView,
                   guild, tavern, forge, expedition, hall, stats, training, work, premium,
-                  report: fightReport, news, fights, messages, loot };
+                  report: fightReport, news, fights, messages, loot,
+                  settings, market, auction };
   const viewFn = views[view] || (() => `
     <div class="coming-soon">
       <div class="cs-icon">🚧</div>
@@ -1586,6 +1587,10 @@ function statTipHTML(key) {
 // Co se má v bublině ukázat – předmět, protivník, nebo vlastnost.
 function tipHTMLFor(ref) {
   if (ref.startsWith('stat:')) return statTipHTML(ref.slice(5));
+  if (ref.startsWith('loot:')) {
+    const z = lootLog[+ref.slice(5)];
+    return z ? itemTipHTML(z.kus) : '';
+  }
   if (ref.startsWith('mon:')) {
     const loc = EXPEDITIONS.find(e => e.id === currentExped);
     const m = loc && loc.monsters[+ref.slice(4)];
@@ -1754,6 +1759,8 @@ function animateHit(fromSel, toSel, dmg, crit) {
 function fightRound() {
   if (!inCombat) return;
 
+  koloCislo++;
+
   // --- útok hráče ---
   const dvojity = Math.random() < doubleChance();
   const rany = dvojity ? 2 : 1;
@@ -1771,6 +1778,10 @@ function fightRound() {
   }
 
   currentEnemy.hp = Math.max(0, currentEnemy.hp - pdmg);
+  dmgHrac += pdmg;
+  zapisKolo('hrac', `utržil <b>${pdmg}</b> poškození` +
+    (vykryto ? ' (druhou ránu vykryl)' : dvojity ? ' (dvojitý zásah)' : '') +
+    (kritCelkem ? ' (kritický)' : ''));
   animateHit('.fighter-box.player', '.fighter-box.enemy', pdmg, kritCelkem);
   addLog(`${character.name} zasáhl za <strong>${pdmg}</strong>` +
          (dvojity && !vykryto ? ' (dvojitý zásah!)' : '') +
@@ -1789,6 +1800,7 @@ function fightRound() {
     if (Math.random() < enemyDoubleChance(currentEnemy)) {
       if (Math.random() < blockChance()) {
         addLog(`${character.name} zablokoval druhou ránu`, 'log-p');
+        zapisKolo('souper', 'blokováno');
       } else {
         eRany = 2;
       }
@@ -1801,6 +1813,9 @@ function fightRound() {
       edmg += d;
     }
     character.health = Math.max(0, character.health - edmg);
+    dmgSouper += edmg;
+    zapisKolo('souper', `utržil <b>${edmg}</b> poškození` +
+      (eRany > 1 ? ' (dvojitý zásah)' : '') + (eKrit ? ' (kritický)' : ''));
     animateHit('.fighter-box.enemy', '.fighter-box.player', edmg, eKrit);
     addLog(`${currentEnemy.name} zasáhl za <strong>${edmg}</strong>` +
            (eRany > 1 ? ' (dvojitý zásah)' : ''), 'log-e');
@@ -1818,6 +1833,7 @@ function skipFight() {
   clearTimeout(fightTimer);
   let guard = 0;
   while (inCombat && guard++ < 500) {
+    koloCislo++;
     let pdmg = 0;
     for (let i = 0, n = Math.random() < doubleChance() ? 2 : 1; i < n; i++) {
       let d = Math.max(1, rollPlayerDamage() - soak(currentEnemy.def));
@@ -1825,16 +1841,22 @@ function skipFight() {
       pdmg += d;
     }
     currentEnemy.hp = Math.max(0, currentEnemy.hp - pdmg);
+    dmgHrac += pdmg;
+    zapisKolo('hrac', `utržil <b>${pdmg}</b> poškození`);
     addLog(`${character.name} zasáhl za <strong>${pdmg}</strong>`, 'log-p');
     if (currentEnemy.hp <= 0) { endCombat(true); break; }
 
-    let eRany = 1;
-    if (Math.random() < enemyDoubleChance(currentEnemy) && Math.random() >= blockChance()) eRany = 2;
+    let eRany = 1, blokoval = false;
+    if (Math.random() < enemyDoubleChance(currentEnemy)) {
+      if (Math.random() < blockChance()) blokoval = true; else eRany = 2;
+    }
     let edmg = 0;
     for (let i = 0; i < eRany; i++) {
       edmg += Math.max(1, currentEnemy.str + Math.floor(Math.random() * 6) - playerSoak());
     }
     character.health = Math.max(0, character.health - edmg);
+    dmgSouper += edmg;
+    zapisKolo('souper', blokovan0(blokoval, edmg, eRany));
     addLog(`${currentEnemy.name} zasáhl za <strong>${edmg}</strong>`, 'log-e');
     if (character.health <= 0) { endCombat(false); break; }
   }
@@ -1857,14 +1879,9 @@ function endCombat(won) {
   if (won && lastFight && lastFight.view === 'expedition') {
     korist = rollLoot(currentEnemy);
     if (korist) {
-      if (inventory.length < BAG_SIZE) {
-        inventory.push(korist);
-        zapisKorist({ kdy: Date.now(), kus: korist, od: currentEnemy.name });
-        addLog(`Našel jsi <strong>${korist.name}</strong>`, 'log-w');
-      } else {
-        toast('Batoh je plný, kořist zůstala ležet.');
-        korist = null;
-      }
+      // do zásilek, ať plný batoh o kořist nepřipraví
+      zapisKorist({ kdy: Date.now(), kus: korist, od: currentEnemy.name });
+      addLog(`Našel jsi <strong>${korist.name}</strong> — čeká v zásilkách`, 'log-w');
     }
   }
 
@@ -1898,6 +1915,9 @@ function endCombat(won) {
 
   lastReport = {
     won,
+    kdy: Date.now(),
+    kola: kolaLog.slice(),
+    dmgHrac, dmgSouper,
     zpet: lastFight ? lastFight.view : 'expedition',
     odmeny,
     hrac: {
@@ -1942,9 +1962,11 @@ function endCombat(won) {
 
   // Na zprávu skoč jen když hráč pořád kouká na souboj – jinak
   // by ho to vytrhlo z toho, kam si mezitím odešel.
-  setTimeout(() => {
-    if (!inCombat && document.getElementById('combatBtns')) openView('report');
-  }, 1400);
+  if (volba('autoZprava')) {
+    setTimeout(() => {
+      if (!inCombat && document.getElementById('combatBtns')) openView('report');
+    }, 1400);
+  }
 }
 
 function refight() {
@@ -2647,7 +2669,22 @@ const durClass = pct => pct === 0 ? 'dur-zero' : pct < 25 ? 'dur-low' : pct < 60
 
 
 // ========== ZPRÁVA Z BOJE ==========
-let lastReport = null;   // { won, odmeny, hrac, soupeR }
+let lastReport = null;   // { won, odmeny, hrac, souper, kola, staty }
+
+// Průběh souboje po kolech – jeden záznam na kolo, aby šlo ve zprávě
+// ukázat, co se v něm stalo oběma stranám.
+let kolaLog = [], koloCislo = 0, dmgHrac = 0, dmgSouper = 0;
+
+function novyZaznamBoje() { kolaLog = []; koloCislo = 0; dmgHrac = 0; dmgSouper = 0; }
+
+const blokovan0 = (blokoval, edmg, eRany) =>
+  (blokoval ? 'blokováno · ' : '') + `utržil <b>${edmg}</b> poškození` +
+  (eRany > 1 ? ' (dvojitý zásah)' : '');
+function zapisKolo(kdo, text) {
+  let k = kolaLog[koloCislo - 1];
+  if (!k) { k = kolaLog[koloCislo - 1] = { cislo: koloCislo, hrac: '', souper: '' }; }
+  k[kdo] = text;
+}
 
 // srovnávací tabulka statů — zrcadlená, aby stály proti sobě
 function reportStats(s, mirror) {
@@ -2721,6 +2758,32 @@ function fightReport() {
       ${reportStats(r.souper, true)}
     </div>
 
+    <div class="panel fr-panel">
+      <div class="panel-header">Statistiky – ${cas(r.kdy)}</div>
+      <div class="panel-body">
+        <table class="fr-stats">
+          <thead>
+            <tr><th>Jméno</th><th>Způsobené zranění</th><th>Životy</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="fs-nm">${r.hrac.name}</td><td>${r.dmgHrac}</td><td>${r.hrac.hp}</td></tr>
+            <tr><td class="fs-nm">${r.souper.name}</td><td>${r.dmgSouper}</td><td>${r.souper.hp}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel fr-panel">
+      <div class="panel-header">Zpráva z boje</div>
+      <div class="panel-body">
+        ${r.kola.length ? r.kola.map(k => `
+          <div class="fr-kolo">Kolo ${k.cislo}</div>
+          <div class="fr-akce"><span>${r.souper.name} zasáhl ${r.hrac.name}.</span><b>${k.souper || 'minul'}</b></div>
+          <div class="fr-akce"><span>${r.hrac.name} zasáhl ${r.souper.name}.</span><b>${k.hrac || 'minul'}</b></div>
+        `).join('') : '<p class="hall-note">Souboj skončil dřív, než padla rána.</p>'}
+      </div>
+    </div>
+
     <div class="fr-actions">
       <button class="btn-green" onclick="refight()">Bojovat znovu</button>
       <button class="btn-back" onclick="openView('${r.zpet}')">Zpět</button>
@@ -2764,7 +2827,69 @@ function rollLoot(enemy) {
 }
 
 function zapisSouboj(zaznam) { fightLog.unshift(zaznam); ulozSeznam('fightLog', fightLog); }
-function zapisKorist(zaznam) { lootLog.unshift(zaznam);  ulozSeznam('lootLog', lootLog); }
+// Kořist nespadne rovnou do batohu – čeká v zásilkách,
+// odkud si ji hráč vyzvedne nebo ji rovnou prodá.
+const ZASILKA_DNI = 7;
+
+function zapisKorist(zaznam) {
+  zaznam.plati = Date.now() + ZASILKA_DNI * 86400000;
+  lootLog.unshift(zaznam);
+  ulozSeznam('lootLog', lootLog);
+}
+
+// vyhodí, co propadlo
+function protridZasilky() {
+  const ted = Date.now();
+  const pred = lootLog.length;
+  lootLog = lootLog.filter(z => !z.plati || z.plati > ted);
+  if (lootLog.length !== pred) ulozSeznam('lootLog', lootLog);
+  return pred - lootLog.length;
+}
+
+const zbyvaText = ms => {
+  if (ms <= 0) return 'propadlo';
+  const d = Math.floor(ms / 86400000);
+  const h = Math.floor(ms % 86400000 / 3600000);
+  const m = Math.floor(ms % 3600000 / 60000);
+  return (d ? d + 'd ' : '') + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+};
+
+// vyzvednutí a prodej
+function vyzvedni(i) {
+  const z = lootLog[i];
+  if (!z) return;
+  if (inventory.length >= BAG_SIZE) { toast('Batoh je plný.'); return; }
+  inventory.push(z.kus);
+  lootLog.splice(i, 1);
+  ulozSeznam('lootLog', lootLog);
+  persist();
+  toast(`${z.kus.name} putuje do batohu.`);
+  openView('loot');
+}
+
+function prodejZasilku(i) {
+  const z = lootLog[i];
+  if (!z) return;
+  const got = sellPrice(z.kus);
+  character.gold += got;
+  lootLog.splice(i, 1);
+  ulozSeznam('lootLog', lootLog);
+  persist();
+  toast(`${z.kus.name} prodán za ${got} zlata.`);
+  openView('loot');
+}
+
+function prodejVse() {
+  if (!lootLog.length) { toast('Zásilky jsou prázdné.'); return; }
+  const celkem = lootLog.reduce((a, z) => a + sellPrice(z.kus), 0);
+  const kolik = lootLog.length;
+  character.gold += celkem;
+  lootLog = [];
+  ulozSeznam('lootLog', lootLog);
+  persist();
+  toast(`Prodáno ${kolik} kusů za ${celkem} zlata.`);
+  openView('loot');
+}
 
 // ---- nepřečtené ----
 const videno = k => parseInt(localStorage.getItem('videno_' + k), 10) || 0;
@@ -2837,19 +2962,120 @@ function messages() {
     </div>`), 'Nikdo ti zatím nenapsal.');
 }
 
-// ---- kořist ----
+// ---- zásilky (kořist z výprav) ----
 function loot() {
   oznacPrectene('loot');
-  return seznamPanel('Kořist z výprav', lootLog.map(z => `
-    <div class="log-row">
-      <div class="log-when">${cas(z.kdy)}</div>
-      <div class="log-ico">${itemIcon(z.kus, 'b-ico')}</div>
-      <div class="log-text">
-        <b style="color:${qualityOf(z.kus).color}">${z.kus.name}</b>
-        <span class="log-sub">${statLine(z.kus)} · z ${z.od}</span>
+  const propadlo = protridZasilky();
+
+  const hodnota = lootLog.reduce((a, z) => a + sellPrice(z.kus), 0);
+
+  const policka = lootLog.map((z, i) => {
+    const q = qualityOf(z.kus);
+    const [w, h] = itemSize(z.kus);
+    return `
+      <div class="g-slot zasilka"
+           style="grid-column:span ${w};grid-row:span ${h}"
+           onclick="vyzvedni(${i})"
+           oncontextmenu="prodejZasilku(${i});return false"
+           data-tip="loot:${i}">
+        <span class="g-lvl" style="color:${q.color}">${z.kus.lvl || 1}</span>
+        ${itemIcon(z.kus, 'g-ico')}
+        <span class="z-cas">${zbyvaText((z.plati || 0) - Date.now())}</span>
+      </div>`;
+  }).join('');
+
+  return `
+  <div class="panel">
+    <div class="panel-header">Zásilky</div>
+    <div class="panel-body">
+
+      <p class="hall-note">
+        Co ti spadne na výpravě, počká tady ${ZASILKA_DNI} dní.
+        Kliknutím si kus vezmeš do batohu, pravým tlačítkem ho rovnou prodáš.
+        ${propadlo ? `<br><b>${propadlo}</b> zásilek mezitím propadlo.` : ''}
+      </p>
+
+      <div class="zas-wrap">
+        <div class="goods-wrap" style="--rows:${SHOP_ROWS}">
+          ${latticeHTML(SHOP_ROWS)}
+          <div class="goods-grid zas-grid">${policka}</div>
+        </div>
       </div>
-    </div>`), 'Z výprav ti zatím nic nepadlo.');
+
+      <div class="zas-foot">
+        <span>Zásilek: <b>${lootLog.length}</b></span>
+        <span>Hodnota při prodeji: <b>${hodnota.toLocaleString('cs-CZ')}</b>
+              <img class="res-ico" src="img/ui/coin.png" alt="zlata"></span>
+        <button class="btn-green" ${lootLog.length ? '' : 'disabled'} onclick="prodejVse()">Prodat vše</button>
+      </div>
+
+    </div>
+  </div>`;
 }
+
+
+// ========== NASTAVENÍ ==========
+// Volby se drží v prohlížeči; čtou je přímo místa, kterých se týkají.
+const NASTAVENI = {
+  rychlyBoj:   { popis:'Přeskakovat animace soubojů',        vychozi:false },
+  autoZprava:  { popis:'Po souboji rovnou otevřít zprávu',   vychozi:true  },
+};
+
+const volba = k => {
+  const v = localStorage.getItem('set_' + k);
+  return v === null ? NASTAVENI[k].vychozi : v === '1';
+};
+function prepniVolbu(k) {
+  localStorage.setItem('set_' + k, volba(k) ? '0' : '1');
+  openView('settings');
+}
+
+function settings() {
+  const radky = Object.entries(NASTAVENI).map(([k, n]) => `
+    <div class="gl-row">
+      <div class="gl-main"><div class="gl-nm">${n.popis}</div></div>
+      <button class="btn-green set-toggle ${volba(k) ? 'on' : 'off'}"
+              onclick="prepniVolbu('${k}')">${volba(k) ? 'Zapnuto' : 'Vypnuto'}</button>
+    </div>`).join('');
+
+  return `
+  <div class="panel">
+    <div class="panel-header">Nastavení</div>
+    <div class="panel-body">
+      <div class="gl-list">${radky}</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">Postava</div>
+    <div class="panel-body">
+      <p class="hall-note">
+        Smazání začne novou postavu od první úrovně. Vybavení, batoh,
+        zásilky i historie soubojů zmizí a nejde je vrátit.
+      </p>
+      <button class="btn-back" onclick="smazPostavu()">Smazat postavu a začít znovu</button>
+    </div>
+  </div>`;
+}
+
+function smazPostavu() {
+  if (!confirm('Opravdu smazat postavu? Vybavení, zásilky i historie zmizí a nejde to vrátit.')) return;
+  ['character','inv','eqp','lootLog','fightLog','inbox','statsFixed',
+   'pts_exped','ptsAt_exped','pts_dungeon','ptsAt_dungeon','expedCdUntil',
+   'expedPts','expedPtsAt','restockAt','lastDaily']
+    .forEach(k => localStorage.removeItem(k));
+  Object.keys(MERCHANTS).forEach(id => {
+    localStorage.removeItem('stock_' + id);
+    localStorage.removeItem('stockAt_' + id);
+  });
+  location.reload();
+}
+
+// ========== TRŽIŠTĚ A AUKČNÍ SÍŇ ==========
+// Obojí stojí na obchodu mezi hráči, a ten zatím nemáme —
+// není server, který by nabídky sdílel. Kupci v Městě fungují.
+const market  = () => lockedSoon('Tržiště');
+const auction = () => lockedSoon('Aukční síň');
 
 // ===== SÍŇ SLÁVY =====
 function hall() {
@@ -3038,6 +3264,9 @@ function combatPanelHTML() {
 
 // ---------- univerzální start boje ----------
 function beginFight(enemy, view) {
+  novyZaznamBoje();
+  // rychlý boj přeskočí animace rovnou po zahájení
+  if (volba('rychlyBoj')) setTimeout(() => { if (inCombat) skipFight(); }, 60);
   clearTimeout(fightTimer);
   character.health = maxHP();
   currentEnemy = JSON.parse(JSON.stringify(enemy));

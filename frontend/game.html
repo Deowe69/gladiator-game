@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Olympus</title>
-  <link rel="stylesheet" href="css/game.css?v=tjh5is">
+  <link rel="stylesheet" href="css/game.css?v=tjh5vp">
 </head>
 <body>
 
@@ -16,7 +16,7 @@
     <a class="topbar-link" onclick="openView('hall')">Síň slávy</a>
     <a class="topbar-link gold" onclick="openMerchant('jeweler')">Klenotník</a>
     <a class="topbar-link" onclick="openView('city')">Město</a>
-    <span class="topbar-date" id="topDate"></span>
+    <a class="topbar-link" onclick="openView('settings')">Nastavení</a>
     <a class="topbar-link" onclick="logout()">Odhlásit</a>
   </div>
 </div>
@@ -112,6 +112,9 @@
           <a class="sub-item" id="menu-junk"      onclick="openMerchant('junk')">Vetešník</a>
           <a class="sub-item" id="menu-alchemy"   onclick="openMerchant('alchemist')">Alchymista</a>
           <a class="sub-item" id="menu-jeweler"   onclick="openMerchant('jeweler')">Klenotník</a>
+          <a class="sub-item" id="menu-forge"     onclick="openView('forge')">Kovárna</a>
+          <a class="sub-item" id="menu-market"    onclick="openView('market')">Tržiště</a>
+          <a class="sub-item" id="menu-auction"   onclick="openView('auction')">Aukční síň</a>
         </div>
 
         <!-- záložka 1: mapa výprav (plní game.js) -->
@@ -158,19 +161,11 @@
   </div>
 </div>
 
-<script src="js/api.js?v=tjh5is"></script>
-<script src="js/avatars.js?v=tjh5is"></script>
-<script src="js/game.js?v=tjh5is"></script>
+<script src="js/api.js?v=tjh5vp"></script>
+<script src="js/avatars.js?v=tjh5vp"></script>
+<script src="js/game.js?v=tjh5vp"></script>
 
 <script>
-  // datum v horním pruhu
-  (function(){
-    const d = new Date();
-    const p = n => String(n).padStart(2,'0');
-    document.getElementById('topDate').textContent =
-      `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
-  })();
-
   function subTab(el, idx) {
     document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
