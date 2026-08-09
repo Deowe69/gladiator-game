@@ -93,69 +93,8 @@ const QUESTS_DEF = [
 ];
 
 
-const TAVERN_QUESTS = [
-  // SNADNÉ
-  { id:'t1', name:'Doruč víno obchodníkovi', icon:'🍷', npc:'Dionýsos', npcIcon:'🧔', rarity:'common',
-    desc:'"Příteli, odnes tento džbán vína do přístavu. Obchodník Kyros čeká."',
-    flavor:'Starý hospodský ti mrkne okem a podá těžký džbán.',
-    time:3*60, gold:40, exp:30, minLevel:1,
-    steps:['Doruč džbán vína do přístavu', 'Vrať se pro odměnu'] },
-  { id:'t2', name:'Vyhnat krysy ze skladu', icon:'🐀', npc:'Hermes', npcIcon:'👴',  rarity:'common',
-    desc:'"Ty proklaté krysy! Vyčisti můj sklad a dostaneš slušně zaplaceno."',
-    flavor:'Hospodský tě vede ke tmavé chodbě plné hluku.',
-    time:5*60, gold:60, exp:45, minLevel:1,
-    steps:['Vejdi do sklepa', 'Vyhub 10 krys', 'Vrať se pro odměnu'] },
-  { id:'t3', name:'Průzkum okolí města', icon:'🗺️', npc:'Strategos', npcIcon:'⚔️', rarity:'common',
-    desc:'"Potřebuji vědět co se děje za hradbami. Prohledej okolí a podej zprávu."',
-    flavor:'Vojenský velitel tě přísně změří pohledem.',
-    time:8*60, gold:80, exp:60, minLevel:1,
-    steps:['Prozkoumej severní cestu', 'Prozkoumej jižní brod', 'Vrať zprávu veliteli'] },
 
-  // STŘEDNÍ
-  { id:'t4', name:'Ukrást mapu od Peršanů', icon:'📜', npc:'Athéna', npcIcon:'🦉', rarity:'uncommon',
-    desc:'"Perský špión má mapu našich pevností. Získej ji za každou cenu, hrdino."',
-    flavor:'Bohyně moudrosti se na tebe upřeně podívá.',
-    time:15*60, gold:180, exp:140, minLevel:3,
-    steps:['Najdi perského špióna v přístavu', 'Ukradni mapu', 'Doruč mapu Athéně'] },
-  { id:'t5', name:'Záchrana rukojmích', icon:'⛓️', npc:'Leonidas', npcIcon:'🛡️', rarity:'uncommon',
-    desc:'"Bandité drží naše vojáky! Vysvoboď je a přiveď je zpět živé."',
-    flavor:'Spartský král tě pohledí s nadějí v očích.',
-    time:20*60, gold:250, exp:200, minLevel:5,
-    steps:['Najdi banditský tábor', 'Poraz strážce', 'Osvoboď rukojmí', 'Vrať se zpět'] },
-  { id:'t6', name:'Lektvar pro nemocné děti', icon:'🧪', npc:'Asklepios', npcIcon:'🌿', rarity:'uncommon',
-    desc:'"Potřebuji kořen Asphodel z hory Pelion. Nemocné děti nemohou čekat!"',
-    flavor:'Lékař Asklepios tě prosebně uchopí za ruku.',
-    time:25*60, gold:200, exp:180, minLevel:4,
-    steps:['Vystoupej na horu Pelion', 'Najdi kořen Asphodel', 'Přines ho lékaři'] },
-
-  // TĚŽKÉ
-  { id:'t7', name:'Drakonova hlava', icon:'🐉', npc:'Zeus', npcIcon:'⚡', rarity:'rare',
-    desc:'"Drak terorizuje vesnice Thessálie. Přines mi jeho hlavu a budeš odměněn zlatem bohů!"',
-    flavor:'Blesky zahrají okolo Dia když ti zadává úkol.',
-    time:40*60, gold:500, exp:420, minLevel:10,
-    steps:['Cestuj do Thessálie', 'Najdi Drakonův doupě', 'Zabi Drakona', 'Přines hlavu Diovi'] },
-  { id:'t8', name:'Ukradený zlatý věnec', icon:'👑', npc:'Apollo', npcIcon:'🌞', rarity:'rare',
-    desc:'"Zloděj ukradl posvátný věnec z mého chrámu! Doveď mi ho - živého."',
-    flavor:'Bůh světla září zlatým světlem při řeči.',
-    time:35*60, gold:450, exp:380, minLevel:8,
-    steps:['Prošetři chrám Apollóna', 'Vystopuj zloděje', 'Chyť ho živého', 'Přiveď ho k Apollónovi'] },
-
-  // EPICKÉ  
-  { id:'t9', name:'Sestup do Tartaru', icon:'💀', npc:'Hádés', npcIcon:'👻', rarity:'epic',
-    desc:'"Duše Achillea unikla z Tartaru. Vrať ji zpět... pokud přežiješ cestu dolů."',
-    flavor:'Chladný dech smrti tě ovane když Hádés promluví.',
-    time:60*60, gold:1200, exp:1000, minLevel:18,
-    steps:['Najdi vstup do Podsvětí', 'Přejdi řeku Styx', 'Najdi duši Achillea', 'Vrať ji Hádovi'] },
-  { id:'t10', name:'Krádež Zlatého rouna', icon:'🌿', npc:'Iásón', npcIcon:'⛵', rarity:'epic',
-    desc:'"Potřebuji hrdinu co dokáže získat Zlaté rouno z Kolchidy. Odměna bude královská."',
-    flavor:'Iásón rozloží mapu s tajuplnými cestami.',
-    time:90*60, gold:2000, exp:1600, minLevel:25,
-    steps:['Nalodění v Iolku', 'Proplout Symplegádami', 'Porazit draka v Kolchidě', 'Ukrást Zlaté rouno', 'Návrat do Řecka'] },
-];
-
-const RARITY_COLORS = { common:'#aaa', uncommon:'#2d8020', rare:'#1a4a8b', epic:'#6b2fa0' };
 const RARITY_LABELS = { common:'Běžný', uncommon:'Neobvyklý', rare:'Vzácný', epic:'Epický' };
-let tavernQuests = JSON.parse(localStorage.getItem('tavernQuests') || '[]'); // pole aktivních questů
 
 // ========== INIT ==========
 document.addEventListener('DOMContentLoaded', async () => {
@@ -281,9 +220,9 @@ function openView(view, highlight) {
 
   const cc = document.getElementById('centerContent');
   const views = { city, arena, dungeon, quests, shop, inventory: profileView, profile: profileView,
-                  guild, tavern, forge, expedition, hall, stats, training, work, premium,
+                  guild, forge, expedition, hall, stats, training, work, premium,
                   report: fightReport, news, fights, messages, loot,
-                  settings, market, auction };
+                  settings, market, auction, admin };
   const viewFn = views[view] || (() => `
     <div class="coming-soon">
       <div class="cs-icon">🚧</div>
@@ -1112,154 +1051,8 @@ function toast(msg) {
 // Kliknutí na slot vybavení (sundání)
 
 // Kliknutí na předmět v inventáři (nasazení)
-function handleInvClick(idx) {
-  const item = inventory[idx];
-  if (!item) return;
-
-  // Určit slot podle typu předmětu
-  const slotMap = {
-    'w1':'weapon','w2':'weapon','w3':'weapon','w4':'weapon',
-    'a1':'chest','a2':'chest','a3':'chest','a4':'chest',
-    'p1':null,'p2':null,'p3':null, // lektvary se nenosí
-    'm1':'ring','m2':'amulet','m3':'weapon',
-  };
-
-  const slotKey = slotMap[item.id];
-
-  // Lektvar - použít okamžitě
-  if (slotKey === null) {
-    if (item.key === 'health') {
-      character.health = Math.min(maxHP(), character.health + item.val);
-      inventory.splice(idx, 1);
-      localStorage.setItem('inv', JSON.stringify(inventory));
-      saveChar(); updateUI();
-      alert(`🧪 Použil jsi ${item.name}! +${item.val} HP`);
-      openView('inventory');
-      return;
-    }
-  }
-
-  if (!slotKey) {
-    alert('Tento předmět nelze nasadit!');
-    return;
-  }
-
-  // Pokud je slot obsazený - vrátit starý předmět do inventáře
-  if (equipped[slotKey]) {
-    const old = equipped[slotKey];
-    if (old.key && old.key !== 'health') character[old.key] -= old.val;
-    inventory.push(old);
-  }
-
-  // Nasadit nový
-  equipped[slotKey] = item;
-  inventory.splice(idx, 1);
-  if (item.key && item.key !== 'health') character[item.key] += item.val;
-
-  localStorage.setItem('eqp', JSON.stringify(equipped));
-  localStorage.setItem('inv', JSON.stringify(inventory));
-  saveChar(); updateUI();
-  openView('inventory');
-}
 
 // ===== TAVERN =====
-function tavern() {
-  const now = Date.now();
-
-  // Render NPC quest boards
-  const renderQuests = (rarities) => {
-    return TAVERN_QUESTS.filter(q => rarities.includes(q.rarity)).map(q => {
-      const aq = tavernQuests.find(x => x.id === q.id);
-      const running  = aq && !aq.done && now < aq.endTime;
-      const claimable= aq && !aq.done && now >= aq.endTime;
-      const done     = aq && aq.done;
-      const avail    = character.level >= q.minLevel;
-      const pct      = running ? Math.min(100,((now-aq.startTime)/(aq.endTime-aq.startTime)*100)).toFixed(1) : (claimable||done?100:0);
-      const timeLeft = running ? formatTime(Math.ceil((aq.endTime-now)/1000)) : '';
-      const rColor   = RARITY_COLORS[q.rarity];
-
-      return `
-      <div class="tq-card ${running||claimable?'tq-active':''}">
-        <div class="tq-top">
-          <div class="tq-npc">
-            <span class="tq-npc-icon">${q.npcIcon}</span>
-            <span class="tq-npc-name">${q.npc}</span>
-          </div>
-          <span class="tq-rarity" style="color:${rColor};border-color:${rColor}">${RARITY_LABELS[q.rarity]}</span>
-        </div>
-        <div class="tq-header">
-          <span class="tq-icon">${q.icon}</span>
-          <div class="tq-title">${q.name}</div>
-        </div>
-        <div class="tq-speech">${q.desc}</div>
-        <div class="tq-flavor">${q.flavor}</div>
-        <div class="tq-steps">
-          ${q.steps.map((s,i) => `<div class="tq-step ${done||claimable?'done':running&&i===0?'current':''}">
-            ${done||claimable?'✓':running&&i===0?'▶':'○'} ${s}</div>`).join('')}
-        </div>
-        <div class="tq-footer">
-          <div class="tq-rewards">
-            <span>💰 ${q.gold}</span>
-            <span>⭐ ${q.exp} XP</span>
-            <span>⏱ ${formatTime(q.time)}</span>
-            <span style="color:var(--text-dim)">Lv.${q.minLevel}+</span>
-          </div>
-          ${running||claimable||done ? `
-          <div class="tq-prog-wrap">
-            <div class="tq-prog-bar"><div class="tq-prog-fill" style="width:${pct}%"></div></div>
-            <span class="tq-prog-txt">${running?timeLeft:claimable?'Hotovo!':'Splněno'}</span>
-          </div>` : ''}
-          <div class="tq-btns">
-            ${!avail ? `<button class="tq-btn" disabled>🔒 Lv.${q.minLevel}+</button>`
-             : done ? `<button class="tq-btn tq-done" disabled>✅ Splněno</button>`
-             : claimable ? `<button class="tq-btn tq-claim" onclick="claimTavernQuest('${q.id}')">🎁 Vyzvednout</button>`
-             : running ? `<button class="tq-btn" disabled>⏳ Probíhá...</button>`
-             : `<button class="tq-btn tq-start" onclick="startTavernQuest('${q.id}')">📜 Přijmout</button>`}
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-  };
-
-  return `
-  <div class="panel panel-gold">
-    <div class="panel-header">🍺 Taverna U Dionýsa</div>
-    <div class="panel-body" style="padding:0;">
-
-      <!-- Top banner -->
-      <div class="tavern-banner">
-        <div class="tavern-banner-left">
-          <div style="font-size:2.5em;">🏺</div>
-          <div>
-            <div style="color:var(--gold);font-size:1.1em;font-weight:bold;">Taverna U Dionýsa</div>
-            <div style="color:var(--text-dim);font-size:.8em;font-style:italic;">"Zde se rodí hrdinové a zalévají vínem"</div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Quest board tabs -->
-      <div class="tavern-tabs" id="tavernTabs">
-        <div class="tavern-tab active" onclick="tavernTab(this,'board-common')">📋 Vývěska</div>
-        <div class="tavern-tab" onclick="tavernTab(this,'board-uncommon')">⚔ Výpravy</div>
-        <div class="tavern-tab" onclick="tavernTab(this,'board-rare')">💎 Vzácné</div>
-        <div class="tavern-tab" onclick="tavernTab(this,'board-epic')">👑 Epické</div>
-        <div class="tavern-tab" onclick="tavernTab(this,'board-active')">📌 Aktivní (${tavernQuests.filter(q=>!q.done).length})</div>
-      </div>
-
-      <div class="tavern-board" id="board-common">${renderQuests(['common'])}</div>
-      <div class="tavern-board" id="board-uncommon" style="display:none">${renderQuests(['uncommon'])}</div>
-      <div class="tavern-board" id="board-rare" style="display:none">${renderQuests(['rare'])}</div>
-      <div class="tavern-board" id="board-epic" style="display:none">${renderQuests(['epic'])}</div>
-      <div class="tavern-board" id="board-active" style="display:none">
-        ${tavernQuests.filter(q=>!q.done).length === 0
-          ? '<div style="text-align:center;padding:40px;color:var(--text-dim);font-style:italic;">Nemáš žádné aktivní úkoly.<br>Přijmi úkol z vývěsky!</div>'
-          : renderQuests(TAVERN_QUESTS.filter(q => tavernQuests.find(x=>x.id===q.id&&!x.done)).map(q=>q.rarity))
-        }
-      </div>
-    </div>
-  </div>`;
-}
 
 function tavernTab(el, boardId) {
   document.querySelectorAll('.tavern-tab').forEach(t => t.classList.remove('active'));
@@ -1268,32 +1061,7 @@ function tavernTab(el, boardId) {
   document.getElementById(boardId).style.display = 'block';
 }
 
-function startTavernQuest(id) {
-  const q = TAVERN_QUESTS.find(x => x.id === id);
-  if (!q) return;
-  if (character.level < q.minLevel) { alert(`🔒 Potřebuješ úroveň ${q.minLevel}!`); return; }
-  const activeQuest = tavernQuests.find(x => !x.done);
-  if (activeQuest) { alert('⚠ Už máš aktivní úkol! Dokonči ho nebo počkej než skončí.'); return; }
-  if (tavernQuests.find(x => x.id === id && x.done)) { alert('Tento úkol jsi už splnil!'); return; }
 
-  const now = Date.now();
-  tavernQuests.push({ id, startTime: now, endTime: now + q.time*1000, done: false });
-  localStorage.setItem('tavernQuests', JSON.stringify(tavernQuests));
-  openView('tavern');
-}
-
-function claimTavernQuest(id) {
-  const q = TAVERN_QUESTS.find(x => x.id === id);
-  const aq = tavernQuests.find(x => x.id === id);
-  if (!q || !aq) return;
-  aq.done = true;
-  localStorage.setItem('tavernQuests', JSON.stringify(tavernQuests));
-  character.gold += q.gold;
-  character.experience += q.exp;
-  checkLevelUp(); saveChar(); updateUI();
-  alert(`🎉 Úkol "${q.name}" splněn!\n+${q.gold} 💰\n+${q.exp} ⭐`);
-  openView('tavern');
-}
 
 // ===== FORGE =====
 
@@ -1379,15 +1147,6 @@ function rollItem(tpl) {
 }
 
 // souhrn statů předmětu do čitelné věty
-function statLine(it) {
-  if (!it) return '';
-  if (it.key === 'health') return '+' + it.val + ' zdraví';
-  const parts = [];
-  if (Array.isArray(it.dmg)) parts.push(it.dmg[0] + '-' + it.dmg[1] + ' poškození');
-  if (it.armor) parts.push('+' + it.armor + ' zbroj');
-  if (it.stats) for (const [k, v] of Object.entries(it.stats)) parts.push('+' + v + ' ' + STAT_DEFS[k]);
-  return parts.join(', ') || (it.stat || '');
-}
 
 // součet jednoho statu ze všeho nasazeného
 function equipBonus(k) {
@@ -2259,11 +2018,6 @@ function expedCdLeft() {
 const fmtSec = ms => Math.ceil(ms / 1000) + ' s';
 
 // čas do dalšího bodu
-function expedRegenLeft() {
-  if (expedPoints() >= EXPED_MAX) return 0;
-  const at = parseInt(localStorage.getItem('expedPtsAt'), 10) || Date.now();
-  return Math.max(0, at + EXPED_REGEN_MS - Date.now());
-}
 
 // obnoví ukazatele bodů a tlačítka Útok
 function refreshExpedUI() {
@@ -2277,6 +2031,7 @@ function refreshExpedUI() {
   if (dg) dg.textContent = points('dungeon') + ' / ' + EXPED_MAX;
 
   refreshBadges();
+  refreshAdminLink();
 
   const cd = expedCdLeft();
   document.querySelectorAll('.mon-attack').forEach(b => {
@@ -3042,7 +2797,17 @@ function settings() {
   <div class="panel">
     <div class="panel-header">Nastavení</div>
     <div class="panel-body">
-      <div class="gl-list">${radky}</div>
+      <div class="gl-list">
+        ${radky}
+        <div class="gl-row">
+          <div class="gl-main">
+            <div class="gl-nm">Admin režim</div>
+            <div class="gl-sub">Vývojářský panel. Není to zabezpečení — hlídat práva musí server.</div>
+          </div>
+          <button class="btn-green set-toggle ${jeAdmin() ? 'on' : 'off'}"
+                  onclick="${jeAdmin() ? 'vypniAdmin()' : 'zapniAdmin()'}">${jeAdmin() ? 'Zapnuto' : 'Vypnuto'}</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3076,6 +2841,180 @@ function smazPostavu() {
 // není server, který by nabídky sdílel. Kupci v Městě fungují.
 const market  = () => lockedSoon('Tržiště');
 const auction = () => lockedSoon('Aukční síň');
+
+
+// ========== ADMIN PANEL ==========
+// POZOR: tohle je nástroj pro vývoj, ne ochrana.
+// Přepínač je v prohlížeči, takže si ho může zapnout kdokoliv.
+// Skutečná práva musí hlídat server, jinak jsou jen na oko.
+const jeAdmin = () => localStorage.getItem('admin') === '1';
+
+function zapniAdmin() { localStorage.setItem('admin', '1'); location.reload(); }
+function vypniAdmin() { localStorage.removeItem('admin'); openView('city'); }
+
+// odkaz v liště se ukáže jen když je režim zapnutý
+function refreshAdminLink() {
+  const a = document.getElementById('adminLink');
+  if (a) a.style.display = jeAdmin() ? '' : 'none';
+}
+
+// ---- zásahy do postavy ----
+function admSet(klic, hodnota) {
+  const v = parseInt(hodnota, 10);
+  if (isNaN(v) || v < 0) { toast('Zadej kladné číslo.'); return; }
+  character[klic] = v;
+  if (klic === 'level') character.experience = 0;
+  saveChar(); updateUI(); openView('admin');
+}
+
+function admHeal() {
+  character.health = maxHP();
+  saveChar(); updateUI(); openView('admin');
+  toast('Životy doplněny.');
+}
+
+function admBody() {
+  ['exped', 'dungeon'].forEach(d => {
+    localStorage.setItem('pts_' + d, EXPED_MAX);
+    localStorage.setItem('ptsAt_' + d, Date.now());
+  });
+  localStorage.removeItem('expedCdUntil');
+  refreshExpedUI(); openView('admin');
+  toast('Body doplněny, odpočinek zrušen.');
+}
+
+function admDejPredmet(idx) {
+  const sablony = Object.values(SHOP_ITEMS).flat();
+  const tpl = sablony[idx];
+  if (!tpl) return;
+  if (inventory.length >= BAG_SIZE) { toast('Batoh je plný.'); return; }
+  inventory.push(rollItem(tpl));
+  persist(); openView('admin');
+  toast(tpl.name + ' přidán do batohu.');
+}
+
+function admDejKorist(kolik) {
+  for (let i = 0; i < kolik; i++) {
+    const sablony = Object.values(SHOP_ITEMS).flat().filter(t => slotForItem(t));
+    const tpl = sablony[Math.floor(Math.random() * sablony.length)];
+    zapisKorist({ kdy: Date.now(), kus: rollItem(tpl), od: 'Admin' });
+  }
+  openView('admin');
+  toast(kolik + ' zásilek přidáno.');
+}
+
+function admNoveZbozi() {
+  Object.keys(MERCHANTS).forEach(id => {
+    localStorage.removeItem('stock_' + id);
+    localStorage.removeItem('stockAt_' + id);
+  });
+  localStorage.removeItem('restockAt');
+  openView('admin');
+  toast('Zboží u všech kupců vyloosováno znovu.');
+}
+
+function admin() {
+  if (!jeAdmin()) {
+    return `
+    <div class="panel">
+      <div class="panel-header">Admin</div>
+      <div class="panel-body">
+        <div class="coming-soon">
+          <div class="cs-icon">🔒</div>
+          <h2>Režim je vypnutý</h2>
+          <p>Zapneš ho v Nastavení.</p>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const c = character;
+  const pole = (popis, klic) => `
+    <div class="gl-row">
+      <div class="gl-main"><div class="gl-nm">${popis}</div>
+        <div class="gl-sub">nyní ${c[klic]}</div></div>
+      <input class="adm-input" type="number" min="0" value="${c[klic]}" id="adm-${klic}">
+      <button class="btn-green" onclick="admSet('${klic}', document.getElementById('adm-${klic}').value)">Nastavit</button>
+    </div>`;
+
+  const sablony = Object.values(SHOP_ITEMS).flat();
+  const nabidka = sablony.map((t, i) =>
+    `<option value="${i}">${t.name} (${t.quality})</option>`).join('');
+
+  return `
+  <div class="panel adm-warn">
+    <div class="panel-header">Admin – vývojářský nástroj</div>
+    <div class="panel-body">
+      <p class="hall-note">
+        <b>Tohle není zabezpečení.</b> Přepínač sedí v prohlížeči, takže si ho
+        může zapnout kdokoliv, kdo si otevře konzoli. Aby admin práva něco
+        znamenala, musí je hlídat server — jinak jsou jen na oko.
+      </p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">Postava</div>
+    <div class="panel-body">
+      <div class="gl-list">
+        ${pole('Úroveň', 'level')}
+        ${pole('Zlato', 'gold')}
+        ${pole('Síla', 'strength')}
+        ${pole('Dovednost', 'skill')}
+        ${pole('Obratnost', 'agility')}
+        ${pole('Odolnost', 'defense')}
+        ${pole('Inteligence', 'intelligence')}
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">Rychlé zásahy</div>
+    <div class="panel-body">
+      <div class="gl-list">
+        <div class="gl-row">
+          <div class="gl-main"><div class="gl-nm">Doplnit životy</div>
+            <div class="gl-sub">${c.health} / ${maxHP()}</div></div>
+          <button class="btn-green" onclick="admHeal()">Doplnit</button>
+        </div>
+        <div class="gl-row">
+          <div class="gl-main"><div class="gl-nm">Body výpravy a bludiště</div>
+            <div class="gl-sub">výprava ${points('exped')}, bludiště ${points('dungeon')} · zruší i odpočinek</div></div>
+          <button class="btn-green" onclick="admBody()">Doplnit</button>
+        </div>
+        <div class="gl-row">
+          <div class="gl-main"><div class="gl-nm">Vyloosovat zboží u všech kupců</div>
+            <div class="gl-sub">jako kdyby doplnili pult</div></div>
+          <button class="btn-green" onclick="admNoveZbozi()">Vyloosovat</button>
+        </div>
+        <div class="gl-row">
+          <div class="gl-main"><div class="gl-nm">Přidat zásilky</div>
+            <div class="gl-sub">nyní ${lootLog.length}</div></div>
+          <button class="btn-green" onclick="admDejKorist(5)">+5</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">Předmět do batohu</div>
+    <div class="panel-body">
+      <div class="gl-row">
+        <div class="gl-main"><div class="gl-nm">Vyber šablonu</div>
+          <div class="gl-sub">vlastnosti se vylosují jako u koupeného kusu · batoh ${inventory.length}/${BAG_SIZE}</div></div>
+        <select class="adm-input" id="admItem">${nabidka}</select>
+        <button class="btn-green" onclick="admDejPredmet(document.getElementById('admItem').value)">Přidat</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">Ukončit</div>
+    <div class="panel-body">
+      <button class="btn-back" onclick="vypniAdmin()">Vypnout admin režim</button>
+    </div>
+  </div>`;
+}
 
 // ===== SÍŇ SLÁVY =====
 function hall() {

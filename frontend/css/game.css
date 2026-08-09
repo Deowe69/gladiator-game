@@ -1985,6 +1985,9 @@ html::after{
 .shop-frame .goods-grid{
   display:grid;
   grid-template-columns:repeat(5, var(--cell));
+  /* Obě vrstvy musí mít stejný počet řad, jinak podklad
+     přeteče pod rám, když je zboží málo. */
+  grid-template-rows:repeat(var(--rows), var(--cell));
   grid-auto-rows:var(--cell);
   gap:var(--gap);
   padding:3px;
@@ -2524,3 +2527,16 @@ html::after{
   padding-left:10px;
 }
 h3{letter-spacing:.5px}
+
+/* admin panel */
+.admin-link{color:#f0a0a0 !important;font-weight:bold}
+.admin-link:hover{text-shadow:0 0 8px rgba(240,120,120,.8)}
+.adm-warn{border-color:#a02525}
+.adm-warn .panel-header{background:linear-gradient(180deg,#c03030 0%,#8a1616 55%,#5e0f11 100%)}
+.adm-warn .hall-note{border-left-color:#a02525}
+.adm-input{
+  flex:0 0 auto;width:104px;padding:5px 7px;
+  background:#fdf7e8;border:1px solid #8a7550;border-radius:3px;
+  font:12.5px Georgia,serif;color:#3a2a12;
+}
+select.adm-input{width:190px}
