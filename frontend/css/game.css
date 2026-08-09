@@ -2540,3 +2540,87 @@ h3{letter-spacing:.5px}
   font:12.5px Georgia,serif;color:#3a2a12;
 }
 select.adm-input{width:190px}
+
+/* =========================================================
+   BLUDISTE - mapa mistnosti
+   ========================================================= */
+.dg-lista{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:8px 12px;margin-bottom:11px;
+  background:linear-gradient(180deg,#e8dab6,#d3bf93);
+  border:2px solid #a8916a;border-radius:3px;
+  font-size:12.5px;color:#5c4423;
+}
+.dg-lista b{color:#7d1616}
+
+/* Podklad mapy. Az prijde obrazek patra, staci sem dat
+   background-image a mistnosti na nem zustanou na svych mistech. */
+.dg-mapa{
+  position:relative;
+  aspect-ratio:16/11;
+  background:
+    radial-gradient(ellipse at 30% 25%, rgba(60,40,20,.55), transparent 60%),
+    linear-gradient(160deg,#5a4630 0%,#3a2c1c 55%,#241a10 100%);
+  border:3px solid #2f2616;border-radius:6px;
+  box-shadow:inset 0 0 60px rgba(0,0,0,.7), 0 8px 22px rgba(0,0,0,.5);
+  overflow:hidden;
+}
+
+.dg-cara{
+  position:absolute;height:4px;
+  background:repeating-linear-gradient(90deg, rgba(216,177,58,.30) 0 6px, transparent 6px 12px);
+  transform-origin:0 50%;
+  pointer-events:none;
+}
+.dg-cara.projita{
+  background:repeating-linear-gradient(90deg, rgba(216,177,58,.85) 0 6px, transparent 6px 12px);
+}
+
+.dg-room{
+  position:absolute;transform:translate(-50%,-50%);
+  width:76px;height:76px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  border-radius:50%;
+  border:3px solid #2f2616;
+  background:radial-gradient(circle at 40% 35%, #6b5636, #2e2416);
+  box-shadow:inset 0 0 18px rgba(0,0,0,.7), 0 4px 12px rgba(0,0,0,.55);
+  color:#c9b48a;
+  transition:transform .14s, box-shadow .14s, border-color .14s;
+}
+.dg-znak{font:bold 22px Georgia,serif;line-height:1;text-shadow:0 2px 4px rgba(0,0,0,.9)}
+.dg-popis{
+  font-size:8.5px;letter-spacing:.2px;text-align:center;line-height:1.1;
+  text-shadow:0 1px 2px #000;padding:0 3px;
+}
+
+.dg-room.zamcena{opacity:.5;filter:grayscale(.6)}
+.dg-room.hotova{
+  border-color:#6d8a2a;
+  background:radial-gradient(circle at 40% 35%, #4d6b28, #24310f);
+  color:#bcd88a;
+}
+.dg-room.otevrena{
+  cursor:pointer;
+  border-color:#d8b13a;
+  background:radial-gradient(circle at 40% 35%, #8a6a34, #453218);
+  color:#f4dfa4;
+  box-shadow:inset 0 0 18px rgba(0,0,0,.6), 0 0 20px rgba(216,177,58,.55), 0 4px 12px rgba(0,0,0,.55);
+  animation:dgPuls 1.7s ease-in-out infinite;
+}
+.dg-room.otevrena:hover{transform:translate(-50%,-50%) scale(1.09)}
+@keyframes dgPuls{
+  0%,100%{box-shadow:inset 0 0 18px rgba(0,0,0,.6), 0 0 16px rgba(216,177,58,.45), 0 4px 12px rgba(0,0,0,.55)}
+  50%    {box-shadow:inset 0 0 18px rgba(0,0,0,.6), 0 0 28px rgba(216,177,58,.85), 0 4px 12px rgba(0,0,0,.55)}
+}
+.dg-room.boss.otevrena{border-color:#c03030;box-shadow:inset 0 0 18px rgba(0,0,0,.6), 0 0 24px rgba(200,50,50,.7)}
+.dg-room.poklad.otevrena{border-color:#f0d060}
+
+.dg-start,.dg-hotovo{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  margin-top:11px;padding:11px 13px;
+  background:linear-gradient(180deg,#e8dab6,#d3bf93);
+  border:2px solid #a8916a;border-radius:3px;
+  font-size:12.5px;color:#5c4423;
+}
+.dg-hotovo b{color:#3d6b12}
+.dg-info b{color:#7d1616}

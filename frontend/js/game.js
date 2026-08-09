@@ -23,12 +23,6 @@ const ENEMIES = [
   { name:'Titan',            icon:'⚡',level:20, hp:800,  maxHp:800,  str:90, def:60, gold:900, exp:900 },
 ];
 
-const DUNGEONS = [
-  { name:'Labyrint Minotaura', icon:'🏛️', level:1,  time:'5 min',  timeMs:5*60000,  gold:[20,50],  exp:[30,60],  desc:'Starověký labyrint plný pastí a nestvůr.' },
-  { name:'Jeskyně Kyklopů',    icon:'🌋', level:5,  time:'15 min', timeMs:15*60000, gold:[80,150], exp:[100,180], desc:'Temné jeskyně obývané jednookými obry.' },
-  { name:'Chrám Hádův',        icon:'💀', level:10, time:'30 min', timeMs:30*60000, gold:[200,400],exp:[250,450], desc:'Podsvětní chrám - jen silní přežijí.' },
-  { name:'Olymp',              icon:'⚡', level:20, time:'60 min', timeMs:60*60000, gold:[500,1000],exp:[600,1100],desc:'Sídlo bohů - ultimátní výzva.' },
-];
 
 const SHOP_ITEMS = {
   weapons: [
@@ -315,30 +309,6 @@ function arena() {
 }
 
 // ===== DUNGEON =====
-function dungeon() {
-  const items = DUNGEONS.map((d,i) => `
-    <div class="dungeon-item" onclick="startDungeon(${i})">
-      <span class="dungeon-icon">${d.icon}</span>
-      <div class="dungeon-info">
-        <div class="dungeon-name">${d.name}</div>
-        <div class="dungeon-desc">${d.desc}</div>
-        <div class="dungeon-stats">
-          <span>⏱ ${d.time}</span>
-          <span>💰 ${d.gold[0]}-${d.gold[1]}</span>
-          <span>⭐ ${d.exp[0]}-${d.exp[1]} XP</span>
-          <span>Lv.${d.level}+</span>
-        </div>
-      </div>
-      <button class="dungeon-btn">${character.level >= d.level ? '🏰 Vstoupit' : '🔒 Lv.'+d.level}</button>
-    </div>`).join('');
-  return `
-  <div class="panel">
-    <div class="panel-header">🏰 Dungeony</div>
-    <div class="panel-body">
-      <div class="dungeon-list">${items}</div>
-    </div>
-  </div>`;
-}
 
 // ===== QUESTS =====
 function quests() {
@@ -1677,6 +1647,7 @@ function endCombat(won) {
   }
   // po výpravě si gladiátor musí odpočinout
   if (lastFight && lastFight.view === 'expedition') startExpedCooldown();
+  if (won && lastFight && lastFight.view === 'dungeon') bludisteVyhra();
   wearEquipment();
 
   saveChar(); updateUI();
@@ -1775,13 +1746,6 @@ function addLog(msg, cls) {
 }
 
 // ========== DUNGEON ==========
-function startDungeon(idx) {
-  const d = DUNGEONS[idx];
-  if (character.level < d.level) { toast(`Bludiště ${d.name} se otevře na úrovni ${d.level}.`); return; }
-  if (!spendPoint('dungeon')) { toast('Došly body bludiště. Další se doplní za 10 minut.'); return; }
-  toast(`${d.name}: výprava potrvá ${d.time}.`);
-  refreshExpedUI();
-}
 
 // ========== QUESTS ==========
 function startQuest(id) {
@@ -3035,6 +2999,194 @@ function admin() {
     <div class="panel-header">Ukončit</div>
     <div class="panel-body">
       <button class="btn-back" onclick="vypniAdmin()">Vypnout admin režim</button>
+    </div>
+  </div>`;
+}
+
+
+// ========== BLUDIŠTĚ ==========
+// Mapa propojených místností. Postupuje se jednou za druhou:
+// otevřená je vždycky jen ta hned za poslední vyčištěnou.
+// Souřadnice jsou v procentech, aby pod ně šlo podložit obrázek.
+
+const DUNGEON_MISTNOSTI = [
+  { x: 16, y: 74, popis: 'Vstupní síň' },
+  { x: 14, y: 44, popis: 'Zatopená chodba' },
+  { x: 38, y: 20, popis: 'Svatyně' },
+  { x: 46, y: 52, popis: 'Kobka' },
+  { x: 72, y: 24, popis: 'Jatka' },
+  { x: 70, y: 66, popis: 'Trůnní sál' },
+];
+
+let dungeonRun = null;   // { patro, mistnosti[], postup, aktivni }
+
+function ulozBludiste() {
+  localStorage.setItem('dungeonRun', JSON.stringify(dungeonRun));
+}
+
+function nactiBludiste() {
+  try { dungeonRun = JSON.parse(localStorage.getItem('dungeonRun') || 'null'); }
+  catch (e) { dungeonRun = null; }
+  return dungeonRun;
+}
+
+// Nové patro. Poslední místnost je vždycky boss, jedna po cestě je poklad.
+function noveBludiste(patro) {
+  const zaklad = EXPEDITIONS[Math.min(EXPEDITIONS.length - 1,
+                    Math.floor((character.level - 1) / 4))];
+  const pokladIdx = 2 + Math.floor(Math.random() * 2);
+
+  dungeonRun = {
+    patro,
+    postup: 0,
+    aktivni: null,
+    mistnosti: DUNGEON_MISTNOSTI.map((m, i) => {
+      const posledni = i === DUNGEON_MISTNOSTI.length - 1;
+      const sablona = zaklad.monsters[Math.min(zaklad.monsters.length - 1,
+                        Math.floor(i * zaklad.monsters.length / DUNGEON_MISTNOSTI.length))];
+      return {
+        ...m,
+        typ: posledni ? 'boss' : (i === pokladIdx ? 'poklad' : 'nestvura'),
+        hotovo: false,
+        sablona,
+      };
+    }),
+  };
+  ulozBludiste();
+}
+
+function vstupDoBludiste() {
+  if (!spendPoint('dungeon')) { toast('Došly body bludiště. Další se doplní za 10 minut.'); return; }
+  noveBludiste((dungeonRun ? dungeonRun.patro : 0) + 1);
+  openView('dungeon');
+}
+
+function opustBludiste() {
+  dungeonRun = null;
+  localStorage.removeItem('dungeonRun');
+  openView('dungeon');
+  toast('Opustil jsi bludiště.');
+}
+
+// vejít do místnosti
+function vejdiDo(i) {
+  if (!dungeonRun) return;
+  const m = dungeonRun.mistnosti[i];
+  if (!m || m.hotovo) return;
+  if (i !== dungeonRun.postup) { toast('Nejdřív projdi předchozí místnost.'); return; }
+
+  if (m.typ === 'poklad') {
+    const zlato = Math.round((30 + character.level * 12) * (0.8 + Math.random() * 0.6));
+    character.gold += zlato;
+    m.hotovo = true;
+    dungeonRun.postup++;
+    ulozBludiste(); saveChar(); updateUI(); openView('dungeon');
+    toast(`V truhle bylo ${zlato} zlata.`);
+    return;
+  }
+
+  dungeonRun.aktivni = i;
+  ulozBludiste();
+
+  const prisera = rollMonster(m.sablona);
+  if (m.typ === 'boss') {           // boss je tvrdší a platí líp
+    prisera.name = 'Pán ' + (prisera.name || 'bludiště');
+    prisera.hp = Math.round(prisera.hp * 1.6);
+    prisera.maxHp = prisera.hp;
+    prisera.str = Math.round(prisera.str * 1.25);
+    prisera.gold = Math.round(prisera.gold * 2.5);
+    prisera.exp = Math.round(prisera.exp * 2.5);
+  }
+  beginFight(prisera, 'dungeon');
+}
+
+// po vyhraném boji v bludišti se místnost odemkne
+function bludisteVyhra() {
+  if (!dungeonRun || dungeonRun.aktivni == null) return;
+  const m = dungeonRun.mistnosti[dungeonRun.aktivni];
+  if (m) { m.hotovo = true; dungeonRun.postup++; }
+  dungeonRun.aktivni = null;
+
+  if (dungeonRun.postup >= dungeonRun.mistnosti.length) {
+    const odmena = Math.round(120 + character.level * 45);
+    character.gold += odmena;
+    toast(`Bludiště zdoláno! Odměna ${odmena} zlata.`);
+    saveChar(); updateUI();
+  }
+  ulozBludiste();
+}
+
+function dungeon() {
+  nactiBludiste();
+
+  if (!dungeonRun) {
+    return `
+    <div class="panel">
+      <div class="panel-header">Bludiště</div>
+      <div class="panel-body">
+        <p class="hall-note">
+          Pod městem se táhne soustava komor. Postupuje se jednou po druhé —
+          v každé někdo čeká, poslední hlídá pán bludiště.
+          Vstup stojí jeden bod bludiště.
+        </p>
+        <div class="dg-start">
+          <div class="dg-info">Body bludiště: <b>${points('dungeon')}</b> / ${EXPED_MAX}</div>
+          <button class="btn-green" ${points('dungeon') > 0 ? '' : 'disabled'}
+                  onclick="vstupDoBludiste()">Vstoupit do bludiště</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const hotovo = dungeonRun.postup >= dungeonRun.mistnosti.length;
+
+  const mistnosti = dungeonRun.mistnosti.map((m, i) => {
+    const otevrena = i === dungeonRun.postup && !hotovo;
+    const stav = m.hotovo ? 'hotova' : otevrena ? 'otevrena' : 'zamcena';
+    const znak = m.hotovo ? '✓' : m.typ === 'boss' ? '☠' : m.typ === 'poklad' ? '⌘' : (i + 1);
+    return `
+      <div class="dg-room ${stav} ${m.typ}"
+           style="left:${m.x}%;top:${m.y}%"
+           ${otevrena ? `onclick="vejdiDo(${i})"` : ''}
+           title="${m.popis}">
+        <span class="dg-znak">${znak}</span>
+        <span class="dg-popis">${m.popis}</span>
+      </div>`;
+  }).join('');
+
+  // spojnice mezi místnostmi
+  const cary = dungeonRun.mistnosti.slice(1).map((m, i) => {
+    const a = dungeonRun.mistnosti[i], b = m;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const delka = Math.sqrt(dx * dx + dy * dy);
+    const uhel = Math.atan2(dy, dx) * 180 / Math.PI;
+    return `<div class="dg-cara ${i < dungeonRun.postup ? 'projita' : ''}"
+                 style="left:${a.x}%;top:${a.y}%;width:${delka}%;transform:rotate(${uhel}deg)"></div>`;
+  }).join('');
+
+  return `
+  <div class="panel">
+    <div class="panel-header">Bludiště — ${dungeonRun.patro}. patro</div>
+    <div class="panel-body">
+
+      <div class="dg-lista">
+        <span>Postup: <b>${dungeonRun.postup}</b> / ${dungeonRun.mistnosti.length}</span>
+        <span>Body: <b>${points('dungeon')}</b> / ${EXPED_MAX}</span>
+        <button class="btn-back" onclick="opustBludiste()">Opustit</button>
+      </div>
+
+      <div class="dg-mapa">
+        ${cary}
+        ${mistnosti}
+      </div>
+
+      ${hotovo ? `
+        <div class="dg-hotovo">
+          <b>Patro vyčištěno.</b> Můžeš sestoupit hlouběji — další patro je těžší.
+          <button class="btn-green" ${points('dungeon') > 0 ? '' : 'disabled'}
+                  onclick="vstupDoBludiste()">Sestoupit do ${dungeonRun.patro + 1}. patra</button>
+        </div>` : ''}
+
     </div>
   </div>`;
 }
