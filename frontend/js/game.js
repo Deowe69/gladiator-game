@@ -183,7 +183,7 @@ function updateUI() {
   if (els.navGold) els.navGold.textContent = c.gold;
   if (els.charNameSm) els.charNameSm.textContent = c.name;
   if (els.charClassSm) els.charClassSm.textContent = c.class;
-  if (els.charAvatarSm) els.charAvatarSm.innerHTML = getAvatar(c.class, c.gender);
+  if (els.charAvatarSm) els.charAvatarSm.innerHTML = avatarProUroven(c.level);
   if (els.sHealth) els.sHealth.textContent = `${c.health}/${maxHP()}`;
   if (els.sStr) els.sStr.textContent = c.strength;
   if (els.sDef) els.sDef.textContent = c.defense;
@@ -600,6 +600,13 @@ setInterval(() => {
 
 // ===== INVENTORY =====
 // Slot definitions
+// Sloupec vpravo na panákovi jsou očka na pomocníky.
+// Otevírají se od 20. úrovně a samotní pomocníci zatím ve hře nejsou,
+// takže očka zůstávají prázdná — ale je vidět, že tam patří.
+const POMOCNIK_SLOTS = ['pom1','pom2','pom3','pom4','pom5','pom6','pom7'];
+const POMOCNIK_OD_UROVNE = 20;
+const pomocniciOtevreni = () => (character && character.level || 1) >= POMOCNIK_OD_UROVNE;
+
 const SLOT_DEFS = {
   helmet:  { label:'Helma',    icon:'⛑️',  key:'defense',  bonus:3  },
   weapon:  { label:'Zbraň',    icon:'⚔️',  key:'strength', bonus:6  },
@@ -651,6 +658,8 @@ function itemIcon(item, cls = '') {
   const path = item.img ? `img/${item.img}` : `img/items/${item.id}.png`;
   return artImg(path, emoji, cls, item.name, item.tint);
 }
+
+POMOCNIK_SLOTS.forEach(k => { SLOT_DEFS[k] = { label:'Pomocník', icon:'👤' }; });
 
 // Prázdný slot: img/slots/<klíč>.png, jinak emoji ze SLOT_DEFS
 function slotIcon(key, cls = '') {
@@ -709,26 +718,62 @@ function dollSlotsHTML() {
       </div>`;
   };
 
-  return DOLL.map(x => one(x.key, x.cls)).join('') + `
-    <div class="slot rings">
-      ${['ring','belt'].map(k => {
-        const eq = equipped[k];
-        return `<div class="slot-sm ${eq ? '' : 'empty'}"
-                     draggable="${eq ? 'true' : 'false'}"
-                     ondragstart="dragStart(event,'slot','${k}')"
-                     ondragend="dragEnd(event)"
-                     ondragover="dragOver(event)"
-                     ondragleave="dragLeave(event)"
-                     ondrop="dropOn(event,'slot','${k}')"
-                     onclick="unequip('${k}')"
-                     ${eq ? `data-tip="eq:${k}"` : `title="${SLOT_DEFS[k].label}"`}>${eq ? itemIcon(eq,'s-ico-sm') : slotIcon(k,'s-ico-sm')}</div>`;
-      }).join('')}
+  // Pozice jsou změřené z img/ui/frame-doll.jpg, takže očka sedí
+  // na namalovaných rámečcích. Když se obrázek vymění, přeměř je.
+  const zamceno = !pomocniciOtevreni();
+  return DOLL_POZICE.map(p => {
+    const styl = `left:${p.x}%;top:${p.y}%;width:${p.w}%;height:${p.h}%`;
+    if (p.pomocnik) {
+      return `<div class="doll-slot pomocnik ${zamceno ? 'zamceny' : ''}" style="${styl}"
+                   title="${zamceno ? `Pomocníci se otevřou na ${POMOCNIK_OD_UROVNE}. úrovni` : 'Místo pro pomocníka'}">
+                <span class="pom-znak">${zamceno ? '🔒' : '👤'}</span>
+              </div>`;
+    }
+    return `<div class="doll-slot" style="${styl}">${one(p.key, '')}</div>`;
+  }).join('');
+}
+
+const DOLL_POZICE = [
+  { key:'helmet', x:36.62, y: 7.88, w:14.19, h:22.20 },
+  { key:'weapon', x:12.21, y:35.45, w:15.61, h:28.29 },
+  { key:'chest',  x:35.49, y:35.45, w:15.61, h:27.93 },
+  { key:'shield', x:58.20, y:35.45, w:16.47, h:28.29 },
+  { key:'gloves', x:12.21, y:69.11, w:15.90, h:21.49 },
+  { key:'boots',  x:35.49, y:69.11, w:15.90, h:21.49 },
+  { key:'belt',   x:57.63, y:74.49, w: 9.37, h:13.25 },
+  { key:'amulet', x:68.13, y:74.84, w: 8.52, h:12.18 },
+  // sloupec oček na pomocníky vpravo (od 20. úrovně)
+  { key:'pom1', x:86.02, y: 8.24, w:7.95, h:10.03, pomocnik:true },
+  { key:'pom2', x:85.45, y:20.77, w:8.52, h:11.10, pomocnik:true },
+  { key:'pom3', x:86.30, y:34.74, w:7.38, h:10.03, pomocnik:true },
+  { key:'pom4', x:86.02, y:47.63, w:7.95, h:10.03, pomocnik:true },
+  { key:'pom5', x:86.02, y:60.16, w:7.95, h:10.38, pomocnik:true },
+  { key:'pom6', x:85.45, y:72.69, w:8.52, h:10.74, pomocnik:true },
+  { key:'pom7', x:86.02, y:85.59, w:7.95, h: 9.67, pomocnik:true },
+];
+
+const BAG_SIZE = 35;   // 7 x 5 policek, kolik jich ram maluje
+
+// mode: 'use' = kliknutím vybavit / vypít, 'sell' = kliknutím prodat
+// Batoh má na rámu 7 x 5 oček a čtyři záložky.
+const BAG_COLS = 7, BAG_ROWS = 5;
+const BAG_PAGE = BAG_COLS * BAG_ROWS;
+let bagPage = 0;
+
+function setBagPage(p) { bagPage = p; openView(currentView); }
+
+function bagFrameHTML(mode) {
+  const zalozky = [0, 1, 2, 3].map(i =>
+    `<div class="pg-tab ${i === bagPage ? 'active' : ''}" onclick="setBagPage(${i})">${['I','II','III','IV'][i]}</div>`
+  ).join('');
+
+  return `
+    <div class="frame frame-bag">
+      <div class="frame-tabs bag-tabs">${zalozky}</div>
+      <div class="bag-grid">${bagSlotsHTML(mode)}</div>
     </div>`;
 }
 
-const BAG_SIZE = 24;
-
-// mode: 'use' = kliknutím vybavit / vypít, 'sell' = kliknutím prodat
 function bagSlotsHTML(mode) {
   let html = '';
   for (let i = 0; i < BAG_SIZE; i++) {
@@ -753,12 +798,7 @@ function bagSlotsHTML(mode) {
 
 function equipPanelHTML() {
   return `
-    <div class="eq-frame">
-      <div class="eq-doll">${dollSlotsHTML()}</div>
-      <div class="eq-side">
-        ${[0,1,2,3].map(() => '<div class="slot empty" title="Zamčeno"><span class="s-ico">🔒</span></div>').join('')}
-      </div>
-    </div>`;
+    <div class="frame frame-doll">${dollSlotsHTML()}</div>`;
 }
 
 function bagPanelHTML(mode) {
@@ -796,11 +836,11 @@ function profileView() {
   const rowPlain = (label, val) =>
     `<div class="strow plain"><span class="sl">${label}</span><span class="sv">${val}</span></div>`;
 
-  const avatar = getAvatar(c.class, c.gender);
+  const avatar = avatarProUroven(c.level);
   const avatarHTML = /^\s*</.test(avatar) ? avatar : `<span class="emoji">${avatar}</span>`;
 
-  const dollHTML = dollSlotsHTML();
-  const bagHTML  = bagSlotsHTML('use');
+  const dollHTML = `<div class="frame frame-doll">${dollSlotsHTML()}</div>`;
+  const bagHTML  = bagFrameHTML('use');
 
   return `
   <div class="gl-profile">
@@ -830,19 +870,11 @@ function profileView() {
     <div class="eq-wrap">
       <div class="eq-frame">
         <div class="eq-doll">${dollHTML}</div>
-        <div class="eq-side">
-          ${[0,1,2,3].map(() => `<div class="slot empty" title="Zamčeno"><span class="s-ico">🔒</span></div>`).join('')}
-        </div>
       </div>
 
       <div class="bag">
         <div class="bag-tabs">
-          <div class="bag-tab active">I</div>
-          <div class="bag-tab">II</div>
-          <div class="bag-tab">III</div>
-          <div class="bag-tab">IV</div>
-        </div>
-        <div class="bag-grid">${bagHTML}</div>
+        ${bagHTML}
       </div>
     </div>
 
@@ -3270,6 +3302,28 @@ function dungeon() {
 
     </div>
   </div>`;
+}
+
+// ========== IKONKA POSTAVY PODLE ÚROVNĚ ==========
+// Horní hranice patří ještě daný stupeň: na 13. úrovni platí 1-13lv,
+// na 14. už 13-25lv.
+const AVATAR_STUPNE = [
+  { do: 13,       soubor: '1-13lv'   },
+  { do: 25,       soubor: '13-25lv'  },
+  { do: 40,       soubor: '25-40lv'  },
+  { do: 60,       soubor: '40-60lv'  },
+  { do: 70,       soubor: '60-70lv'  },
+  { do: 85,       soubor: '70-85lv'  },
+  { do: 100,      soubor: '85-100lv' },
+  { do: Infinity, soubor: '100+lv'   },
+];
+
+const avatarSoubor = uroven =>
+  AVATAR_STUPNE.find(s => (uroven || 1) <= s.do).soubor;
+
+// Obrázek postavy pro danou úroveň; když chybí, spadne se na emoji.
+function avatarProUroven(uroven, cls) {
+  return artImg(`img/avatars/${avatarSoubor(uroven)}.jpg`, '🧑', cls || 'av-img', 'Postava');
 }
 
 // ===== SÍŇ SLÁVY =====
