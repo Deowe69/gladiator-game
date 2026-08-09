@@ -2994,3 +2994,29 @@ select.adm-input{width:190px}
   box-shadow:none;
   padding:14px 4px;
 }
+
+/* zalozky nad obsahem odebrany - pergamen uz nemusi mit zkoseny roh */
+.parchment{border-radius:0}
+
+/* Popis na cvicisti: barvu si prebiraly odstavce, proto zustaval tmavy.
+   Ciluju primo na ne a davam tomu vlastni ramecek. */
+.tr-text{
+  background:linear-gradient(180deg, rgba(26,20,10,.72), rgba(16,12,6,.82));
+  border:2px solid rgba(198,160,84,.55);
+  border-radius:4px;
+  padding:12px 15px;
+  box-shadow:inset 0 1px 0 rgba(240,216,134,.18), 0 3px 10px rgba(0,0,0,.5);
+}
+.tr-text p{
+  color:#eadcb8;
+  font-size:12.5px;line-height:1.65;
+  margin:0 0 8px;
+  text-shadow:0 1px 3px rgba(0,0,0,.95);
+}
+.tr-text p:last-child{margin-bottom:0}
+.tr-text em,.tr-text i{color:#f0d886;font-style:italic}
+
+/* stitek nad namalovanym obrazkem uz nekreslime */
+.tr-portrait{background:none}
+.tr-portrait:empty::before{content:none}
+.tr-img{display:none}
