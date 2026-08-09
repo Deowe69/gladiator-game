@@ -1212,7 +1212,7 @@ span.fighter-img{font-size:52px}
    OBCHOD – svislý rám podle předlohy
    (přepisuje starší pravidla výše)
    ========================================================= */
-.s2body{grid-template-columns:298px 1fr;align-items:start}
+.s2body{grid-template-columns:308px 1fr;align-items:start}
 
 /* kovový rám kolem celého pultu */
 .shop-frame{
@@ -1979,12 +1979,12 @@ html::after{
    ========================================================= */
 .goods-wrap{
   position:relative;
-  --cell:52px; --gap:2px;
+  --cell:44px; --gap:2px;
 }
 .goods-lattice,
 .shop-frame .goods-grid{
   display:grid;
-  grid-template-columns:repeat(5, var(--cell));
+  grid-template-columns:repeat(6, var(--cell));
   /* Obě vrstvy musí mít stejný počet řad, jinak podklad
      přeteče pod rám, když je zboží málo. */
   grid-template-rows:repeat(var(--rows), var(--cell));
@@ -2203,7 +2203,7 @@ html::after{
 /* zóna pro výkup */
 .shop-frame .sell-zone{
   display:flex;align-items:center;justify-content:center;
-  min-height:344px;
+  min-height:466px;
   border:2px dashed #b09a70;border-radius:0 3px 0 0;
   background:linear-gradient(180deg,rgba(74,51,32,.85),rgba(46,30,18,.9));
   text-align:center;

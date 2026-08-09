@@ -419,8 +419,8 @@ function merchantPortrait(id) {
 // ========== ROZMĚRY PŘEDMĚTŮ ==========
 // [šířka, výška] v políčkách. Odvozuje se ze slotu, do kterého kus patří,
 // takže nový předmět dostane rozměr sám podle svého druhu.
-const SHOP_COLS = 5;   // pult je 5 x 8 políček
-const SHOP_ROWS = 8;
+const SHOP_COLS = 6;   // pult je 6 x 10 políček
+const SHOP_ROWS = 10;
 const ITEM_SIZE = {
   weapon: [1, 3],   // meče, kopí, luky – dlouhé
   shield: [2, 2],
@@ -938,8 +938,8 @@ function dropOn(e, type, ref) {
 
   // --- do slotu vybavení ---
   if (type === 'slot') {
-    if (item.lvl && character.level < item.lvl) {
-      toast(`${item.name} si můžeš vzít až na úrovni ${item.lvl}.`);
+    if (!uneseKus(item)) {
+      toast(`${item.name} má úroveň ${item.lvl}. Uneseš nejvýš ${maxNositelnaUroven()}.`);
       return;
     }
     const want = slotForItem(item);
@@ -998,10 +998,11 @@ function unequip(key) {
 function useItem(i) {
   const item = inventory[i];
   if (!item) return;
-  if (item.lvl && character.level < item.lvl) {
-    toast(`${item.name} si můžeš vzít až na úrovni ${item.lvl}.`);
+  if (!uneseKus(item)) {
+    toast(`${item.name} má úroveň ${item.lvl}. Uneseš nejvýš ${maxNositelnaUroven()}.`);
     return;
   }
+
 
   if (item.key === 'health') {
     character.health = Math.min(maxHP(), character.health + item.val);
@@ -1110,16 +1111,31 @@ function totalArmor() {
 // zbylé se losují, takže dva stejné meče nejsou nikdy stejné.
 function rollItem(tpl) {
   const it = { ...tpl, uid: 'i' + Math.random().toString(36).slice(2, 10) };
-  it.lvl = Math.max(1, Math.round((tpl.price || 25) / 28));   // požadovaná úroveň
+  // Úroveň kusu se losuje kolem úrovně hráče: od tří pod ni po pět nad ni.
+  const hracLvl = character ? character.level : 1;
+  it.lvl = Math.max(1, hracLvl + Math.floor(Math.random() * 9) - 3);
+
+  // Sílu určuje úroveň a kvalita, ne cena šablony. Kdyby se škálovalo
+  // podle ceny, vyšlo by dřevěné rezátko na 15. úrovni stejně jako
+  // Meč Achillea — třídy by se slely dohromady.
+  const kval = qualityOf(tpl);
+  const naUroven = (zaklad, naLvl) => Math.max(1, Math.round((zaklad + it.lvl * naLvl) * kval.mult));
+
+  tpl = { ...tpl, val: naUroven(3, 1.6) };                 // objem vlastností
+  it.price = Math.max(10, Math.round((14 + it.lvl * it.lvl * 1.1) * kval.mult));
+
+  if (Array.isArray(tpl.dmg)) {
+    it.dmg = [naUroven(1, 1.5), naUroven(3, 2.4)];
+  }
 
   // kusy výstroje nesou vlastní zbroj (zbraně a šperky ne)
   if (ARMOR_SLOTS.includes(slotForItem(tpl))) {
-    it.armor = Math.max(1, Math.round((tpl.price || 50) / 5 * qualityOf(tpl).mult));
+    it.armor = naUroven(4, 3.2);
   }
 
   // všechno nositelné se opotřebovává
   if (slotForItem(tpl)) {
-    it.durMax = Math.round(150 + (tpl.price || 50) * 1.5 * qualityOf(tpl).mult);
+    it.durMax = Math.round(150 + it.price * 1.5 * qualityOf(tpl).mult);
     it.dur    = it.durMax;
   }
   if (tpl.key === 'health') return it;          // lektvary se nerolují
@@ -1235,7 +1251,8 @@ function itemTipHTML(it) {
   if (it.armor) souhrn = '+' + it.armor + ' Zbroj';
   else if (Array.isArray(it.dmg)) souhrn = '+' + Math.round((it.dmg[0] + it.dmg[1]) / 2) + ' Poškození';
 
-  const tezky = it.lvl && character && character.level < it.lvl;
+  const tezky = !uneseKus(it);                                    // vůbec neunese
+  const nadUrovni = it.lvl && character && character.level < it.lvl; // nad ním, ale unese
 
   return `
     <div class="tip-head" style="background:linear-gradient(180deg,${q.color},#1a1409)">
@@ -1246,13 +1263,15 @@ function itemTipHTML(it) {
       ${rows.join('') || '<div class="tip-row"><span>Bez bonusů</span><b>—</b></div>'}
       ${souhrn ? `<div class="tip-sum">${souhrn}</div>` : ''}
       <div class="tip-sep"></div>
-      ${it.lvl ? `<div class="tip-row${tezky ? ' neg' : ''}"><span>Úroveň</span><b>${it.lvl}</b></div>` : ''}
+      ${it.lvl ? `<div class="tip-row${tezky ? ' neg' : ''}"><span>Úroveň</span><b${!tezky && nadUrovni ? ' class="rank-mid"' : ''}>${it.lvl}</b></div>` : ''}
       <div class="tip-row"><span>Hodnota</span><b>${it.price || 0} zlata</b></div>
       ${it.durMax ? (() => {
         const pct = Math.round(it.dur / it.durMax * 100);
         return `<div class="tip-row"><span>Životnost</span><b class="${durClass(pct)}">${it.dur}/${it.durMax} (${pct} %)</b></div>`;
       })() : ''}
-      ${tezky ? '<div class="tip-warn">Na tenhle kus ti chybí úroveň.</div>' : ''}
+      ${tezky
+          ? `<div class="tip-warn">Uneseš nejvýš úroveň ${maxNositelnaUroven()}.</div>`
+          : nadUrovni ? '<div class="tip-note">Kus je nad tvou úrovní, ale ještě ho uneseš.</div>' : ''}
     </div>`;
 }
 
@@ -2303,6 +2322,11 @@ const premium = () => lockedSoon('Prémium');
 // Zničený kus zůstane nasazený, ale nedává žádné bonusy,
 // dokud ho hráč nenechá spravit v Kovárně.
 const isBroken = it => !!(it && it.durMax && it.dur <= 0);
+
+// O kolik smí být kus nad hráčem, aby ho ještě unesl.
+const LVL_TOLERANCE = 5;
+const maxNositelnaUroven = () => (character ? character.level : 1) + LVL_TOLERANCE;
+const uneseKus = it => !it || !it.lvl || it.lvl <= maxNositelnaUroven();
 
 const DUR_WEAR_MIN = 2;   // ubere se po každém boji
 const DUR_WEAR_MAX = 4;
