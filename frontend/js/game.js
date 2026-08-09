@@ -222,7 +222,7 @@ function openView(view, highlight) {
   const views = { city, arena, dungeon, quests, shop, inventory: profileView, profile: profileView,
                   guild, forge, expedition, hall, stats, training, work, premium,
                   report: fightReport, news, fights, messages, loot,
-                  settings, market, auction, admin };
+                  settings, market, auction, admin, combat };
   const viewFn = views[view] || (() => `
     <div class="coming-soon">
       <div class="cs-icon">🚧</div>
@@ -3143,8 +3143,8 @@ function expedition() {
               onclick="attackMonster(${i})">Útok</button>
 
       <div class="mon-rew">
-        <span title="Zlato">🪙 ${m.gold[0]}–${m.gold[1]}</span>
-        <span title="Zkušenosti">⭐ ${m.exp[0]}–${m.exp[1]}</span>
+        <span title="Zlato"><img class="res-ico" src="img/ui/coin.png" alt=""> ${m.gold[0]}–${m.gold[1]}</span>
+        <span title="Zkušenosti">✦ ${m.exp[0]}–${m.exp[1]}</span>
       </div>
 
     </div>`).join('');
@@ -3225,6 +3225,9 @@ function combatPanelHTML() {
   </div>`;
 }
 
+// Boj má vlastní pohled – nic jiného na obrazovce nezůstává.
+function combat() { return combatPanelHTML(); }
+
 // ---------- univerzální start boje ----------
 function beginFight(enemy, view) {
   novyZaznamBoje();
@@ -3237,7 +3240,7 @@ function beginFight(enemy, view) {
   inCombat = true;
   lastFight = { enemy, view };
 
-  openView(view);
+  openView('combat');
   setTimeout(() => {
     const panel = document.getElementById('combatPanel');
     if (!panel) return;
@@ -3254,7 +3257,8 @@ function beginFight(enemy, view) {
     document.getElementById('eName').textContent = currentEnemy.name;
     document.getElementById('combatLog').innerHTML = '';
     document.getElementById('combatBtns').innerHTML =
-      `<button class="btn-back" onclick="skipFight()">Přeskočit animaci</button>`;
+      `<button class="btn-back" onclick="skipFight()">Přeskočit animaci</button>
+       <button class="btn-back" onclick="openView('${view}')">Utéct</button>`;
 
     updateHpBars();
     addLog(`${character.name} vs ${currentEnemy.name} — boj začal!`, 'log-s');
