@@ -2801,3 +2801,56 @@ select.adm-input{width:190px}
 .frame-doll{max-width:520px;margin:0 auto}
 .frame-bag{max-width:560px;margin:0 auto}
 .gl-profile .frame-doll,.gl-profile .frame-bag{max-width:100%}
+
+/* =========================================================
+   PROFIL – rozvržení kolem namalovaných rámů
+   Rámy maji pevny pomer stran, takze sloupec pod ne musi mit
+   dost mista. Drive byl zaskrceny na 430 px a panak se v nem
+   smrsknul na 222 px.
+   ========================================================= */
+.gl-profile{
+  grid-template-columns:236px minmax(520px, 1fr);
+  gap:20px;
+  align-items:start;
+}
+.gl-right{display:flex;flex-direction:column;gap:16px;min-width:0}
+
+/* obal panáka už nic nedělá – rám je sám o sobě panel */
+.eq-frame{
+  background:none;border:none;padding:0;box-shadow:none;
+  display:block;
+}
+
+/* rámy drží poměr stran a berou celou šířku sloupce */
+.gl-profile .frame{width:100%;max-width:none;margin:0;height:auto}
+.gl-profile .frame-doll{aspect-ratio:1409/1117}
+.gl-profile .frame-bag {aspect-ratio:1447/1087}
+
+/* větší rám = čitelnější popisky oček */
+.frame-doll .s-lbl{font-size:11px}
+.frame-doll .s-nm{font-size:10px}
+.doll-slot.pomocnik{font-size:19px}
+
+/* na úzkém okně pod sebe */
+@media (max-width:1040px){
+  .gl-profile{grid-template-columns:1fr}
+  .gl-left{max-width:420px}
+}
+
+/* levý sloupec profilu o něco širší */
+.gl-profile{grid-template-columns:280px minmax(520px, 1fr)}
+.np-name{font-size:15px}
+.nameplate{padding:9px 12px}
+
+/* Číslice záložek jsou namalované v rámu, takže vlastní text
+   nevypisujeme – jen klikací plochu a zvýraznění té aktivní. */
+.frame-tabs .pg-tab{font-size:0;color:transparent;text-shadow:none}
+.frame-tabs .pg-tab.active{
+  background:rgba(255,225,150,.16);
+  box-shadow:inset 0 -2px 0 rgba(248,230,174,.55);
+  text-shadow:none;
+}
+.frame-tabs .pg-tab:hover{background:rgba(255,225,150,.10)}
+/* „Prodat" namalované není, to vypsat musíme */
+.frame-tabs .pg-tab.sell{font-size:11px;color:#d8b884}
+.frame-tabs .pg-tab.sell.active{color:#f8e6ae}

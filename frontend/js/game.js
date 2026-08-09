@@ -869,7 +869,7 @@ function profileView() {
 
     <div class="eq-wrap">
       <div class="eq-frame">
-        <div class="eq-doll">${dollHTML}</div>
+        ${dollHTML}
       </div>
 
       <div class="bag">
