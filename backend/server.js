@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 require('dotenv').config();
 
 const pool = require('./config/db');
+const { MAX_UROVEN, XP_DO_DALSI } = require('./config/xp');
 const authRoutes = require('./routes/auth');
 const characterRoutes = require('./routes/character');
 
@@ -66,6 +67,33 @@ async function initDB() {
     ];
     for (const [jmeno, typ] of noveSloupce) {
       await pool.query(`ALTER TABLE characters ADD COLUMN IF NOT EXISTS ${jmeno} ${typ};`);
+    }
+
+    // Tabulka zkusenosti. Je to herni pravidlo, ne data hrace, ale
+    // v databazi ji chceme, aby si ji server mohl overit sam.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS xp_levels (
+        level      INTEGER PRIMARY KEY,
+        xp_to_next BIGINT,
+        xp_total   BIGINT NOT NULL
+      );
+    `);
+
+    // Naplnime ji jen kdyz je prazdna nebo se zmenila delka tabulky.
+    const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM xp_levels');
+    if (rows[0].n !== MAX_UROVEN) {
+      await pool.query('TRUNCATE xp_levels');
+      let celkem = 0;
+      const hodnoty = [];
+      for (let l = 1; l <= MAX_UROVEN; l++) {
+        const doDalsi = l >= MAX_UROVEN ? null : XP_DO_DALSI[l];
+        hodnoty.push(`(${l}, ${doDalsi === null ? 'NULL' : doDalsi}, ${celkem})`);
+        if (doDalsi) celkem += doDalsi;
+      }
+      await pool.query(
+        `INSERT INTO xp_levels (level, xp_to_next, xp_total) VALUES ${hodnoty.join(',')}`
+      );
+      console.log(`✅ Tabulka zkušeností naplněna: ${MAX_UROVEN} úrovní, celkem ${celkem.toLocaleString('cs-CZ')} XP`);
     }
 
     console.log('✅ Database tables ready!');
