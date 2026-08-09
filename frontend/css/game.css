@@ -3502,3 +3502,118 @@ select.adm-input{width:190px}
   box-shadow:inset 0 2px 6px rgba(0,0,0,.55), 0 0 8px rgba(216,177,58,.35);
   filter:none;
 }
+
+/* =========================================================
+   SIN SLAVY: zebricek
+   ========================================================= */
+.zb-obal{overflow-x:auto;margin-top:8px}
+.zb-tabulka{width:100%;border-collapse:collapse;font-size:12.5px;min-width:560px}
+.zb-tabulka th{
+  padding:7px 9px;text-align:left;white-space:nowrap;
+  background:linear-gradient(180deg,#a8272a,#611013);
+  color:#f4dfa4;font-size:11.5px;letter-spacing:.4px;text-transform:uppercase;
+  border-bottom:2px solid rgba(216,177,58,.5);
+}
+.zb-tabulka td{
+  padding:7px 9px;color:#e0d0aa;
+  border-bottom:1px solid rgba(140,115,80,.25);
+  font-variant-numeric:tabular-nums;
+}
+.zb-tabulka tr:hover td{background:rgba(240,216,134,.07)}
+.zb-poradi{color:#c9a961;font-weight:bold}
+.zb-jmeno{color:#f0d886;font-weight:bold}
+.zb-tabulka tr.ja td{
+  background:linear-gradient(180deg, rgba(216,177,58,.22), rgba(216,177,58,.12));
+  color:#f8e6ae;
+}
+.zb-tabulka tr.ja .zb-jmeno{color:#fff0c0}
+
+/* denni odmena */
+.dr-row{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.dr-text{color:#e0d0aa;font-size:12.5px;line-height:1.6}
+.dr-text b{color:#f0d886}
+
+/* Zebricek byl natesno - vic vzduchu a citelnejsi cisla. */
+.zb-tabulka{font-size:13.5px;min-width:640px}
+.zb-tabulka th{padding:11px 14px;font-size:12px}
+.zb-tabulka td{padding:11px 14px}
+.zb-tabulka th:first-child,.zb-tabulka td:first-child{padding-left:18px}
+.zb-tabulka th:last-child,.zb-tabulka td:last-child{padding-right:18px}
+.zb-tabulka th:not(:first-child):not(:nth-child(2)),
+.zb-tabulka td:not(:first-child):not(:nth-child(2)){text-align:right}
+.zb-jmeno{font-size:14px}
+.zb-obal{
+  border:2px solid rgba(198,160,84,.45);
+  border-radius:4px;
+  background:linear-gradient(180deg, rgba(30,23,12,.6), rgba(18,13,7,.7));
+}
+.zb-tabulka tbody tr:last-child td{border-bottom:none}
+
+/* =========================================================
+   SIN SLAVY: seznam vlevo, detail vpravo
+   ========================================================= */
+.hf-telo{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start;margin-top:8px}
+@media (max-width:980px){ .hf-telo{grid-template-columns:1fr} }
+
+.hf-sloupec{
+  background:linear-gradient(180deg, rgba(30,23,12,.72), rgba(18,13,7,.82));
+  border:2px solid rgba(198,160,84,.45);border-radius:4px;
+  padding:10px;
+}
+.hf-hlava,.hf-radek{
+  display:grid;grid-template-columns:44px 1fr 74px 110px;
+  align-items:center;gap:10px;padding:9px 12px;
+}
+.hf-hlava{
+  background:linear-gradient(180deg,#a8272a,#611013);
+  border-radius:3px;margin-bottom:6px;
+  color:#f4dfa4;font:bold 11.5px Georgia,serif;
+  letter-spacing:.4px;text-transform:uppercase;
+}
+.hf-seznam{max-height:430px;overflow-y:auto}
+.hf-radek{
+  cursor:pointer;border-bottom:1px solid rgba(140,115,80,.22);
+  color:#e0d0aa;font-size:13px;
+  transition:background .12s;
+}
+.hf-radek:hover{background:rgba(240,216,134,.08)}
+.hf-radek.vybrany{background:rgba(216,177,58,.18);box-shadow:inset 3px 0 0 #d8b13a}
+.hf-radek.ja .hf-jmeno{color:#f8e6ae}
+.hf-poradi{color:#c9a961;font-weight:bold;text-align:right}
+.hf-jmeno{color:#f0d886;font-weight:bold}
+.hf-uroven,.hf-exp{text-align:right;font-variant-numeric:tabular-nums}
+.hf-prazdno{padding:18px;text-align:center;color:#bda878;font-style:italic}
+
+.hf-hledani{
+  width:100%;margin-top:9px;padding:8px 11px;
+  background:rgba(20,15,8,.9);border:1px solid rgba(198,160,84,.45);
+  border-radius:3px;color:#e8d4a0;font:12.5px Georgia,serif;
+}
+.hf-hledani::placeholder{color:#8a7a5c}
+
+/* detail vybraneho */
+.hf-detail{display:flex;flex-direction:column;gap:10px}
+.hf-portret{position:relative;border:2px solid rgba(198,160,84,.55);border-radius:4px;overflow:hidden}
+.hf-img{width:100%;height:230px;object-fit:cover;object-position:center 16%;display:block}
+.hf-jmenovka{
+  position:absolute;left:0;right:0;bottom:0;padding:8px 11px;
+  background:linear-gradient(180deg,transparent,rgba(0,0,0,.85));
+  text-align:center;
+}
+.hf-nadpis{color:#f8e6ae;font:bold 15px Georgia,serif;text-shadow:0 1px 4px #000}
+.hf-trida{color:#c9b48a;font-size:11.5px;font-style:italic;text-shadow:0 1px 3px #000}
+.hf-uroven-pas{
+  padding:7px;text-align:center;border-radius:3px;
+  background:linear-gradient(180deg,#a8272a,#611013);
+  border:1px solid #4a0b0b;
+  color:#f4dfa4;font:bold 13px Georgia,serif;letter-spacing:.5px;
+}
+.hf-vlastnosti{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.hf-vl{
+  padding:8px 10px;border-radius:3px;
+  background:linear-gradient(180deg, rgba(46,35,20,.85), rgba(28,21,12,.9));
+  border:1px solid rgba(198,160,84,.35);
+}
+.hf-vl-nazev{color:#c9b48a;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase}
+.hf-vl-hod{color:#f0d886;font:bold 16px Georgia,serif;font-variant-numeric:tabular-nums}
+.hf-vl-popis{color:#9d8a68;font-size:10.5px}

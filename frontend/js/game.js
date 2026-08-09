@@ -130,6 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     openView('city');
     startQuestTimer();
     loadLeaderboard();
+    nabidniDenniOdmenu();
   } catch (err) {
     // Fallback: load from localStorage or create demo character
     const savedChar = localStorage.getItem('character');
@@ -141,6 +142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       openView('city');
       startQuestTimer();
       loadLeaderboard();
+      nabidniDenniOdmenu();
     } else {
       // Demo character pro offline vývoj
       character = {
@@ -165,6 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       openView('city');
       startQuestTimer();
       loadLeaderboard();
+      nabidniDenniOdmenu();
     }
   }
 });
@@ -219,7 +222,7 @@ function updateUI() {
   if (els.sInt) els.sInt.textContent = c.intelligence;
 
   // Daily button
-  if (els.dailyBtn) els.dailyBtn.disabled = localStorage.getItem('lastDaily') === new Date().toDateString();
+  if (els.dailyBtn) els.dailyBtn.disabled = odmenaVybrana();
 }
 
 // ========== VIEWS ==========
@@ -1929,18 +1932,14 @@ function buyItem(uid) {
 
 // ========== DAILY REWARD ==========
 function claimDaily() {
-  const today = new Date().toDateString();
-  const last = localStorage.getItem('lastDaily');
-  if (last === today) return;
-  const gold = 50 + Math.floor(Math.random()*50);
-  const exp  = 30 + Math.floor(Math.random()*30);
-  character.gold += gold;
-  character.experience += exp;
-  localStorage.setItem('lastDaily', today);
+  if (odmenaVybrana()) { toast('Dnešní odměnu už máš, další po půlnoci.'); return; }
+  const o = dennyOdmenaCastka();
+  character.gold += o.zlato;
+  character.experience += o.exp;
+  localStorage.setItem('lastDaily', dnesniDen());
   checkLevelUp(); saveChar(); updateUI();
-  const btn = document.getElementById('dailyBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Dnes už vyzvednuto'; }
-  toast(`Denní odměna: +${gold} zlata, +${exp} zkušeností`);
+  toast(`Denní odměna: +${o.zlato} zlata, +${o.exp} zkušeností.`);
+  openView('hall');
 }
 
 // ========== LEVEL UP ==========
@@ -2199,11 +2198,14 @@ const EXPED_DEFS = [
   { id:'cestovatel', name:'Cestovatel', lvl:1, zamceno:true,
     desc:'', mobs:[] },
 
-  { id:'chram', name:'Jeskynní chrám',  lvl:1,
-    desc:'Pod zemí se skrývá chrám starší než samotné Atény. Stěny porostlé svítícím mechem, ' +
-         'ozvěna nesoucí zvuky, které nepatří ničemu živému. Poklady tu leží na dosah — ' +
-         'hlídané tvory, kteří nikdy nespatřili slunce.',
-    mobs:[['Slizoun','slime'],['Skřet Zlodějský','goblin'],['Jeskynní Krab','crab'],['Chrámový Golem','golem']] },
+  { id:'chram', name:'Orčí Les',  lvl:1,
+    desc:'Za městskými poli začíná les, kde se usadily orčí tlupy. Mezi kmeny visí kouř z ohnišť ' +
+         'a na kůře jsou vyryté značky, kterým nikdo z Atén nerozumí. Kdo zajde příliš hluboko, ' +
+         'potká nejdřív poskoky — a nakonec jejich velitele.',
+    mobs:[['Orčí poskok','monsters/ork-poskok.jpg'],
+          ['Naštvaný ork','monsters/ork-nastvany.jpg'],
+          ['Orčí šamanka','monsters/ork-samanka.jpg'],
+          ['Orčí velitel','monsters/ork-velitel.jpg']] },
 
   { id:'les', name:'Zelený les',       lvl:8,
     desc:'Kdo má rád zeleň a vůni bylin, brzy zjistí, že Zelený les je pro něj jako stvořený. ' +
@@ -2278,7 +2280,9 @@ const EXPEDITIONS = EXPED_DEFS.map(d => ({
     const loot = 18 * Math.pow(T, 0.9) * k;
 
     return {
-      name, img: `monsters/${img}.png`,
+      name, // Kdyz uz je v definici hotova cesta i s priponou, bereme ji tak,
+    // jak je - jinak by z toho vyslo monsters/monsters/....jpg.png
+    img: /[\/.]/.test(img) ? img : `monsters/${img}.png`,
       lvl:  [d.lvl + i, d.lvl + i + 2],
       hp:   [r(hp * 0.85), r(hp * 1.15)],
       str:  r(str),
@@ -2565,7 +2569,7 @@ function reportStats(s, mirror) {
 function reportFighter(s, mirror) {
   const portret = s.img
     ? `<img class="ico rf-img" src="img/${s.img}" alt="${s.name}" data-emoji="👹" data-try="svg" onerror="iconFallback(this)">`
-    : `<div class="rf-img">${getAvatar(s.class, s.gender)}</div>`;
+    : avatarProUroven(s.level, 'rf-img');   // ikonka podle urovne, ne stara kreslena
   return `
     <div class="rf-card">
       <div class="rf-name">${s.name}</div>
@@ -3381,31 +3385,161 @@ function avatarProUroven(uroven, cls) {
 }
 
 // ===== SÍŇ SLÁVY =====
+
+// ========== ŽEBŘÍČEK ==========
+let zebricek = null, zebricekChyba = null;
+
+async function nactiZebricek() {
+  try {
+    const data = await API.getLeaderboard();
+    zebricek = (data && data.leaderboard) || [];
+    zebricekChyba = null;
+  } catch (e) {
+    zebricek = [];
+    zebricekChyba = 'Server neodpovídá, žebříček teď nenačtu.';
+  }
+  if (posledniPohled === 'hall') openView('hall');
+}
+
+// ========== DENNÍ ODMĚNA ==========
+// Den se pocita podle mistni pulnoci, takze se odmena obnovi
+// prvni minutou noveho dne a ceka na prvni prihlaseni.
+const dnesniDen = () => new Date().toLocaleDateString('sv-SE');   // RRRR-MM-DD
+const odmenaVybrana = () => localStorage.getItem('lastDaily') === dnesniDen();
+
+function dennyOdmenaCastka() {
+  return { zlato: 50 + character.level * 15, exp: 20 + character.level * 8 };
+}
+
+function dennyOdmenaPanel() {
+  const o = dennyOdmenaCastka();
+  const hotovo = odmenaVybrana();
+  return `
+  <div class="panel">
+    <div class="panel-header">Denní odměna</div>
+    <div class="panel-body">
+      <div class="dr-row">
+        <div class="dr-text">
+          ${hotovo
+            ? 'Dnešní odměnu už máš. Další se objeví po půlnoci.'
+            : `Za dnešní návštěvu arény ti náleží
+               <b>${o.zlato}</b> zlata a <b>${o.exp}</b> zkušeností.`}
+        </div>
+        <button class="btn-green" ${hotovo ? 'disabled' : ''} onclick="claimDaily()">
+          ${hotovo ? 'Vybráno' : 'Vyzvednout'}
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Po prihlaseni ukazeme odmenu rovnou, at na ni hrac nemusi hledat cestu.
+function nabidniDenniOdmenu() {
+  if (odmenaVybrana()) return;
+  const o = dennyOdmenaCastka();
+  toast(`Čeká na tebe denní odměna: ${o.zlato} zlata a ${o.exp} zkušeností.`);
+  openView('hall');
+}
+
+// Kdo je v zebricku rozkliknuty a co je napsane ve vyhledavani.
+let hallVybrany = null;
+let hallHledani = '';
+
+function hallVyber(jmeno) { hallVybrany = jmeno; openView('hall'); }
+function hallHledej(text) {
+  hallHledani = text;
+  const s = document.getElementById('hallSeznam');
+  if (s) s.innerHTML = hallRadky();
+}
+
+const hallVybrane = () =>
+  (zebricek || []).filter(h => !hallHledani ||
+    h.name.toLowerCase().includes(hallHledani.toLowerCase()));
+
+function hallRadky() {
+  return hallVybrane().map(h => {
+    const poradi = (zebricek || []).indexOf(h) + 1;
+    const ja = h.name === character.name;
+    const vybrany = h.name === (hallVybrany || character.name);
+    return `
+      <div class="hf-radek ${ja ? 'ja' : ''} ${vybrany ? 'vybrany' : ''}"
+           onclick="hallVyber('${h.name.replace(/'/g, "\\'")}')">
+        <span class="hf-poradi">${poradi}</span>
+        <span class="hf-jmeno">${h.name}</span>
+        <span class="hf-uroven">${h.level}</span>
+        <span class="hf-exp">${(h.experience || 0).toLocaleString('cs-CZ')}</span>
+      </div>`;
+  }).join('') || '<div class="hf-prazdno">Nikdo takový tu není.</div>';
+}
+
+function hallDetail() {
+  const h = (zebricek || []).find(x => x.name === (hallVybrany || character.name))
+         || (zebricek || [])[0];
+  if (!h) return '<div class="hf-prazdno">Vyber gladiátora ze seznamu.</div>';
+
+  // Zivoty pocitame stejne jako u vlastni postavy, at cisla sedi.
+  const zivoty = (h.max_health || 100) + (h.defense || 0) * HP_ZA_ODOLNOST;
+  const vl = (nazev, hodnota, popis) => `
+    <div class="hf-vl">
+      <div class="hf-vl-nazev">${nazev}</div>
+      <div class="hf-vl-hod">${(hodnota || 0).toLocaleString('cs-CZ')}</div>
+      <div class="hf-vl-popis">${popis}</div>
+    </div>`;
+
+  return `
+    <div class="hf-portret">
+      ${avatarProUroven(h.level, 'hf-img')}
+      <div class="hf-jmenovka">
+        <div class="hf-nadpis">${h.name}</div>
+        <div class="hf-trida">${h.class || 'Gladiátor'}</div>
+      </div>
+    </div>
+    <div class="hf-uroven-pas">Úroveň ${h.level}</div>
+    <div class="hf-vlastnosti">
+      ${vl('Síla', h.strength, 'poškození')}
+      ${vl('Odolnost', h.defense, `životy ${zivoty.toLocaleString('cs-CZ')}`)}
+      ${vl('Obratnost', h.agility, 'blokace')}
+      ${vl('Inteligence', h.intelligence, 'kritický zásah')}
+      ${vl('Zkušenost', h.experience, `do ${(h.level || 1) + 1}. úrovně`)}
+      ${vl('Životy', zivoty, 'celkem')}
+    </div>`;
+}
+
 function hall() {
-  const claimed = localStorage.getItem('lastDaily') === new Date().toDateString();
-  setTimeout(loadLeaderboard, 0);   // doplní se po vykreslení
+  if (zebricek === null) nactiZebricek();
+
+  const obsah =
+      zebricek === null ? '<p class="hall-note">Načítám žebříček…</p>'
+    : zebricekChyba     ? `<p class="hall-note">${zebricekChyba}</p>`
+    : !zebricek.length  ? '<p class="hall-note">Zatím tu nikdo není.</p>'
+    : `
+      <div class="hf-telo">
+        <div class="hf-sloupec">
+          <div class="hf-hlava">
+            <span class="hf-poradi">#</span>
+            <span class="hf-jmeno">Jméno</span>
+            <span class="hf-uroven">Úroveň</span>
+            <span class="hf-exp">Zkušenost</span>
+          </div>
+          <div class="hf-seznam" id="hallSeznam">${hallRadky()}</div>
+          <input class="hf-hledani" placeholder="Hledat jméno…"
+                 value="${hallHledani}" oninput="hallHledej(this.value)">
+        </div>
+        <div class="hf-sloupec hf-detail">${hallDetail()}</div>
+      </div>`;
+
   return `
   <div class="panel">
     <div class="panel-header">Síň slávy</div>
     <div class="panel-body">
-      <div class="hall-grid">
-
-        <div class="hall-box">
-          <h3>Nejlepší gladiátoři</h3>
-          <div id="leaderboard"></div>
-        </div>
-
-        <div class="hall-box">
-          <h3>Denní odměna</h3>
-          <p class="hall-note">Jednou denně ti Olymp přeje. Vyzvedni si zlato a zkušenosti.</p>
-          <button class="btn-green" id="dailyBtn" ${claimed ? 'disabled' : ''} onclick="claimDaily()">
-            ${claimed ? 'Dnes už vyzvednuto' : 'Vyzvednout odměnu'}
-          </button>
-        </div>
-
+      ${obsah}
+      <div class="ar-foot">
+        <button class="btn-green" onclick="zebricek=null; hallVybrany=null; openView('hall')">Načíst znovu</button>
       </div>
     </div>
-  </div>`;
+  </div>
+
+  ${dennyOdmenaPanel()}`;
 }
 
 // ===== STATISTIKY =====
