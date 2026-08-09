@@ -920,12 +920,7 @@ function profileView() {
     </div>
 
   </div>
-
-  <div class="profile-link">
-    <div class="pl-title">Odkaz na tvůj profil</div>
-    <input class="pl-input" readonly onclick="this.select()"
-           value="${location.origin}${location.pathname}?hrdina=${encodeURIComponent(c.name)}">
-  </div>`;
+`;
 }
 
 // ========== DRAG & DROP ==========
@@ -2824,10 +2819,14 @@ const ZASILKA_FILTRY = [
 ];
 
 let zasilkaFiltr = 'vse';
+let zasilkaStrana = 0;
+const ZASILKA_NA_STRANU = SHOP_COLS * SHOP_ROWS;   // kolik se jich vejde na ram
+
+function setZasilkaStrana(s) { zasilkaStrana = s; openView('loot'); }
 
 const sedneFiltr = it => (ZASILKA_FILTRY.find(f => f.key === zasilkaFiltr) || ZASILKA_FILTRY[0]).sedne(it);
 
-function setZasilkaFiltr(k) { zasilkaFiltr = k; openView('loot'); }
+function setZasilkaFiltr(k) { zasilkaFiltr = k; zasilkaStrana = 0; openView('loot'); }
 
 // Proda jen to, co je zrovna vyfiltrovane - jinak by filtr uspal
 // pozornost a smazal i to, co hrac nevidi.
@@ -2854,7 +2853,15 @@ function loot() {
     `<button class="zf-btn ${zasilkaFiltr === fl.key ? 'active' : ''}"
              onclick="setZasilkaFiltr('${fl.key}')">${fl.nazev}</button>`).join('');
 
-  const policka = vybrane.map((z, i) => {
+  const odsud = zasilkaStrana * ZASILKA_NA_STRANU;
+  const naStrance = vybrane.slice(odsud, odsud + ZASILKA_NA_STRANU);
+
+  // zalozky sedi na namalovanych v ramu
+  const zalozky = [0, 1].map(s =>
+    `<div class="pg-tab ${s === zasilkaStrana ? 'active' : ''}" onclick="setZasilkaStrana(${s})">${['I','II'][s]}</div>`
+  ).join('');
+
+  const policka = naStrance.map((z, i) => {
     const q = qualityOf(z.kus);
     const [w, h] = itemSize(z.kus);
     const idx = lootLog.indexOf(z);
@@ -2887,6 +2894,7 @@ function loot() {
         <div class="zas-sloupec">
           <div class="zas-nadpis">Zásilky</div>
           <div class="frame frame-shop">
+            <div class="frame-tabs">${zalozky}</div>
             <div class="goods-grid">${policka}</div>
           </div>
         </div>
