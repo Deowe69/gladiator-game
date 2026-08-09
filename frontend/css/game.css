@@ -2634,3 +2634,120 @@ select.adm-input{width:190px}
   font-variant-numeric:tabular-nums;
 }
 .hb-bar-row:hover .gbar{box-shadow:inset 0 1px 3px rgba(0,0,0,.8), 0 0 6px rgba(216,177,58,.5)}
+
+/* =========================================================
+   RÁMY ROZHRANÍ
+   Políčka jsou namalovaná v obrázku. Rozměry níž jsou změřené
+   z těch obrázků, takže mřížka hry sedne přesně na ně — když
+   se obrázek vymění, musí se přeměřit i tahle čísla.
+   ========================================================= */
+.frame{
+  position:relative;
+  width:100%;
+  background-size:100% 100%;
+  background-repeat:no-repeat;
+  border-radius:4px;
+  box-shadow:0 8px 24px rgba(0,0,0,.55);
+}
+.frame-shop{
+  aspect-ratio:1189/1323;
+  background-image:url('../img/ui/frame-shop.jpg?v=1');
+  max-width:340px;
+}
+.frame-bag{
+  aspect-ratio:1447/1087;
+  background-image:url('../img/ui/frame-bag.jpg?v=1');
+}
+.frame-doll{
+  aspect-ratio:1409/1117;
+  background-image:url('../img/ui/frame-doll.jpg?v=1');
+}
+
+/* mřížka posazená na namalovaná políčka */
+.frame .goods-grid,
+.frame .bag-grid{
+  position:absolute;
+  display:grid;
+  background:none;border:none;box-shadow:none;padding:0;
+  grid-auto-flow:row dense;
+}
+.frame-shop .goods-grid{
+  left:5.719%;  top:11.489%;
+  width:88.173%; height:75.231%;
+  grid-template-columns:repeat(5, 1fr);
+  grid-template-rows:repeat(5, 1fr);
+  column-gap:2.537%;
+  row-gap:3.588%;
+}
+.frame-bag .bag-grid{
+  left:6.151%;  top:12.879%;
+  width:87.085%; height:81.747%;
+  grid-template-columns:repeat(7, 1fr);
+  grid-template-rows:repeat(5, 1fr);
+  column-gap:1.377%;
+  row-gap:2.126%;
+}
+
+/* políčko na rámu nemá vlastní podklad – ten je namalovaný */
+.frame .g-slot,
+.frame .bag-slot{
+  position:relative;
+  width:auto;height:auto;aspect-ratio:auto;
+  background:none;border:none;box-shadow:none;
+  display:flex;align-items:center;justify-content:center;
+  padding:3px;
+  transition:transform .12s, filter .12s;
+}
+.frame .g-slot:hover,
+.frame .bag-slot:hover{
+  transform:scale(1.08);
+  filter:drop-shadow(0 4px 9px rgba(0,0,0,.75)) brightness(1.12);
+  z-index:5;
+}
+.frame .g-ico,.frame .b-ico{max-width:100%;max-height:100%;object-fit:contain}
+.frame .g-slot.poor{filter:grayscale(.55) brightness(.7)}
+
+/* záložky sedící na namalovaných */
+/* Zalozky sedi na namalovanych v ramu. Sirka odpovida jejich
+   kresbe, takze klikaci plocha je presne tam, kde je videt. */
+.frame-tabs{
+  position:absolute;left:8.4%;top:2.3%;right:4%;
+  display:flex;gap:0.9%;
+  height:6.2%;
+}
+.frame-tabs .pg-tab{
+  min-width:0;width:11.8%;height:100%;
+  background:transparent;border:none;border-radius:5px 5px 0 0;
+  color:#c9a961;font:bold 13px Georgia,serif;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;box-shadow:none;
+  transition:color .14s, background .14s;
+}
+.frame-tabs .pg-tab:hover{background:rgba(240,216,134,.14);color:#f4dfa4}
+.frame-tabs .pg-tab.active{
+  color:#f8e6ae;
+  text-shadow:0 0 8px rgba(248,230,174,.7);
+  background:rgba(240,216,134,.10);
+}
+.frame-tabs .pg-tab.sell{width:15%;margin-left:1.5%;font-size:11px}
+
+/* portrét kupce nad rámem */
+.mp-outer{
+  margin-bottom:9px;
+  border:3px solid #4a3a1c;border-radius:6px;overflow:hidden;
+  box-shadow:0 6px 18px rgba(0,0,0,.55), inset 0 0 0 2px rgba(216,177,58,.5);
+  max-width:340px;
+}
+.mp-outer .mp-inner{height:172px;border:none;border-radius:0}
+
+/* patička pod rámem */
+.shop-foot{max-width:340px;margin-top:9px;border-radius:4px}
+.shop-refresh{max-width:340px}
+.s2body{grid-template-columns:340px 1fr}
+
+/* pozadí cvičiště */
+.tr-panel{
+  background-image:url('../img/ui/frame-training.jpg?v=1');
+  background-size:cover;background-position:center;
+  border:3px solid #2f2616;
+}

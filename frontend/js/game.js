@@ -394,8 +394,9 @@ function merchantPortrait(id) {
 // ========== ROZMĚRY PŘEDMĚTŮ ==========
 // [šířka, výška] v políčkách. Odvozuje se ze slotu, do kterého kus patří,
 // takže nový předmět dostane rozměr sám podle svého druhu.
-const SHOP_COLS = 6;   // pult je 6 x 10 políček
-const SHOP_ROWS = 10;
+// Rozměry drží obrázek rámu (img/ui/frame-shop.jpg), ne naopak.
+const SHOP_COLS = 5;
+const SHOP_ROWS = 5;
 const ITEM_SIZE = {
   weapon: [1, 3],   // meče, kopí, luky – dlouhé
   shield: [2, 2],
@@ -433,13 +434,9 @@ function goodsSlot(item, dark) {
     </div>`;
 }
 
-// Prázdná mřížka pod zbožím. Kreslí se zvlášť, aby skládání
-// různě velkých kusů nemusela řešit ještě výplňová políčka.
-function latticeHTML(rows) {
-  return '<div class="goods-lattice">' +
-         '<div class="gl-cell"></div>'.repeat(SHOP_COLS * rows) +
-         '</div>';
-}
+// Políčka jsou namalovaná v rámu, žádnou podkladovou mřížku
+// už nekreslíme — jen na ně posadíme zboží.
+function latticeHTML() { return ''; }
 
 // odpočet do nového zboží (4h cyklus)
 function restockLeft() {
@@ -500,14 +497,7 @@ function shop() {
            <small>nebo na něj klikni — vykoupím ho za 40 % ceny</small>
          </div>
        </div>`
-    : (() => {
-        const kusy = pages[shopPage] || [];
-        const rows = shopRows();
-        return `<div class="goods-wrap" style="--rows:${rows}">
-                  ${latticeHTML(rows)}
-                  <div class="goods-grid">${kusy.map(i => goodsSlot(i, false)).join('')}</div>
-                </div>`;
-      })();
+    : `<div class="goods-grid">${(pages[shopPage] || []).map(i => goodsSlot(i, false)).join('')}</div>`;
 
   return `
   <div class="shop2">
@@ -517,25 +507,24 @@ function shop() {
 
       <!-- kupec: portrét, záložky a pult v jednom rámu -->
       <div class="s2left">
-        <div class="shop-frame">
+        <div class="mp-outer">
           <div class="mp-inner">${merchantPortrait(id)}</div>
+          <div class="mp-plate"><div class="mp-name">${MERCHANTS[id].name}</div></div>
+        </div>
 
-          <div class="mp-plate">
-            <div class="mp-name">${MERCHANTS[id].name}</div>
-          </div>
-
-          <div class="pg-tabs">${pageTabs}</div>
+        <div class="frame frame-shop">
+          <div class="frame-tabs">${pageTabs}</div>
           ${mrizka}
+        </div>
 
-          <div class="shop-foot">
-            <span class="sf-gold">
-              <img class="res-ico" src="img/ui/coin.png" alt="zlata">
-              <b>${character.gold.toLocaleString('cs-CZ')}</b>
-            </span>
-            <span class="sf-restock" title="Než kupec doplní zboží">
-              ⏳ <b id="restockTimer">${restockLeft()}</b>
-            </span>
-          </div>
+        <div class="shop-foot">
+          <span class="sf-gold">
+            <img class="res-ico" src="img/ui/coin.png" alt="zlata">
+            <b>${character.gold.toLocaleString('cs-CZ')}</b>
+          </span>
+          <span class="sf-restock" title="Než kupec doplní zboží">
+            ⏳ <b id="restockTimer">${restockLeft()}</b>
+          </span>
         </div>
 
         <button class="btn-green shop-refresh" onclick="newGoods()">Nové zboží</button>
