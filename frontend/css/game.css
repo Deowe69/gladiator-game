@@ -2854,3 +2854,15 @@ select.adm-input{width:190px}
 /* „Prodat" namalované není, to vypsat musíme */
 .frame-tabs .pg-tab.sell{font-size:11px;color:#d8b884}
 .frame-tabs .pg-tab.sell.active{color:#f8e6ae}
+
+/* Klikaci plocha zalozek je pruhledna - cislice jsou namalovane v ramu.
+   Aktivni se pozna jen podle jemneho podsviceni zespodu. */
+.frame-tabs .pg-tab{
+  background:transparent;
+  box-shadow:none;
+}
+.frame-tabs .pg-tab:hover{background:rgba(255,235,180,.07)}
+.frame-tabs .pg-tab.active{
+  background:transparent;
+  box-shadow:inset 0 -3px 0 rgba(248,225,150,.5);
+}

@@ -199,7 +199,10 @@ let viewCache = {}; // Cache rendered views to avoid regeneration
 // který folder tab patří ke které view
 const TAB_OF_VIEW = { profile:0, inventory:0, city:0, stats:1, hall:2 };
 
+let posledniPohled = 'profile';   // co je zrovna na obrazovce
+
 function openView(view, highlight) {
+  posledniPohled = view;
   // Všichni kupci sdílejí pohled 'shop', takže sám o sobě neurčuje,
   // co má v menu svítit — doplníme podle právě otevřeného krámu.
   if (!highlight && view === 'shop' && MERCHANTS[currentShop]) {
@@ -752,7 +755,10 @@ const DOLL_POZICE = [
   { key:'pom7', x:86.02, y:85.59, w:7.95, h: 9.67, pomocnik:true },
 ];
 
-const BAG_SIZE = 35;   // 7 x 5 policek, kolik jich ram maluje
+// Batoh ma ctyri zalozky po 7 x 5 polickach.
+const BAG_PAGE_SIZE = 35;
+const BAG_PAGES = 4;
+const BAG_SIZE = BAG_PAGE_SIZE * BAG_PAGES;
 
 // mode: 'use' = kliknutím vybavit / vypít, 'sell' = kliknutím prodat
 // Batoh má na rámu 7 x 5 oček a čtyři záložky.
@@ -760,7 +766,10 @@ const BAG_COLS = 7, BAG_ROWS = 5;
 const BAG_PAGE = BAG_COLS * BAG_ROWS;
 let bagPage = 0;
 
-function setBagPage(p) { bagPage = p; openView(currentView); }
+function setBagPage(p) {
+  bagPage = p;
+  openView(posledniPohled);   // driv se volalo s currentView, ktere neexistuje
+}
 
 function bagFrameHTML(mode) {
   const zalozky = [0, 1, 2, 3].map(i =>
@@ -776,7 +785,9 @@ function bagFrameHTML(mode) {
 
 function bagSlotsHTML(mode) {
   let html = '';
-  for (let i = 0; i < BAG_SIZE; i++) {
+  // vypisuje se jen aktualni zalozka, index ale zustava do celeho batohu
+  const od = bagPage * BAG_PAGE_SIZE;
+  for (let i = od; i < od + BAG_PAGE_SIZE; i++) {
     const it = inventory[i];
     const click = !it ? '' : (mode === 'sell' ? `sellItem(${i})` : `useItem(${i})`);
     const tipAttr = !it ? '' : `data-tip="inv:${i}"`;
