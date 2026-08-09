@@ -3617,3 +3617,34 @@ select.adm-input{width:190px}
 .hf-vl-nazev{color:#c9b48a;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase}
 .hf-vl-hod{color:#f0d886;font:bold 16px Georgia,serif;font-variant-numeric:tabular-nums}
 .hf-vl-popis{color:#9d8a68;font-size:10.5px}
+
+/* Portret a obrazky priser maji byt videt cele a vyplnit ramecek,
+   ne jen vyrez z prostredka. */
+.gl-left .av-img{object-fit:contain;object-position:center;background:rgba(20,15,8,.5)}
+.hf-img{height:auto;aspect-ratio:1/1;object-fit:contain;background:rgba(20,15,8,.5)}
+
+.mon-portrait,.mon-card .mon-img,.mon-card img{
+  width:100%;height:100%;
+  object-fit:cover;object-position:center;
+  display:block;
+}
+.mon-card .mon-pic{
+  width:100%;aspect-ratio:16/9;
+  overflow:hidden;border-radius:3px;
+  background:rgba(20,15,8,.5);
+}
+.fighter-avatar-lg .fighter-img{object-fit:contain;background:rgba(20,15,8,.45)}
+.rf-img{width:100%;height:auto;aspect-ratio:1/1;object-fit:contain;background:rgba(20,15,8,.45)}
+
+/* Obrazek prisery vyplni cely ramecek karty. */
+.mon-frame{
+  width:100%;aspect-ratio:1/1;
+  overflow:hidden;border-radius:3px;
+  background:rgba(20,15,8,.5);
+  border:2px solid rgba(198,160,84,.4);
+}
+.mon-frame .mon-img{
+  width:100%;height:100%;
+  object-fit:cover;object-position:center;
+  display:block;
+}

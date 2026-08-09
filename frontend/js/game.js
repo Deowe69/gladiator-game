@@ -189,6 +189,7 @@ function updateUI() {
     xpVal: document.getElementById('xpVal'),
     hpPct: document.getElementById('hpPct'),
     xpPct: document.getElementById('xpPct'),
+    navPocta: document.getElementById('navPocta'),
     navGold: document.getElementById('navGold'),
     charNameSm: document.getElementById('charNameSm'),
     charClassSm: document.getElementById('charClassSm'),
@@ -211,6 +212,7 @@ function updateUI() {
   // procenta vedle pruhů; přesná čísla ukáže bublina po najetí
   if (els.hpPct) els.hpPct.textContent = Math.round(hpPct) + ' %';
   if (els.xpPct) els.xpPct.textContent = Math.round(xpPct) + ' %';
+  if (els.navPocta) els.navPocta.textContent = (c.pocta || 0).toLocaleString('cs-CZ');
   if (els.navGold) els.navGold.textContent = c.gold;
   if (els.charNameSm) els.charNameSm.textContent = c.name;
   if (els.charClassSm) els.charClassSm.textContent = c.class;
@@ -316,7 +318,9 @@ function city() {
         </div>
       </div>
     </div>
-  </div>`;
+  </div>
+
+  ${dennyOdmenaPanel()}`;
 }
 
 // ===== ARENA =====
@@ -1214,6 +1218,7 @@ function normalizeCharacter() {
   if (!character) return;
   // Dovednost přibyla později – starší postavy ji dostanou dopočtenou
   if (typeof character.skill !== 'number') character.skill = 10;
+  if (typeof character.pocta !== 'number') character.pocta = 0;
   if (localStorage.getItem('statsFixed') === '1') return;
   for (const k of STAT_KEYS) {
     if (typeof character[k] === 'number') {
@@ -1762,6 +1767,10 @@ function endCombat(won) {
   }
   // po výpravě si gladiátor musí odpočinout
   if (lastFight && lastFight.view === 'expedition') startExpedCooldown();
+  if (won && lastFight && lastFight.view === 'arena') {
+    character.pocta = (character.pocta || 0) + POCTA_ARENA;
+    addLog(`Získáváš <strong>${POCTA_ARENA}</strong> pocty`, 'log-w');
+  }
   if (lastFight && lastFight.view === 'dungeon') startCooldown('dungeon');
   if (won && lastFight && lastFight.view === 'dungeon') bludisteVyhra();
   wearEquipment();
@@ -1939,7 +1948,7 @@ function claimDaily() {
   localStorage.setItem('lastDaily', dnesniDen());
   checkLevelUp(); saveChar(); updateUI();
   toast(`Denní odměna: +${o.zlato} zlata, +${o.exp} zkušeností.`);
-  openView('hall');
+  openView('city');
 }
 
 // ========== LEVEL UP ==========
@@ -3438,7 +3447,7 @@ function nabidniDenniOdmenu() {
   if (odmenaVybrana()) return;
   const o = dennyOdmenaCastka();
   toast(`Čeká na tebe denní odměna: ${o.zlato} zlata a ${o.exp} zkušeností.`);
-  openView('hall');
+  openView('city');            // odmena je v Meste, kam hrac stejne prijde
 }
 
 // Kdo je v zebricku rozkliknuty a co je napsane ve vyhledavani.
@@ -3450,6 +3459,17 @@ function hallHledej(text) {
   hallHledani = text;
   const s = document.getElementById('hallSeznam');
   if (s) s.innerHTML = hallRadky();
+}
+
+// Pocta se ziskava vitezstvim v Arene a Circus Turma.
+// V databazi pro ni zatim neni sloupec, takze u ostatnich hracu
+// vychazi 0 - u sebe se bere ze sve postavy.
+const POCTA_ARENA = 12;
+const POCTA_TURMA = 20;
+
+function hallPocta(h) {
+  if (h.name === character.name) return character.pocta || 0;
+  return h.pocta || 0;
 }
 
 const hallVybrane = () =>
@@ -3467,7 +3487,7 @@ function hallRadky() {
         <span class="hf-poradi">${poradi}</span>
         <span class="hf-jmeno">${h.name}</span>
         <span class="hf-uroven">${h.level}</span>
-        <span class="hf-exp">${(h.experience || 0).toLocaleString('cs-CZ')}</span>
+        <span class="hf-exp">${hallPocta(h).toLocaleString('cs-CZ')}</span>
       </div>`;
   }).join('') || '<div class="hf-prazdno">Nikdo takový tu není.</div>';
 }
@@ -3500,7 +3520,7 @@ function hallDetail() {
       ${vl('Odolnost', h.defense, `životy ${zivoty.toLocaleString('cs-CZ')}`)}
       ${vl('Obratnost', h.agility, 'blokace')}
       ${vl('Inteligence', h.intelligence, 'kritický zásah')}
-      ${vl('Zkušenost', h.experience, `do ${(h.level || 1) + 1}. úrovně`)}
+      ${vl('Pocta', hallPocta(h), 'z arény')}
       ${vl('Životy', zivoty, 'celkem')}
     </div>`;
 }
@@ -3519,7 +3539,7 @@ function hall() {
             <span class="hf-poradi">#</span>
             <span class="hf-jmeno">Jméno</span>
             <span class="hf-uroven">Úroveň</span>
-            <span class="hf-exp">Zkušenost</span>
+            <span class="hf-exp">Pocta</span>
           </div>
           <div class="hf-seznam" id="hallSeznam">${hallRadky()}</div>
           <input class="hf-hledani" placeholder="Hledat jméno…"
@@ -3537,9 +3557,7 @@ function hall() {
         <button class="btn-green" onclick="zebricek=null; hallVybrany=null; openView('hall')">Načíst znovu</button>
       </div>
     </div>
-  </div>
-
-  ${dennyOdmenaPanel()}`;
+  </div>`;
 }
 
 // ===== STATISTIKY =====
