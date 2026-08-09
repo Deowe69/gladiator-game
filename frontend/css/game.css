@@ -3020,3 +3020,116 @@ select.adm-input{width:190px}
 .tr-portrait{background:none}
 .tr-portrait:empty::before{content:none}
 .tr-img{display:none}
+
+/* Ramecek na popis je namaloveny primo v ramu cviciste, takze vlastni
+   uz nekreslime - byl by videt dvakrat. Text jen zarovname dovnitr. */
+.tr-text{
+  background:none;
+  border:none;
+  box-shadow:none;
+  padding:3.5% 4%;
+  justify-content:flex-start;
+}
+.tr-text p{font-size:13px;line-height:1.6}
+
+/* =========================================================
+   TMAVÝ KÁMEN MÍSTO BÉŽOVÉHO PERGAMENU
+   Béžový podklad je pryč ze všech stránek, takže je vidět malba
+   na pozadí. Panely přitom musí zůstat čitelné — proto tmavý
+   průsvitný kámen se zlatým lemem a světlé písmo.
+   ========================================================= */
+.panel{
+  background:linear-gradient(180deg, rgba(30,23,12,.88), rgba(18,13,7,.93));
+  border:2px solid rgba(198,160,84,.5);
+  box-shadow:0 6px 20px rgba(0,0,0,.55), inset 0 1px 0 rgba(240,216,134,.14);
+}
+.panel-body{color:#e0d0aa}
+
+/* řádky, karty a boxy uvnitř panelů */
+.gl-row,.log-row,.rs-table,.rw-box,.hall-box,.zas-foot,.forge-total,
+.sell-note,.dg-lista,.dg-start,.dg-hotovo,.city-card,.mon-card,
+.stattable,.eq-frame,.q-row,.shop-foot{
+  background:linear-gradient(180deg, rgba(46,35,20,.85), rgba(28,21,12,.9));
+  border-color:rgba(198,160,84,.42);
+  color:#e0d0aa;
+}
+
+/* písmo, které bylo tmavé na béžové */
+.gl-nm,.log-text b,.fs-nm,.zas-foot,.dg-lista,.dg-start,.dg-hotovo,
+.hall-note,.sell-note,.tip-note,.gl-sub,.log-sub,.log-when,
+.stattable .sl,.stattable .sv,.city-card,.mon-card,.rs-row span,
+.q-title,.q-desc,.pl-title{
+  color:#e0d0aa;
+}
+.gl-nm,.stattable .sv,.rs-row b{color:#f0d886}
+.gl-sub,.log-sub,.log-when,.q-desc{color:#bda878}
+.hall-note,.sell-note,.tip-note{color:#e8c860}
+.log-row.win b{color:#a8d858}
+.log-row.lose b{color:#e07070}
+.zas-foot b,.dg-lista b,.dg-info b{color:#f0d886}
+.dg-hotovo b{color:#a8d858}
+
+/* karty města a příšer */
+.city-card:hover,.mon-card:hover{
+  background:linear-gradient(180deg, rgba(64,48,26,.9), rgba(40,30,16,.92));
+}
+.cc-name,.cc-desc{text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.cc-name{color:#f0d886}
+.cc-desc{color:#bda878}
+
+/* pole a odkazy */
+.pl-input,.adm-input{
+  background:rgba(20,15,8,.9);
+  border-color:rgba(198,160,84,.45);
+  color:#e8d4a0;
+}
+
+/* prázdné stavy */
+.coming-soon h2{color:#f0d886}
+.coming-soon p{color:#bda878}
+.cs-icon{opacity:.7}
+
+/* Doplneni po prechodu na tmavy kamen - tyhle prvky si drzely
+   tmavou barvu z doby, kdy byl podklad bezovy. */
+#centerContent h2,
+#centerContent h3,
+#centerContent h4,
+.quest-title,.q-name,.tr-total,.hall-title,.st-name,.st-val,
+.gl-list .gl-nm,.gl-row .gl-nm,.set-row .gl-nm,
+.forge-row,.forge-name,.rf-name,.stat-label,.stat-value{
+  color:#f0d886;
+  text-shadow:0 1px 3px rgba(0,0,0,.85);
+}
+#centerContent p,
+.quest-desc,.q-text,.st-desc,.forge-sub,.hall-sub{
+  color:#d9c9a4;
+}
+#centerContent table td,#centerContent table th{color:#e0d0aa}
+#centerContent li{color:#d9c9a4}
+
+/* zalozky na ramech maji byt pruhledne, kontrast se u nich nemeri */
+.frame-tabs .pg-tab{color:transparent}
+
+/* Posledni zbytky tmaveho pisma po prechodu na kamen. */
+.tr-total,.quest-tab,.sc-val,.sc-label,.gl-sub,.st-val,.q-tab{
+  color:#e0d0aa;
+  text-shadow:0 1px 3px rgba(0,0,0,.85);
+}
+.tr-total,.sc-val{color:#f0d886}
+.quest-tab.active,.q-tab.active{color:#f8e6ae}
+.cs-icon{opacity:.85;filter:drop-shadow(0 2px 4px rgba(0,0,0,.8))}
+
+/* Portret kupce vyplni cely ram - zadny lem kolem, zadna jmenovka pod nim. */
+.mp-outer{
+  border:3px solid #4a3a1c;border-radius:6px;overflow:hidden;
+  box-shadow:0 6px 18px rgba(0,0,0,.55), inset 0 0 0 2px rgba(216,177,58,.5);
+}
+.mp-outer .mp-inner{
+  height:210px;padding:0;border:none;border-radius:0;
+  background:#1a1409;
+}
+.mp-outer .mp-img{
+  width:100%;height:100%;
+  object-fit:cover;object-position:center 36%;
+  display:block;
+}

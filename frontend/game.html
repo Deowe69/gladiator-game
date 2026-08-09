@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Olympus</title>
-  <link rel="stylesheet" href="css/game.css?v=tji64v">
+  <link rel="stylesheet" href="css/game.css?v=tji6ej">
 </head>
 <body>
 
@@ -105,18 +105,16 @@
 
       <div class="submenu">
         <div class="submenu-tabs">
-          <div class="sub-tab active" onclick="subTab(this,0)">🏛️</div>
+          <div class="sub-tab active" title="Město" onclick="subTab(this,0); openView('city')">🏛️</div>
           <div class="sub-tab" onclick="subTab(this,1)">🗺️</div>
         </div>
         <!-- záložka 0: budovy města -->
         <div class="submenu-body" id="submenu-city">
-          <a class="sub-item" id="menu-city"      onclick="openView('city')">Město</a>
           <a class="sub-item" id="menu-work"      onclick="openView('work')">Práce</a>
           <a class="sub-item" id="menu-arena"     onclick="openView('arena')">Aréna</a>
           <a class="sub-item" id="menu-training"  onclick="openView('training')">Cvičiště</a>
           <a class="sub-item" id="menu-shop"      onclick="openMerchant('blacksmith')">Zbrojíř</a>
           <a class="sub-item" id="menu-armorer"   onclick="openMerchant('armorer')">Platnéř</a>
-          <a class="sub-item" id="menu-junk"      onclick="openMerchant('junk')">Vetešník</a>
           <a class="sub-item" id="menu-alchemy"   onclick="openMerchant('alchemist')">Alchymista</a>
           <a class="sub-item" id="menu-jeweler"   onclick="openMerchant('jeweler')">Klenotník</a>
           <a class="sub-item" id="menu-forge"     onclick="openView('forge')">Kovárna</a>
@@ -161,9 +159,9 @@
   </div>
 </div>
 
-<script src="js/api.js?v=tji64v"></script>
-<script src="js/avatars.js?v=tji64v"></script>
-<script src="js/game.js?v=tji64v"></script>
+<script src="js/api.js?v=tji6ej"></script>
+<script src="js/avatars.js?v=tji6ej"></script>
+<script src="js/game.js?v=tji6ej"></script>
 
 <script>
   function subTab(el, idx) {

@@ -53,7 +53,7 @@ const SHOP_ITEMS = {
     { id:'b6', name:'Boty Nesmrtelných',icon:'🥾',stat:'+28 Hbitost',key:'agility',   val:28, price:720,  quality:'epic'     },
     { id:'b3', name:'Kožený Pás',      icon:'🔗', stat:'+3 Obrana',  key:'defense',   val:3,  price:60,   quality:'common',   tint:'leather' },
   ],
-  // Vetešník – použité prsteny, od obnošených po nečekané nálezy
+  // Prsteny – od obnošených po nečekané nálezy
   rings: [
     { id:'r1', name:'Otlučený Prsten',   icon:'💍', key:'agility',      val:4,  price:40,  quality:'common'   },
     { id:'r2', name:'Měděný Kroužek',    icon:'💍', key:'defense',      val:6,  price:75,  quality:'common',   tint:'bronze' },
@@ -374,13 +374,12 @@ function quests() {
 
 // ===== SHOPS =====
 let currentShop = null;
-let shopPage = 0;      // 0/1/2 = stránky zboží, 'sell' = výkup
+let shopPage = 0;      // 0 nebo 1 – ram maluje dve zalozky
 
 const MERCHANTS = {
   blacksmith: { name:'Zbrojíř',    emoji:'🧔', menu:'shop',    desc:'Zbraně všeho druhu',        get items(){ return SHOP_ITEMS.weapons; } },
   armorer:    { name:'Platnéř',    emoji:'👨‍🏭', menu:'armorer', desc:'Zbroje, boty a rukavice',  get items(){ return SHOP_ITEMS.armor.concat(SHOP_ITEMS.armor_extra || []); } },
   jeweler:    { name:'Šperkař',    emoji:'👳', menu:'jeweler', desc:'Amulety a ozdoby',          get items(){ return SHOP_ITEMS.jewelry; } },
-  junk:       { name:'Vetešník',   emoji:'🧓', menu:'junk',    desc:'Použité prsteny z druhé ruky', get items(){ return SHOP_ITEMS.rings; } },
   alchemist:  { name:'Alchymista', emoji:'🧙', menu:'alchemy', desc:'Lektvary a elixíry',        get items(){ return SHOP_ITEMS.potions; } },
 };
 
@@ -487,8 +486,7 @@ function shop() {
   const pageTabs =
     ['I', 'II'].map((lbl, i) =>
       `<div class="pg-tab ${shopPage === i ? 'active' : ''}" onclick="setShopPage(${i})">${lbl}</div>`
-    ).join('') +
-    `<div class="pg-tab sell ${shopPage === 'sell' ? 'active' : ''}" onclick="setShopPage('sell')">Prodat</div>`;
+    ).join('');
 
   const mrizka = shopPage === 'sell'
     ? `<div class="sell-zone"
@@ -512,7 +510,6 @@ function shop() {
       <div class="s2left">
         <div class="mp-outer">
           <div class="mp-inner">${merchantPortrait(id)}</div>
-          <div class="mp-plate"><div class="mp-name">${MERCHANTS[id].name}</div></div>
         </div>
 
         <div class="frame frame-shop">
@@ -536,12 +533,8 @@ function shop() {
       <!-- tvoje výbava -->
       <div class="s2right">
         ${equipPanelHTML()}
-        ${bagPanelHTML(shopPage === 'sell' ? 'sell' : 'use')}
-        <div class="sell-note">
-          ${shopPage === 'sell'
-            ? 'Klikni na předmět v batohu a kupec ti ho vykoupí.'
-            : 'Klikni na předmět v batohu pro vybavení. Prodej najdeš na záložce „Prodat".'}
-        </div>
+        ${bagPanelHTML('use')}
+        <div class="sell-note">Klikni na předmět v batohu pro vybavení.</div>
       </div>
 
     </div>
@@ -2469,67 +2462,9 @@ function repairAll() {
 
 // ===== KOVÁRNA =====
 function forge() {
-  const kusy = repairable();
-  const celkem = kusy.reduce((a, x) => a + repairCost(x.it), 0);
-
-  if (!kusy.length) {
-    return `
-    <div class="panel">
-      <div class="panel-header">Kovárna</div>
-      <div class="panel-body">
-        <div class="coming-soon">
-          <div class="cs-icon">🔨</div>
-          <h2>Všechno je jako nové</h2>
-          <p>Kovář si otírá ruce — nemá do čeho píchnout.</p>
-        </div>
-      </div>
-    </div>`;
-  }
-
-  const rows = kusy.map(x => {
-    const it = x.it, pct = Math.round(it.dur / it.durMax * 100);
-    const cena = repairCost(it);
-    const ok = character.gold >= cena;
-    return `
-      <div class="gl-row" data-tip="${x.kde === 'eq' ? 'eq:' + x.ref : 'inv:' + x.ref}">
-        <div class="gl-ico">${itemIcon(it, 'b-ico')}</div>
-        <div class="gl-main">
-          <div class="gl-nm">${it.name}${isBroken(it) ? ' <span class="broken-tag">zničeno</span>' : ''}</div>
-          <div class="dur-bar"><i class="${durClass(pct)}" style="width:${pct}%"></i></div>
-          <div class="gl-sub">${it.dur} / ${it.durMax} (${pct} %)${x.kde === 'eq' ? ' · nasazeno' : ''}</div>
-        </div>
-        <div class="train-cost ${ok ? '' : 'poor'}">${cena} zlata</div>
-        <button class="btn-green" ${ok ? '' : 'disabled'} onclick="repairItem('${x.kde}','${x.ref}')">Spravit</button>
-      </div>`;
-  }).join('');
-
-  return `
-  <div class="panel">
-    <div class="panel-header">Kovárna</div>
-    <div class="panel-body">
-      <p class="hall-note">
-        Každý boj kus vybavení odře. Když životnost klesne na nulu,
-        předmět přestane dávat bonusy, dokud ho kovář nespraví.
-      </p>
-      <div class="gl-list">${rows}</div>
-      <div class="forge-total">
-        <span>Vše dohromady: <b>${celkem} zlata</b></span>
-        <button class="btn-green" ${character.gold >= celkem ? '' : 'disabled'} onclick="repairAll()">Spravit vše</button>
-      </div>
-    </div>
-  </div>`;
+  // Kovarna zatim neni hotova - lepsi to rict rovnou nez predstirat.
+  return lockedSoon('Kovárna');
 }
-
-const durClass = pct => pct === 0 ? 'dur-zero' : pct < 25 ? 'dur-low' : pct < 60 ? 'dur-mid' : 'dur-full';
-
-
-// ========== ZPRÁVA Z BOJE ==========
-let lastReport = null;   // { won, odmeny, hrac, souper, kola, staty }
-
-// Průběh souboje po kolech – jeden záznam na kolo, aby šlo ve zprávě
-// ukázat, co se v něm stalo oběma stranám.
-let kolaLog = [], koloCislo = 0, dmgHrac = 0, dmgSouper = 0;
-
 function novyZaznamBoje() { kolaLog = []; koloCislo = 0; dmgHrac = 0; dmgSouper = 0; }
 
 const blokovan0 = (blokoval, edmg, eRany) =>
@@ -2653,7 +2588,6 @@ function fightReport() {
 
 const NOVINKY = [
   { datum:'09.08.2026', text:'Vlastnosti přepracovány. Dovednost dává dvojité zásahy, Obratnost je blokuje, Odolnost přidává životy.' },
-  { datum:'09.08.2026', text:'Vetešník otevřel krám s použitými prsteny.' },
   { datum:'09.08.2026', text:'Předměty mají životnost. Opravu zařídí Kovárna.' },
   { datum:'08.08.2026', text:'Výpravy stojí body a mezi nimi si gladiátor musí odpočinout.' },
   { datum:'08.08.2026', text:'Každý předmět má vlastní vylosované vlastnosti.' },
