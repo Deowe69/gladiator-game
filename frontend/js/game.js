@@ -40,10 +40,25 @@ const SHOP_ITEMS = {
     { id:'a2', name:'Bronzová Zbroj',  icon:'🛡️', stat:'+14 Obrana', key:'defense',   val:14, price:200,  quality:'uncommon', tint:'bronze'  },
     { id:'a3', name:'Athénin Štít',    icon:'⛨',  stat:'+25 Obrana', key:'defense',   val:25, price:480,  quality:'rare'     },
     { id:'a4', name:'Zbroj Spartana',  icon:'💠', stat:'+40 Obrana', key:'defense',   val:40, price:950,  quality:'epic'     },
+    { id:'a5',  name:'Plátěná Suknice',  icon:'🥋', stat:'zbroj',  key:'defense', val:4,  price:60,   quality:'common'   },
+    { id:'a6',  name:'Kožich Barbarův',  icon:'🧥', stat:'zbroj',  key:'defense', val:6,  price:110,  quality:'common'   },
+    { id:'a7',  name:'Zbroj Hraničáře',  icon:'🥼', stat:'zbroj',  key:'agility', val:9,  price:210,  quality:'uncommon' },
+    { id:'a13', name:'Bronzový Krunýř',  icon:'🛡️', stat:'zbroj',  key:'defense', val:11, price:260,  quality:'uncommon' },
+    { id:'a8',  name:'Šupinová Zbroj',   icon:'🐉', stat:'zbroj',  key:'defense', val:15, price:410,  quality:'rare'     },
+    { id:'a9',  name:'Stříbrná Zbroj',   icon:'⚪', stat:'zbroj',  key:'defense', val:18, price:520,  quality:'rare'     },
+    { id:'a10', name:'Zbroj Olympu',     icon:'✨', stat:'zbroj',  key:'defense', val:24, price:820,  quality:'epic'     },
+    { id:'a11', name:'Zbroj Persefony',  icon:'🔮', stat:'zbroj',  key:'intelligence', val:26, price:900, quality:'epic' },
+    { id:'a12', name:'Zbroj Poseidona',  icon:'🌊', stat:'zbroj',  key:'defense', val:28, price:980,  quality:'epic'     },
   ],
   armor_extra: [
     { id:'h1', name:'Korintská Helma', icon:'⛑️', stat:'+8 Obrana',  key:'defense',   val:8,  price:150,  quality:'uncommon' },
     { id:'h2', name:'Helma Heros',     icon:'👑', stat:'+16 Obrana', key:'defense',   val:16, price:320,  quality:'rare'     },
+    { id:'h3', name:'Otlučená Přilba', icon:'⛑️', stat:'zbroj', key:'defense', val:3,  price:45,  quality:'common'   },
+    { id:'h4', name:'Kožená Čapka',    icon:'🧢', stat:'zbroj', key:'defense', val:5,  price:80,  quality:'common'   },
+    { id:'h5', name:'Helma Poutníka',  icon:'🪖', stat:'zbroj', key:'skill',   val:8,  price:180, quality:'uncommon' },
+    { id:'h6', name:'Helma Setníka',   icon:'🎖️', stat:'zbroj', key:'defense', val:13, price:340, quality:'rare'     },
+    { id:'h7', name:'Helma Válečníka', icon:'⚔️', stat:'zbroj', key:'strength', val:15, price:420, quality:'rare'    },
+    { id:'h8', name:'Helma Áreova',    icon:'👑', stat:'zbroj', key:'strength', val:22, price:760, quality:'epic'    },
     { id:'g1', name:'Kožené Rukavice', icon:'🥊', stat:'+5 Síla',    key:'strength',  val:5,  price:80,   quality:'common',   tint:'leather' },
     { id:'g3', name:'Bronzové Rukavice',icon:'🥊',stat:'+9 Síla',    key:'strength',  val:9,  price:170,  quality:'uncommon', tint:'bronze'  },
     { id:'g2', name:'Železné Rukavice',icon:'👊', stat:'+12 Síla',   key:'strength',  val:12, price:200,  quality:'uncommon' },
@@ -3439,7 +3454,7 @@ function beginFight(enemy, view) {
     if (!panel) return;
     panel.style.display = 'block';
 
-    document.getElementById('pAvatar').innerHTML = getAvatar(character.class, character.gender);
+    document.getElementById('pAvatar').innerHTML = avatarProUroven(character.level, 'fighter-img');
     document.getElementById('pName').textContent = character.name;
 
     const eAv = document.getElementById('eAvatar');
