@@ -617,10 +617,11 @@ function artImg(path, emoji, cls, alt, tint) {
 function itemIcon(item, cls = '') {
   if (!item) return '';
   const emoji = String(item.icon || '');
-  if (!item.img && !item.id) return `<span class="ico ${cls}">${emoji}</span>`;
-  // item.img = vlastní cesta (relativně k img/), jinak img/items/<id>.png
-  const path = item.img ? `img/${item.img}` : `img/items/${item.id}.png`;
-  return artImg(path, emoji, cls, item.name, item.tint);
+  if (!item.id) return `<span class="ico ${cls}">${emoji}</span>`;
+  // Ikona se hleda vzdy podle id. Drive sly zapsat vlastni cesty,
+  // jenze ty pak prezily v ulozene nabidce i po vymene grafiky
+  // a kus se tvaril, ze ikonu nema.
+  return artImg(`img/items/${item.id}.png`, emoji, cls, item.name, item.tint);
 }
 
 POMOCNIK_SLOTS.forEach(k => { SLOT_DEFS[k] = { label:'Pomocník', icon:'👤' }; });
@@ -1431,9 +1432,13 @@ document.addEventListener('click',     () => hideItemTip());
 
 // ========== ZBOŽÍ V OBCHODĚ ==========
 // Nabídka se vyloosuje jednou za restock a drží se, dokud kupec nedoplní.
+// Zvys, kdyz se zmeni podoba predmetu - stara ulozena nabidka
+// se pak zahodi a vyloosuje znovu.
+const STOCK_VERZE = '2';
+
 function shopStock(id) {
   restockLeft();                                  // zajistí, že restockAt existuje
-  const stamp = localStorage.getItem('restockAt') || '0';
+  const stamp = (localStorage.getItem('restockAt') || '0') + '#' + STOCK_VERZE;
   const kIt = 'stock_' + id, kAt = 'stockAt_' + id;
 
   if (localStorage.getItem(kAt) === stamp) {
