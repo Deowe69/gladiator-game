@@ -26,11 +26,11 @@ const ENEMIES = [
 
 const SHOP_ITEMS = {
   weapons: [
-    { id:'w0', name:'Wood Sword',      icon:'🪵', stat:'2-4 poškození',   key:'strength', val:2,  dmg:[2,4],   price:25,  quality:'common',   img:'weapons/wooden-sword.png' },
-    { id:'w1', name:'Bronzový Meč',    icon:'🗡️', stat:'7-12 poškození',  key:'strength', val:6,  dmg:[7,12],  price:100, quality:'common',   img:'weapons/bronze-sword.png' },
-    { id:'w2', name:'Železné Kopí',    icon:'🔱', stat:'14-22 poškození', key:'strength', val:12, dmg:[14,22], price:220, quality:'uncommon', img:'weapons/iron-spear.png'   },
-    { id:'w3', name:'Ocelová Kosa',    icon:'⚔️', stat:'24-36 poškození', key:'strength', val:20, dmg:[24,36], price:450, quality:'rare',     img:'weapons/silver-axe.png'   },
-    { id:'w4', name:'Meč Achillea',    icon:'🌟', stat:'42-62 poškození', key:'strength', val:35, dmg:[42,62], price:900, quality:'epic',     img:'weapons/gold-sword.png'   },
+    { id:'w0', name:'Wood Sword',      icon:'🪵', stat:'2-4 poškození',   key:'strength', val:2,  dmg:[2,4],   price:25,  quality:'common' },
+    { id:'w1', name:'Bronzový Meč',    icon:'🗡️', stat:'7-12 poškození',  key:'strength', val:6,  dmg:[7,12],  price:100, quality:'common' },
+    { id:'w2', name:'Železné Kopí',    icon:'🔱', stat:'14-22 poškození', key:'strength', val:12, dmg:[14,22], price:220, quality:'uncommon'   },
+    { id:'w3', name:'Ocelová Kosa',    icon:'⚔️', stat:'24-36 poškození', key:'strength', val:20, dmg:[24,36], price:450, quality:'rare'   },
+    { id:'w4', name:'Meč Achillea',    icon:'🌟', stat:'42-62 poškození', key:'strength', val:35, dmg:[42,62], price:900, quality:'epic'   },
     { id:'w5', name:'Oštěp Artemidy', icon:'🔱', stat:'20-31 poškození', key:'strength', val:18, dmg:[20,31], price:380, quality:'rare'     },
     { id:'w6', name:'Bojová Sekera',  icon:'🪓', stat:'17-29 poškození', key:'strength', val:15, dmg:[17,29], price:290, quality:'uncommon' },
     { id:'w7', name:'Ocelový Meč',    icon:'⚔️', stat:'22-34 poškození', key:'strength', val:20, dmg:[22,34], price:430, quality:'rare'     },
