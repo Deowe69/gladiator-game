@@ -31,7 +31,9 @@ const SHOP_ITEMS = {
     { id:'w2', name:'Železné Kopí',    icon:'🔱', stat:'14-22 poškození', key:'strength', val:12, dmg:[14,22], price:220, quality:'uncommon', img:'weapons/iron-spear.png'   },
     { id:'w3', name:'Ocelová Kosa',    icon:'⚔️', stat:'24-36 poškození', key:'strength', val:20, dmg:[24,36], price:450, quality:'rare',     img:'weapons/silver-axe.png'   },
     { id:'w4', name:'Meč Achillea',    icon:'🌟', stat:'42-62 poškození', key:'strength', val:35, dmg:[42,62], price:900, quality:'epic',     img:'weapons/gold-sword.png'   },
-    { id:'w5', name:'Luk Artemidy',    icon:'🏹', stat:'20-31 poškození', key:'strength', val:18, dmg:[20,31], price:380, quality:'rare'     },
+    { id:'w5', name:'Oštěp Artemidy', icon:'🔱', stat:'20-31 poškození', key:'strength', val:18, dmg:[20,31], price:380, quality:'rare'     },
+    { id:'w6', name:'Bojová Sekera',  icon:'🪓', stat:'17-29 poškození', key:'strength', val:15, dmg:[17,29], price:290, quality:'uncommon' },
+    { id:'w7', name:'Ocelový Meč',    icon:'⚔️', stat:'22-34 poškození', key:'strength', val:20, dmg:[22,34], price:430, quality:'rare'     },
   ],
   armor: [
     { id:'a1', name:'Kožená Zbroj',    icon:'🧥', stat:'+6 Obrana',  key:'defense',   val:6,  price:90,   quality:'common',   tint:'leather' },
@@ -320,67 +322,18 @@ function arena() {
 
 // ===== QUESTS =====
 function quests() {
-  const now = Date.now();
-  const cards = QUESTS_DEF.map(q => {
-    const qd = questData && questData.id === q.id ? questData : null;
-    const available = character.level >= q.minLevel;
-    const running = qd && !qd.done && now < qd.endTime;
-    const claimable = qd && !qd.done && now >= qd.endTime;
-    const done = qd && qd.done;
-    const pct = running ? Math.min(100, ((now - qd.startTime) / (qd.endTime - qd.startTime) * 100)).toFixed(1) : (claimable||done ? 100 : 0);
-    const timeLeft = running ? formatTime(Math.ceil((qd.endTime - now)/1000)) : '';
-
-    return `
-    <div class="quest-card ${running||claimable?'active-quest':''}">
-      <div class="quest-card-header">
-        <span class="quest-icon">${q.icon}</span>
-        <div>
-          <div class="quest-title">${q.name}</div>
-          <div class="quest-tier">Lv.${q.minLevel}+ · ⏱ ${formatTime(q.time)}</div>
-        </div>
-      </div>
-      <div class="quest-desc">${q.desc}</div>
-      <div class="quest-rewards">
-        <span class="quest-rew">💰 ${q.gold} zlatých</span>
-        <span class="quest-rew">⭐ ${q.exp} XP</span>
-      </div>
-      ${running||claimable||done ? `
-      <div class="quest-time-bar">
-        <div class="quest-time-label"><span>${running?'Probíhá...':claimable?'Hotovo!':'Dokončeno'}</span><span>${timeLeft}</span></div>
-        <div class="quest-prog-bar"><div class="quest-prog-fill" style="width:${pct}%"></div></div>
-      </div>` : ''}
-      ${!available ? `<button class="quest-btn" disabled>🔒 Lv.${q.minLevel}+</button>`
-       : done ? `<button class="quest-btn" disabled>✅ Splněno</button>`
-       : claimable ? `<button class="quest-btn claim" onclick="claimQuest('${q.id}')">🎁 Převzít odměnu</button>`
-       : running ? `<button class="quest-btn" disabled>⏳ Probíhá...</button>`
-       : questData && !questData.done ? `<button class="quest-btn" disabled>Jiný úkol běží</button>`
-       : questData && !questData.done ? `<button class="quest-btn" disabled>⚠ Jiný úkol běží</button>` : `<button class="quest-btn" onclick="startQuest('${q.id}')">📜 Zahájit</button>`}
-    </div>`;
-  }).join('');
-
-  return `
-  <div class="panel">
-    <div class="panel-header">📜 Úkoly</div>
-    <div class="panel-body">
-      <div class="quest-tabs">
-        <div class="quest-tab active">📜 Průzkum</div>
-        <div class="quest-tab">⚔ Zabíjení</div>
-        <div class="quest-tab">🏆 Denní</div>
-      </div>
-      <div class="quest-list">${cards}</div>
-    </div>
-  </div>`;
+  // Mise jeste nejsou hotove.
+  return lockedSoon('Mise');
 }
-
 // ===== SHOPS =====
 let currentShop = null;
-let shopPage = 0;      // 0 nebo 1 – ram maluje dve zalozky
+let shopPage = 0;      // 0 nebo 1 - ram maluje dve zalozky
 
 const MERCHANTS = {
-  blacksmith: { name:'Zbrojíř',    emoji:'🧔', menu:'shop',    desc:'Zbraně všeho druhu',        get items(){ return SHOP_ITEMS.weapons; } },
-  armorer:    { name:'Platnéř',    emoji:'👨‍🏭', menu:'armorer', desc:'Zbroje, boty a rukavice',  get items(){ return SHOP_ITEMS.armor.concat(SHOP_ITEMS.armor_extra || []); } },
-  jeweler:    { name:'Šperkař',    emoji:'👳', menu:'jeweler', desc:'Amulety a ozdoby',          get items(){ return SHOP_ITEMS.jewelry; } },
-  alchemist:  { name:'Alchymista', emoji:'🧙', menu:'alchemy', desc:'Lektvary a elixíry',        get items(){ return SHOP_ITEMS.potions; } },
+  blacksmith: { name:'Zbrojíř',    emoji:'🧔', menu:'shop',    desc:'Zbraně všeho druhu',       get items(){ return SHOP_ITEMS.weapons; } },
+  armorer:    { name:'Platnéř',    emoji:'👨', menu:'armorer', desc:'Zbroje, boty a rukavice',  get items(){ return SHOP_ITEMS.armor.concat(SHOP_ITEMS.armor_extra || []); } },
+  jeweler:    { name:'Šperkař',    emoji:'👳', menu:'jeweler', desc:'Amulety a ozdoby',         get items(){ return SHOP_ITEMS.jewelry; } },
+  alchemist:  { name:'Alchymista', emoji:'🧙', menu:'alchemy', desc:'Lektvary a elixíry',       get items(){ return SHOP_ITEMS.potions; } },
 };
 
 // portrét kupce: img/merchants/<id>.png, jinak emoji
@@ -2148,13 +2101,12 @@ setInterval(refreshExpedUI, 1000);
 // Lokace se odemykají podle úrovně. Staty příšer se dopočítají
 // z úrovně lokace, takže je balanc konzistentní napříč celou mapou.
 const EXPED_DEFS = [
-  { id:'poustevnik', name:'Poustevník',      lvl:1,
-    desc:'Poustevníkova chatrč stojí kousek za hradbami. Místo klidu a modliteb — jenže krysy, ' +
-         'toulaví vlci a hladoví havrani z okolních polí sem chodí častěji než poutníci. ' +
-         'Pro začínajícího gladiátora ideální místo, kde si otestovat první meč.',
-    mobs:[['Zdivočelý Netopýr','bat'],['Toulavý Vlk','wolf'],['Hladový Havran','raven'],['Křížák','spider']] },
+  // Cestovatel nahradi Poustevnika - bude jim jit prechazet mezi
+  // lokacemi na vyssi urovni. Zatim jen zamceny panel.
+  { id:'cestovatel', name:'Cestovatel', lvl:1, zamceno:true,
+    desc:'', mobs:[] },
 
-  { id:'chram', name:'Jeskynní chrám',  lvl:4,
+  { id:'chram', name:'Jeskynní chrám',  lvl:1,
     desc:'Pod zemí se skrývá chrám starší než samotné Atény. Stěny porostlé svítícím mechem, ' +
          'ozvěna nesoucí zvuky, které nepatří ničemu živému. Poklady tu leží na dosah — ' +
          'hlídané tvory, kteří nikdy nespatřili slunce.',
@@ -2217,7 +2169,7 @@ const EXPED_DEFS = [
 
 // z definice udělá plnou lokaci i se staty příšer
 const EXPEDITIONS = EXPED_DEFS.map(d => ({
-  id: d.id, name: d.name, minLevel: d.lvl, desc: d.desc,
+  id: d.id, name: d.name, minLevel: d.lvl, desc: d.desc, zamceno: !!d.zamceno,
   monsters: d.mobs.map(([name, img], i) => {
     // Staty vycházejí z toho, co hráč na dané úrovni reálně uveze:
     //   životy   ≈ 8 kol, než ho hráč sundá
@@ -2244,7 +2196,7 @@ const EXPEDITIONS = EXPED_DEFS.map(d => ({
   })
 }));
 
-let currentExped = 'poustevnik';
+let currentExped = 'chram';
 
 // slovní hodnocení statu vůči hráči (jako v Gladiatus)
 const RANK_WORDS = ['Bezcenný','Velmi slabý','Slabý','Neduživý','Normální','Silný','Velmi silný'];
@@ -2465,6 +2417,17 @@ function forge() {
   // Kovarna zatim neni hotova - lepsi to rict rovnou nez predstirat.
   return lockedSoon('Kovárna');
 }
+// Barva podle toho, jak je kus opotrebeny.
+const durClass = pct => pct === 0 ? 'dur-zero' : pct < 25 ? 'dur-low' : pct < 60 ? 'dur-mid' : 'dur-full';
+
+
+// ========== ZPRAVA Z BOJE ==========
+let lastReport = null;   // { won, odmeny, hrac, souper, kola, staty }
+
+// Prubeh souboje po kolech - jeden zaznam na kolo, aby slo ve zprave
+// ukazat, co se v nem stalo obema stranam.
+let kolaLog = [], koloCislo = 0, dmgHrac = 0, dmgSouper = 0;
+
 function novyZaznamBoje() { kolaLog = []; koloCislo = 0; dmgHrac = 0; dmgSouper = 0; }
 
 const blokovan0 = (blokoval, edmg, eRany) =>
@@ -3358,6 +3321,10 @@ function expedition() {
   setTimeout(refreshExpedUI, 0);   // ať ukazatel nečeká na další tik
   const loc = EXPEDITIONS.find(e => e.id === currentExped) || EXPEDITIONS[0];
   currentExped = loc.id;
+
+  // Cestovatel jeste neni hotovy, rikame to rovnou
+  if (loc.zamceno) return lockedSoon(loc.name);
+
   const locked = character.level < loc.minLevel;
 
   const cards = loc.monsters.map((m, i) => `
