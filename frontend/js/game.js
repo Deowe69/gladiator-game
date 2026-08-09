@@ -795,8 +795,10 @@ function profileView() {
   const hpPct   = Math.max(0, c.health / maxHP() * 100);
 
   const bar = (cls, pct) => `<div class="sbar ${cls}"><i style="width:${pct}%"></i></div>`;
-  const rowBar   = (label, cls, pct, val, statKey) =>
-    `<div class="strow"${statKey ? ` data-tip="stat:${statKey}"` : ''}><span class="sl">${label}</span>${bar(cls, pct)}<span class="sv">${val}</span></div>`;
+  const rowBar   = (label, cls, pct, val, statKey, tipKey) => {
+    const tip = tipKey ? ` data-tip="${tipKey}"` : statKey ? ` data-tip="stat:${statKey}"` : '';
+    return `<div class="strow"${tip}><span class="sl">${label}</span>${bar(cls, pct)}<span class="sv">${val}</span></div>`;
+  };
   const rowPlain = (label, val) =>
     `<div class="strow plain"><span class="sl">${label}</span><span class="sv">${val}</span></div>`;
 
@@ -820,7 +822,7 @@ function profileView() {
       <div class="stattable">
         ${rowPlain('Úroveň', c.level)}
         ${rowBar('Životy',     'hp', hpPct, c.health + '/' + maxHP(), 'defense')}
-        ${rowBar('Zkušenost',  'xp', xpPct, xpPct.toFixed(1) + ' %')}
+        ${rowBar('Zkušenost',  'xp', xpPct, xpPct.toFixed(1) + ' %', null, 'xp')}
         ${rowBar('Síla',       'st', Math.min(100, str / 3), str, 'strength')}
         ${rowBar('Dovednost',  'st', Math.min(100, skl / 3), skl, 'skill')}
         ${rowBar('Obratnost',  'st', Math.min(100, agi / 3), agi, 'agility')}
@@ -828,10 +830,6 @@ function profileView() {
         ${rowBar('Inteligence','st', Math.min(100, int / 3), int, 'intelligence')}
         ${rowPlain('Zbroj', armor)}
         ${rowPlain('Poškození', dmgMin + ' - ' + dmgMax)}
-        ${equipped.weapon && equipped.weapon.dmg
-            ? rowPlain('Zbraň', equipped.weapon.dmg[0] + ' - ' + equipped.weapon.dmg[1])
-            : ''}
-        ${rowPlain('Zlato', c.gold)}
       </div>
     </div>
 
@@ -1308,6 +1306,30 @@ const STAT_INFO = {
   },
 };
 
+// Kolik zkušeností hráč má a kolik ještě potřebuje na další úroveň.
+function xpTipHTML() {
+  const potreba = character.level * 100;
+  const ma = character.experience;
+  const zbyva = Math.max(0, potreba - ma);
+  const pct = Math.min(100, ma / potreba * 100);
+
+  const row = (jmeno, hodnota) =>
+    `<div class="tip-row"><span>${jmeno}</span><b>${hodnota}</b></div>`;
+
+  return `
+    <div class="tip-head" style="background:linear-gradient(180deg,#7a5a12,#1a1409)">
+      <div class="tip-name">Zkušenost</div>
+      <div class="tip-q">${pct.toFixed(1)} % do ${character.level + 1}. úrovně</div>
+    </div>
+    <div class="tip-body">
+      ${row('Máš', ma.toLocaleString('cs-CZ'))}
+      ${row('Potřebuješ', potreba.toLocaleString('cs-CZ'))}
+      <div class="tip-sep"></div>
+      ${row('Zbývá', zbyva.toLocaleString('cs-CZ'))}
+      <div class="tip-note">Na ${character.level + 1}. úroveň potřebuješ celkem ${potreba.toLocaleString('cs-CZ')} zkušeností.</div>
+    </div>`;
+}
+
 function statTipHTML(key) {
   const s = STAT_INFO[key];
   if (!s) return '';
@@ -1333,6 +1355,7 @@ function statTipHTML(key) {
 
 // Co se má v bublině ukázat – předmět, protivník, nebo vlastnost.
 function tipHTMLFor(ref) {
+  if (ref === 'xp') return xpTipHTML();
   if (ref.startsWith('stat:')) return statTipHTML(ref.slice(5));
   if (ref.startsWith('loot:')) {
     const z = lootLog[+ref.slice(5)];
@@ -2016,6 +2039,16 @@ function refreshExpedUI() {
   refreshAdminLink();
 
   const cd = expedCdLeft();
+
+  // odpočet je vidět i na tlačítku v hlavičce, ať kvůli němu
+  // nemusíš chodit až na výpravu
+  const hb = document.getElementById('btnExped');
+  if (hb) {
+    if (cd > 0)        { hb.disabled = true;  hb.textContent = 'Odpočinek ' + fmtSec(cd); }
+    else if (pts <= 0) { hb.disabled = true;  hb.textContent = 'Bez bodů'; }
+    else               { hb.disabled = false; hb.textContent = 'Jít na výpravu'; }
+  }
+
   document.querySelectorAll('.mon-attack').forEach(b => {
     if (cd > 0)        { b.disabled = true;  b.textContent = 'Odpočinek ' + fmtSec(cd); }
     else if (pts <= 0) { b.disabled = true;  b.textContent = 'Bez bodů'; }
@@ -2182,13 +2215,14 @@ function expedMenuHTML() {
 
 
 // ===== CVIČIŠTĚ =====
-const TRAIN_STATS = [
-  { key:'strength',     name:'Síla',        popis:'Zvyšuje poškození, které rozdáš.' },
-  { key:'skill',        name:'Dovednost',   popis:'Šance udeřit dvakrát v jednom kole.' },
-  { key:'defense',      name:'Obrana',      popis:'Tlumí zásahy soupeřů.' },
-  { key:'agility',      name:'Hbitost',     popis:'Pomáhá ti uhýbat a útočit dřív.' },
-  { key:'intelligence', name:'Inteligence', popis:'Otevírá cestu k magickému vybavení.' },
-];
+// Pořadí i názvy drží STAT_INFO, aby se Cvičiště a profil nemohly rozejít.
+// Getter čte až při vykreslení, takže nevadí, že je STAT_INFO níž v souboru.
+const TRAIN_POradi = ['strength', 'skill', 'agility', 'defense', 'intelligence'];
+const TRAIN_STATS = TRAIN_POradi.map(key => ({
+  key,
+  get name()  { return STAT_INFO[key].nazev; },
+  get popis() { return STAT_INFO[key].popis; },
+}));
 
 // cena roste s aktuální hodnotou, ať trénink není nekonečný zdroj
 const trainCost = key => Math.floor(15 * character[key] + 25);
