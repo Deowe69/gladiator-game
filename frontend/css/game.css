@@ -3712,3 +3712,9 @@ select.adm-input{width:190px}
   text-shadow:0 1px 3px rgba(0,0,0,.9);
   font-weight:bold;letter-spacing:.4px;
 }
+
+/* Popisek misto ikonky u urovne. */
+.res-lbl{
+  font-style:normal;font-size:11px;
+  color:#8a7550;letter-spacing:.3px;
+}

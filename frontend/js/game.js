@@ -3720,10 +3720,6 @@ function expedition() {
       <button class="btn-green mon-attack" ${locked ? 'disabled data-locked="1"' : ''}
               onclick="attackMonster(${i})">Útok</button>
 
-      <div class="mon-rew">
-        <span title="Zlato">${m.gold[0]}–${m.gold[1]} zlata</span>
-        <span title="Zkušenosti">✦ ${m.exp[0]}–${m.exp[1]}</span>
-      </div>
 
     </div>`).join('');
 
