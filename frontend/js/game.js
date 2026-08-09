@@ -130,6 +130,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     openView('city');
     startQuestTimer();
     loadLeaderboard();
+    await nactiServerStav();
+    refreshExpedUI();
     nabidniDenniOdmenu();
   } catch (err) {
     // Fallback: load from localStorage or create demo character
@@ -1222,6 +1224,12 @@ function normalizeCharacter() {
   if (typeof character.skill !== 'number') character.skill = 10;
   if (typeof character.pocta !== 'number') character.pocta = 0;
   if (typeof character.emeralds !== 'number') character.emeralds = 0;
+
+  // Body, odpocty a clenstvi uz drzi server. Stare klice v prohlizeci
+  // by jen matly - uz je nikdo necte, tak at nezustavaji lezet.
+  ['pts_exped','ptsAt_exped','pts_dungeon','ptsAt_dungeon',
+   'cd_exped','cd_dungeon','expedCdUntil','expedPts','expedPtsAt',
+   'paladinDo'].forEach(k => localStorage.removeItem(k));
   if (localStorage.getItem('statsFixed') === '1') return;
   for (const k of STAT_KEYS) {
     if (typeof character[k] === 'number') {
@@ -1769,12 +1777,12 @@ function endCombat(won) {
     addLog(`Porážka. ${rewards}`, 'log-d');
   }
   // po výpravě si gladiátor musí odpočinout
-  if (lastFight && lastFight.view === 'expedition') startExpedCooldown();
+  // odpočinek nastavil server, když se utratil bod
   if (won && lastFight && lastFight.view === 'arena') {
     character.pocta = (character.pocta || 0) + POCTA_ARENA;
     addLog(`Získáváš <strong>${POCTA_ARENA}</strong> pocty`, 'log-w');
   }
-  if (lastFight && lastFight.view === 'dungeon') startCooldown('dungeon');
+  // odpočinek bludiště nastavil server při vstupu do místnosti
   if (won && lastFight && lastFight.view === 'dungeon') bludisteVyhra();
   wearEquipment();
 
@@ -2098,77 +2106,121 @@ function logout() {
 
 
 // ========== BODY VÝPRAVY A ODPOČINEK ==========
-const EXPED_MAX      = 12;
-const EXPED_REGEN_MS = 10 * 60 * 1000;   // +1 bod za 10 minut
+// ========== STAV ZE SERVERU ==========
+// O bodech, odpočtech i členství Paladina rozhoduje server. Hra si
+// drží poslední odpověď a čas, kdy dorazila, aby šly odpočty
+// dopočítat mezi dotazy. Sama nic z toho nepočítá.
+let serverStav = null;
+let serverStavKdy = 0;
+let serverNedostupny = false;
 
-// Body se vedou zvlášť pro každou činnost ('exped', 'dungeon'),
-// aby si navzájem neubíraly.
-function points(druh) {
-  const kP = 'pts_' + druh, kAt = 'ptsAt_' + druh;
-  let p  = parseInt(localStorage.getItem(kP), 10);
-  let at = parseInt(localStorage.getItem(kAt), 10);
-
-  // přechod ze starého společného počítadla
-  if (isNaN(p) && druh === 'exped') {
-    p  = parseInt(localStorage.getItem('expedPts'), 10);
-    at = parseInt(localStorage.getItem('expedPtsAt'), 10);
+async function nactiServerStav() {
+  try {
+    serverStav = await API.gameState();
+    serverStavKdy = Date.now();
+    serverNedostupny = false;
+  } catch (e) {
+    serverNedostupny = true;
   }
-  if (isNaN(p))  p  = EXPED_MAX;
-  if (isNaN(at)) at = Date.now();
-
-  if (p < EXPED_MAX) {
-    const pribylo = Math.floor((Date.now() - at) / EXPED_REGEN_MS);
-    if (pribylo > 0) {
-      p = Math.min(EXPED_MAX, p + pribylo);
-      at += pribylo * EXPED_REGEN_MS;
-    }
-  }
-  if (p >= EXPED_MAX) at = Date.now();
-
-  localStorage.setItem(kP, p);
-  localStorage.setItem(kAt, at);
-  return p;
+  return serverStav;
 }
 
-function spendPoint(druh) {
-  const p = points(druh);
-  if (p <= 0) return false;
-  if (p === EXPED_MAX) localStorage.setItem('ptsAt_' + druh, Date.now());
-  localStorage.setItem('pts_' + druh, p - 1);
-  return true;
+const odPosledni = () => Date.now() - serverStavKdy;
+
+// Členství potvrzuje server. Když neodpověděl, Paladin neplatí —
+// lepší výhodu nedat, než ji dát někomu, kdo na ni nemá nárok.
+const jePaladin = () => !!(serverStav && serverStav.paladin && serverStav.paladin.aktivni);
+
+const paladinDo = () => (serverStav && serverStav.paladin && serverStav.paladin.do)
+  ? new Date(serverStav.paladin.do).getTime() : 0;
+
+function paladinZbyva() {
+  const ms = paladinDo() - Date.now();
+  if (ms <= 0) return '';
+  const dni = Math.floor(ms / 86400000);
+  const hod = Math.floor(ms % 86400000 / 3600000);
+  return dni ? dni + ' dní a ' + hod + ' h' : hod + ' h';
+}
+
+// Než dorazí nastavení ze serveru, platí tyhle hodnoty.
+const NASTAVENI_ZALOHA = {
+  paladin_gold_bonus_percent: 10, paladin_xp_bonus_percent: 10,
+  normal_expedition_points_max: 12, paladin_expedition_points_max: 30,
+  normal_labyrinth_points_max: 12, paladin_labyrinth_points_max: 30,
+  paladin_free_merchant_refreshes_per_day: 1,
+  paladin_expedition_time_multiplier: 0.5, paladin_labyrinth_time_multiplier: 0.5,
+  paladin_arena_cooldown_multiplier: 0.5, paladin_circus_turma_cooldown_multiplier: 0.5,
+  paladin_price_emeralds: 30, paladin_duration_days: 14,
+};
+const palNastaveni = klic => {
+  const z = serverStav && serverStav.config && serverStav.config[klic];
+  return (z === undefined || z === null) ? NASTAVENI_ZALOHA[klic] : Number(z);
+};
+
+// ---- body a odpočty ze serverového stavu ----
+function points(druh) {
+  const b = serverStav && serverStav.body && serverStav.body[druh];
+  return b ? b.body : 0;
+}
+
+function stropBodu(druh) {
+  const b = serverStav && serverStav.body && serverStav.body[druh];
+  if (b) return b.strop;
+  return palNastaveni(druh === 'dungeon' ? 'normal_labyrinth_points_max' : 'normal_expedition_points_max');
+}
+
+function cdLeft(druh) {
+  const o = serverStav && serverStav.odpocty && serverStav.odpocty[druh];
+  return o ? Math.max(0, o - odPosledni()) : 0;
 }
 
 function regenLeft(druh) {
-  if (points(druh) >= EXPED_MAX) return 0;
-  const at = parseInt(localStorage.getItem('ptsAt_' + druh), 10) || Date.now();
-  return Math.max(0, at + EXPED_REGEN_MS - Date.now());
+  const b = serverStav && serverStav.body && serverStav.body[druh];
+  return b ? Math.max(0, b.doDalsiho - odPosledni()) : 0;
 }
 
-// Cooldown roste s úrovní — vyšší level = delší odpočinek mezi výpravami
-function expedCooldownMs() {
-  const L = character ? character.level : 1;
-  if (L <= 10) return 15 * 1000;
-  if (L <= 20) return 30 * 1000;
-  if (L <= 35) return 45 * 1000;
-  if (L <= 50) return 90 * 1000;
-  return 150 * 1000;
+// Bod utrácí a odpočinek nastavuje server; vrací true, když akce prošla.
+async function spendPoint(druh) {
+  try {
+    const odpoved = await API.gameSpend(druh);
+    await nactiServerStav();
+    refreshExpedUI();
+    return !!odpoved.ok;
+  } catch (e) {
+    const z = (e && e.message) || '';
+    if (/odpo/i.test(z))      toast('Ještě si odpočiň.');
+    else if (/bod/i.test(z))  toast('Došly body. Další se doplní za 10 minut.');
+    else                      toast('Server neodpověděl, zkus to znovu.');
+    await nactiServerStav();
+    refreshExpedUI();
+    return false;
+  }
 }
 
 const expedPoints     = () => points('exped');
-const spendExpedPoint = () => spendPoint('exped');
+const spendExpedPoint = () => spendPoint('exped');     // vrací Promise
+const expedCdLeft     = () => cdLeft('exped');
 
-const startCooldown = druh =>
-  localStorage.setItem('cd_' + druh, Date.now() + expedCooldownMs());
+// Nákup členství. Smaragdy odečítá a členství prodlužuje server —
+// hra si částku nepočítá sama, aby ji nešlo obejít.
+async function kupPaladina() {
+  const cena = palNastaveni('paladin_price_emeralds');
+  const dni  = palNastaveni('paladin_duration_days');
+  if (!confirm('Stát se Paladinem na ' + dni + ' dní za ' + cena + ' smaragdů?')) return;
 
-function cdLeft(druh) {
-  let until = parseInt(localStorage.getItem('cd_' + druh), 10);
-  // přechod ze starého klíče, kdy odpočet měla jen výprava
-  if (isNaN(until) && druh === 'exped') until = parseInt(localStorage.getItem('expedCdUntil'), 10);
-  return Math.max(0, (until || 0) - Date.now());
+  try {
+    const odpoved = await API.paladinBuy();
+    if (typeof odpoved.emeralds === 'number') character.emeralds = odpoved.emeralds;
+    await nactiServerStav();
+    updateUI(); openView('premium');
+    toast('Jsi Paladin na dalších ' + (odpoved.dni || dni) + ' dní.');
+  } catch (e) {
+    const z = (e && e.message) || '';
+    toast(/smaragd/i.test(z) ? ('Na Paladina potřebuješ ' + cena + ' smaragdů.')
+                             : 'Nákup se nepovedl, zkus to znovu.');
+  }
 }
 
-const startExpedCooldown = () => startCooldown('exped');
-const expedCdLeft = () => cdLeft('exped');
 
 const fmtSec = ms => Math.ceil(ms / 1000) + ' s';
 
@@ -2180,10 +2232,10 @@ function refreshExpedUI() {
 
   const pts = points('exped');
   const el  = document.getElementById('expedPts');
-  if (el) el.textContent = pts + ' / ' + EXPED_MAX;
+  if (el) el.textContent = pts + ' / ' + stropBodu('exped');
 
   const dg = document.getElementById('dungeonPts');
-  if (dg) dg.textContent = points('dungeon') + ' / ' + EXPED_MAX;
+  if (dg) dg.textContent = points('dungeon') + ' / ' + stropBodu('dungeon');
 
   // bludiště má vlastní odpočet, ale stejná pravidla jako výprava
   const dcd = cdLeft('dungeon');
@@ -2229,7 +2281,7 @@ function refreshExpedUI() {
     const regen = regenLeft('exped');
     info.textContent =
       (cd > 0 ? 'Odpočinek: ' + fmtSec(cd) + ' · ' : '') +
-      'Body výpravy: ' + pts + '/' + EXPED_MAX +
+      'Body výpravy: ' + pts + '/' + stropBodu('exped') +
       (regen > 0 ? ' · další za ' + Math.ceil(regen / 60000) + ' min' : '');
   }
 }
@@ -2484,37 +2536,6 @@ const work    = () => lockedSoon('Práce');
 // Paladin je casove predplatne za smaragdy. Vyhody zatim nejsou
 // domluvene, takze je panel necha otevrene misto toho, aby sliboval
 // neco, co hra nedela.
-const PALADIN_DNI = 14;
-const PALADIN_CENA = 30;      // smaragdu
-
-const paladinDo = () => parseInt(localStorage.getItem('paladinDo'), 10) || 0;
-const jePaladin = () => paladinDo() > Date.now();
-
-function paladinZbyva() {
-  const ms = paladinDo() - Date.now();
-  if (ms <= 0) return '';
-  const dni = Math.floor(ms / 86400000);
-  const hod = Math.floor(ms % 86400000 / 3600000);
-  return dni ? `${dni} dní a ${hod} h` : `${hod} h`;
-}
-
-function kupPaladina() {
-  const mam = character.emeralds || 0;
-  if (mam < PALADIN_CENA) {
-    toast(`Na Paladina potřebuješ ${PALADIN_CENA} smaragdů, máš ${mam}.`);
-    return;
-  }
-  if (!confirm(`Stát se Paladinem na ${PALADIN_DNI} dní za ${PALADIN_CENA} smaragdů?`)) return;
-
-  character.emeralds = mam - PALADIN_CENA;
-  // Kdyz uz Paladina ma, dalsi nakup se pricte k tomu, co zbyva.
-  const odkud = Math.max(Date.now(), paladinDo());
-  localStorage.setItem('paladinDo', odkud + PALADIN_DNI * 86400000);
-
-  saveChar(); updateUI(); openView('premium');
-  toast(`Jsi Paladin na dalších ${PALADIN_DNI} dní.`);
-}
-
 function premium() {
   const aktivni = jePaladin();
   const mam = character.emeralds || 0;
@@ -2534,7 +2555,7 @@ function premium() {
           <div class="pal-popis">
             ${aktivni
               ? `Zbývá ti <b>${paladinZbyva()}</b>. Další nákup se přičte k tomu, co ti zůstalo.`
-              : `<b>${PALADIN_DNI} dní</b> za <b>${PALADIN_CENA} smaragdů</b>.`}
+              : `<b>${palNastaveni('paladin_duration_days')} dní</b> za <b>${palNastaveni('paladin_price_emeralds')} smaragdů</b>.`}
           </div>
         </div>
 
@@ -2543,7 +2564,7 @@ function premium() {
             Máš <b>${mam}</b>
             <img class="res-ico" src="img/ui/gem.png" alt="smaragdů">
           </div>
-          <button class="btn-green" ${mam >= PALADIN_CENA ? '' : 'disabled'}
+          <button class="btn-green" ${mam >= palNastaveni('paladin_price_emeralds') ? '' : 'disabled'}
                   onclick="kupPaladina()">
             ${aktivni ? 'Prodloužit' : 'Stát se Paladinem'}
           </button>
@@ -3151,7 +3172,7 @@ function admHeal() {
 
 function admBody() {
   ['exped', 'dungeon'].forEach(d => {
-    localStorage.setItem('pts_' + d, EXPED_MAX);
+    localStorage.setItem('pts_' + d, stropBodu(d));
     localStorage.setItem('ptsAt_' + d, Date.now());
   });
   localStorage.removeItem('expedCdUntil');
@@ -3344,8 +3365,9 @@ function noveBludiste(patro) {
   ulozBludiste();
 }
 
-function vstupDoBludiste() {
-  if (!spendPoint('dungeon')) { toast('Došly body bludiště. Další se doplní za 10 minut.'); return; }
+async function vstupDoBludiste() {
+  // server odecte bod a nastavi odpocinek; hlasku uz rekl spendPoint
+  if (!await spendPoint('dungeon')) return;
   noveBludiste((dungeonRun ? dungeonRun.patro : 0) + 1);
   openView('dungeon');
 }
@@ -3422,7 +3444,7 @@ function dungeon() {
           Vstup stojí jeden bod bludiště.
         </p>
         <div class="dg-start">
-          <div class="dg-info">Body bludiště: <b>${points('dungeon')}</b> / ${EXPED_MAX}</div>
+          <div class="dg-info">Body bludiště: <b>${points('dungeon')}</b> / ${stropBodu('dungeon')}</div>
           <button class="btn-green" ${points('dungeon') > 0 ? '' : 'disabled'}
                   onclick="vstupDoBludiste()">Vstoupit do bludiště</button>
         </div>
@@ -3465,7 +3487,7 @@ function dungeon() {
 
       <div class="dg-lista">
         <span>Postup: <b>${dungeonRun.postup}</b> / ${dungeonRun.mistnosti.length}</span>
-        <span>Body: <b>${points('dungeon')}</b> / ${EXPED_MAX}</span>
+        <span>Body: <b>${points('dungeon')}</b> / ${stropBodu('dungeon')}</span>
         <span id="dgCd">${dgCd > 0 ? 'Odpočinek: <b>' + fmtSec(dgCd) + '</b>' : ''}</span>
         <button class="btn-back" onclick="opustBludiste()">Opustit</button>
       </div>
@@ -3722,8 +3744,8 @@ function stats() {
         <div class="stats-block">
           <h3>Výprava</h3>
           <div class="stat-cells">
-            ${cell('Body výpravy', points('exped') + '/' + EXPED_MAX)}
-            ${cell('Odpočinek', Math.ceil(expedCooldownMs() / 1000) + ' s')}
+            ${cell('Body výpravy', points('exped') + '/' + stropBodu('exped'))}
+            ${cell('Odpočinek', Math.ceil(cdLeft('exped') / 1000) + ' s')}
             ${cell('Batoh', inventory.length + '/' + BAG_SIZE)}
             ${cell('Lokace', EXPEDITIONS.filter(e => c.level >= e.minLevel).length + '/' + EXPEDITIONS.length)}
           </div>
@@ -3787,14 +3809,14 @@ function openExped(id) {
   openView('expedition');
 }
 
-function attackMonster(i) {
+async function attackMonster(i) {
   const loc = EXPEDITIONS.find(e => e.id === currentExped);
   if (!loc) return;
   if (character.level < loc.minLevel) { toast(`Potřebuješ úroveň ${loc.minLevel}.`); return; }
 
   const cd = expedCdLeft();
   if (cd > 0) { toast('Ještě si odpočiň — zbývá ' + fmtSec(cd) + '.'); return; }
-  if (!spendExpedPoint()) { toast('Došly body výpravy. Další se doplní za 10 minut.'); return; }
+  if (!await spendExpedPoint()) return;
 
   beginFight(rollMonster(loc.monsters[i]), 'expedition');
 }
