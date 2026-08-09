@@ -2866,3 +2866,36 @@ select.adm-input{width:190px}
   background:transparent;
   box-shadow:inset 0 -3px 0 rgba(248,225,150,.5);
 }
+
+/* levý sloupec profilu ještě o kus větší, ať jsou čísla dobře čitelná */
+.gl-profile{grid-template-columns:340px minmax(520px, 1fr)}
+.np-name{font-size:18px;letter-spacing:1px}
+.np-class{font-size:12.5px}
+.nameplate{padding:11px 14px}
+.gl-left .avatar-box{min-height:300px}
+.stattable{font-size:13.5px}
+.stattable .strow{padding:5px 10px}
+.stattable .sl{min-width:88px}
+.stattable .sv{font-size:13.5px}
+.stattable .sbar{height:9px}
+.pl-title{font-size:12.5px}
+.pl-input{font-size:11.5px;padding:6px 8px}
+
+@media (max-width:1100px){
+  .gl-profile{grid-template-columns:1fr}
+  .gl-left{max-width:460px}
+}
+
+/* Skutecne tridy leveho sloupce jsou .portrait a .np-title,
+   proto se drivejsi pravidla nepropsala. */
+.gl-left .nameplate{padding:12px 14px}
+.gl-left .np-name{font-size:19px;letter-spacing:1.1px}
+.gl-left .np-title{font-size:13px}
+
+/* Portret je na vysku (420x631), takze potrebuje vic mista.
+   Driv se mackal do 188 px a z postavy byl jen pruh. */
+.gl-left .portrait-inner{height:360px}
+.gl-left .av-img{
+  width:100%;height:100%;
+  object-fit:cover;object-position:center 18%;
+}
