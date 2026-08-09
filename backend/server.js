@@ -5,8 +5,10 @@ require('dotenv').config();
 
 const pool = require('./config/db');
 const { MAX_UROVEN, XP_DO_DALSI } = require('./config/xp');
+const { VYCHOZI: PALADIN_VYCHOZI } = require('./config/paladin');
 const authRoutes = require('./routes/auth');
 const characterRoutes = require('./routes/character');
+const paladinRoutes = require('./routes/paladin');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -19,6 +21,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/character', characterRoutes);
+app.use('/api/paladin', paladinRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -67,6 +70,26 @@ async function initDB() {
     ];
     for (const [jmeno, typ] of noveSloupce) {
       await pool.query(`ALTER TABLE characters ADD COLUMN IF NOT EXISTS ${jmeno} ${typ};`);
+    }
+
+    // Clenstvi Paladina u postavy a priznak spravce u uctu.
+    await pool.query(`ALTER TABLE characters ADD COLUMN IF NOT EXISTS paladin_until TIMESTAMPTZ;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;`);
+
+    // Nastaveni Paladina. Drzi se v databazi, aby slo menit z adminu
+    // bez zasahu do kodu.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS paladin_config (
+        klic    TEXT PRIMARY KEY,
+        hodnota NUMERIC NOT NULL
+      );
+    `);
+    for (const [klic, hodnota] of Object.entries(PALADIN_VYCHOZI)) {
+      // DO NOTHING - uz ulozenou hodnotu restart serveru neprepise
+      await pool.query(
+        'INSERT INTO paladin_config (klic, hodnota) VALUES ($1, $2) ON CONFLICT (klic) DO NOTHING',
+        [klic, hodnota]
+      );
     }
 
     // Tabulka zkusenosti. Je to herni pravidlo, ne data hrace, ale
