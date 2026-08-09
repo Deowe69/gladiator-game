@@ -156,6 +156,8 @@ function updateUI() {
     hpVal: document.getElementById('hpVal'),
     xpBar: document.getElementById('xpBar'),
     xpVal: document.getElementById('xpVal'),
+    hpPct: document.getElementById('hpPct'),
+    xpPct: document.getElementById('xpPct'),
     navGold: document.getElementById('navGold'),
     charNameSm: document.getElementById('charNameSm'),
     charClassSm: document.getElementById('charClassSm'),
@@ -175,6 +177,9 @@ function updateUI() {
   if (els.hpVal) els.hpVal.textContent = `${c.health}/${maxHP()}`;
   if (els.xpBar) els.xpBar.style.width = xpPct + '%';
   if (els.xpVal) els.xpVal.textContent = `${c.experience}/${xpNeeded} XP`;
+  // procenta vedle pruhů; přesná čísla ukáže bublina po najetí
+  if (els.hpPct) els.hpPct.textContent = Math.round(hpPct) + ' %';
+  if (els.xpPct) els.xpPct.textContent = Math.round(xpPct) + ' %';
   if (els.navGold) els.navGold.textContent = c.gold;
   if (els.charNameSm) els.charNameSm.textContent = c.name;
   if (els.charClassSm) els.charClassSm.textContent = c.class;
@@ -1306,6 +1311,28 @@ const STAT_INFO = {
   },
 };
 
+// Kolik má hráč životů a odkud se skládá jejich strop.
+function hpTipHTML() {
+  const strop = maxHP();
+  const zOdolnosti = statTotal('defense') * HP_ZA_ODOLNOST;
+  const row = (jmeno, hodnota) =>
+    `<div class="tip-row"><span>${jmeno}</span><b>${hodnota}</b></div>`;
+
+  return `
+    <div class="tip-head" style="background:linear-gradient(180deg,#8f2020,#1a1409)">
+      <div class="tip-name">Životy</div>
+      <div class="tip-q">${Math.round(character.health / strop * 100)} % z maxima</div>
+    </div>
+    <div class="tip-body">
+      ${row('Máš', character.health.toLocaleString('cs-CZ'))}
+      ${row('Maximum', strop.toLocaleString('cs-CZ'))}
+      <div class="tip-sep"></div>
+      ${row('Základ', (character.max_health || 0).toLocaleString('cs-CZ'))}
+      ${row('Z odolnosti', '+' + zOdolnosti.toLocaleString('cs-CZ'))}
+      <div class="tip-note">Každý bod odolnosti přidá ${HP_ZA_ODOLNOST} životů.</div>
+    </div>`;
+}
+
 // Kolik zkušeností hráč má a kolik ještě potřebuje na další úroveň.
 function xpTipHTML() {
   const potreba = character.level * 100;
@@ -1356,6 +1383,7 @@ function statTipHTML(key) {
 // Co se má v bublině ukázat – předmět, protivník, nebo vlastnost.
 function tipHTMLFor(ref) {
   if (ref === 'xp') return xpTipHTML();
+  if (ref === 'hp') return hpTipHTML();
   if (ref.startsWith('stat:')) return statTipHTML(ref.slice(5));
   if (ref.startsWith('loot:')) {
     const z = lootLog[+ref.slice(5)];
@@ -1670,6 +1698,7 @@ function endCombat(won) {
   }
   // po výpravě si gladiátor musí odpočinout
   if (lastFight && lastFight.view === 'expedition') startExpedCooldown();
+  if (lastFight && lastFight.view === 'dungeon') startCooldown('dungeon');
   if (won && lastFight && lastFight.view === 'dungeon') bludisteVyhra();
   wearEquipment();
 
@@ -2011,14 +2040,18 @@ function expedCooldownMs() {
 const expedPoints     = () => points('exped');
 const spendExpedPoint = () => spendPoint('exped');
 
-function startExpedCooldown() {
-  localStorage.setItem('expedCdUntil', Date.now() + expedCooldownMs());
+const startCooldown = druh =>
+  localStorage.setItem('cd_' + druh, Date.now() + expedCooldownMs());
+
+function cdLeft(druh) {
+  let until = parseInt(localStorage.getItem('cd_' + druh), 10);
+  // přechod ze starého klíče, kdy odpočet měla jen výprava
+  if (isNaN(until) && druh === 'exped') until = parseInt(localStorage.getItem('expedCdUntil'), 10);
+  return Math.max(0, (until || 0) - Date.now());
 }
 
-function expedCdLeft() {
-  const until = parseInt(localStorage.getItem('expedCdUntil'), 10) || 0;
-  return Math.max(0, until - Date.now());
-}
+const startExpedCooldown = () => startCooldown('exped');
+const expedCdLeft = () => cdLeft('exped');
 
 const fmtSec = ms => Math.ceil(ms / 1000) + ' s';
 
@@ -2034,6 +2067,25 @@ function refreshExpedUI() {
 
   const dg = document.getElementById('dungeonPts');
   if (dg) dg.textContent = points('dungeon') + ' / ' + EXPED_MAX;
+
+  // bludiště má vlastní odpočet, ale stejná pravidla jako výprava
+  const dcd = cdLeft('dungeon');
+  const dpts = points('dungeon');
+
+  const db = document.getElementById('btnDungeon');
+  if (db) {
+    if (dcd > 0)        { db.disabled = true;  db.textContent = 'Odpočinek ' + fmtSec(dcd); }
+    else if (dpts <= 0) { db.disabled = true;  db.textContent = 'Bez bodů'; }
+    else                { db.disabled = false; db.textContent = 'Jít do bludiště'; }
+  }
+
+  const dgc = document.getElementById('dgCd');
+  if (dgc) dgc.innerHTML = dcd > 0 ? 'Odpočinek: <b>' + fmtSec(dcd) + '</b>' : '';
+
+  // otevřená místnost se během odpočinku zamkne
+  document.querySelectorAll('.dg-room.otevrena').forEach(el => {
+    if (dcd > 0) { el.classList.remove('otevrena'); el.classList.add('zamcena'); }
+  });
 
   refreshBadges();
   refreshAdminLink();
@@ -3109,6 +3161,9 @@ function vejdiDo(i) {
   if (!m || m.hotovo) return;
   if (i !== dungeonRun.postup) { toast('Nejdřív projdi předchozí místnost.'); return; }
 
+  const cd = cdLeft('dungeon');
+  if (cd > 0) { toast('Ještě si odpočiň — zbývá ' + fmtSec(cd) + '.'); return; }
+
   if (m.typ === 'poklad') {
     const zlato = Math.round((30 + character.level * 12) * (0.8 + Math.random() * 0.6));
     character.gold += zlato;
@@ -3174,8 +3229,10 @@ function dungeon() {
 
   const hotovo = dungeonRun.postup >= dungeonRun.mistnosti.length;
 
+  const dgCd = cdLeft('dungeon');
+
   const mistnosti = dungeonRun.mistnosti.map((m, i) => {
-    const otevrena = i === dungeonRun.postup && !hotovo;
+    const otevrena = i === dungeonRun.postup && !hotovo && dgCd <= 0;
     const stav = m.hotovo ? 'hotova' : otevrena ? 'otevrena' : 'zamcena';
     const znak = m.hotovo ? '✓' : m.typ === 'boss' ? '☠' : m.typ === 'poklad' ? '⌘' : (i + 1);
     return `
@@ -3206,6 +3263,7 @@ function dungeon() {
       <div class="dg-lista">
         <span>Postup: <b>${dungeonRun.postup}</b> / ${dungeonRun.mistnosti.length}</span>
         <span>Body: <b>${points('dungeon')}</b> / ${EXPED_MAX}</span>
+        <span id="dgCd">${dgCd > 0 ? 'Odpočinek: <b>' + fmtSec(dgCd) + '</b>' : ''}</span>
         <button class="btn-back" onclick="opustBludiste()">Opustit</button>
       </div>
 

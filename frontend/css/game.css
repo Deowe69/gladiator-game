@@ -2624,3 +2624,13 @@ select.adm-input{width:190px}
 }
 .dg-hotovo b{color:#3d6b12}
 .dg-info b{color:#7d1616}
+
+/* procenta vedle pruhu v hlavicce */
+.hb-bar-row{display:flex;align-items:center;gap:6px;cursor:help}
+.hb-bar-row .gbar{flex:1;min-width:0}
+.gbar-pct{
+  flex:0 0 auto;min-width:34px;text-align:right;
+  font:bold 10.5px Georgia,serif;color:#5c4423;
+  font-variant-numeric:tabular-nums;
+}
+.hb-bar-row:hover .gbar{box-shadow:inset 0 1px 3px rgba(0,0,0,.8), 0 0 6px rgba(216,177,58,.5)}

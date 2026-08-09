@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Olympus</title>
-  <link rel="stylesheet" href="css/game.css?v=tjhrl9">
+  <link rel="stylesheet" href="css/game.css?v=tjhrs8">
 </head>
 <body>
 
@@ -45,8 +45,14 @@
         <span class="res"><i>⭐</i><b id="navLevel">1</b></span>
       </div>
       <div class="hb-bars">
-        <div class="gbar gbar-hp"><div class="gbar-fill" id="hpBar" style="width:0%"></div></div>
-        <div class="gbar gbar-xp"><div class="gbar-fill" id="xpBar" style="width:0%"></div><span class="gbar-txt" id="xpVal">0 XP</span></div>
+        <div class="hb-bar-row" data-tip="hp">
+          <div class="gbar gbar-hp"><div class="gbar-fill" id="hpBar" style="width:0%"></div></div>
+          <span class="gbar-pct" id="hpPct">0 %</span>
+        </div>
+        <div class="hb-bar-row" data-tip="xp">
+          <div class="gbar gbar-xp"><div class="gbar-fill" id="xpBar" style="width:0%"></div></div>
+          <span class="gbar-pct" id="xpPct">0 %</span>
+        </div>
       </div>
     </div>
 
@@ -60,7 +66,7 @@
       <div class="hb-act-row">
         <span class="hb-act-icon">🏰</span>
         <span class="hb-act-count" id="dungeonPts">– / –</span>
-        <button class="btn-green" onclick="openView('dungeon')">Jít do bludiště</button>
+        <button class="btn-green" id="btnDungeon" onclick="openView('dungeon')">Jít do bludiště</button>
       </div>
     </div>
 
@@ -162,9 +168,9 @@
   </div>
 </div>
 
-<script src="js/api.js?v=tjhrl9"></script>
-<script src="js/avatars.js?v=tjhrl9"></script>
-<script src="js/game.js?v=tjhrl9"></script>
+<script src="js/api.js?v=tjhrs8"></script>
+<script src="js/avatars.js?v=tjhrs8"></script>
+<script src="js/game.js?v=tjhrs8"></script>
 
 <script>
   function subTab(el, idx) {
