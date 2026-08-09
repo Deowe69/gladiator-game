@@ -42,7 +42,8 @@ router.get('/my-character', authenticateToken, async (req, res) => {
 // Aktualizace postavy (všechny stats)
 router.put('/update', authenticateToken, async (req, res) => {
   try {
-    const { level, experience, health, max_health, gold, strength, defense, agility, intelligence } = req.body;
+    const { level, experience, health, max_health, gold, strength, defense, agility, intelligence,
+            skill, pocta, emeralds } = req.body;
 
     const result = await pool.query(
       `UPDATE characters
@@ -52,13 +53,17 @@ router.put('/update', authenticateToken, async (req, res) => {
            max_health    = COALESCE($4,  max_health),
            gold          = COALESCE($5,  gold),
            strength      = COALESCE($6,  strength),
+           skill         = COALESCE($11, skill),
+           pocta         = COALESCE($12, pocta),
+           emeralds      = COALESCE($13, emeralds),
            defense       = COALESCE($7,  defense),
            agility       = COALESCE($8,  agility),
            intelligence  = COALESCE($9,  intelligence),
            updated_at    = CURRENT_TIMESTAMP
        WHERE user_id = $10
        RETURNING *`,
-      [level, experience, health, max_health, gold, strength, defense, agility, intelligence, req.user.id]
+      [level, experience, health, max_health, gold, strength, defense, agility, intelligence, req.user.id,
+       skill, pocta, emeralds]
     );
 
     if (result.rows.length === 0) return res.status(404).json({ error: 'Character not found' });
@@ -78,7 +83,7 @@ router.get('/leaderboard', async (req, res) => {
     const result = await pool.query(
       `SELECT c.name, c.level, c.class, c.gender, u.username,
               c.strength, c.defense, c.agility, c.intelligence,
-              c.max_health, c.experience
+              c.max_health, c.experience, c.skill, c.pocta
        FROM characters c
        JOIN users u ON c.user_id = u.id
        ORDER BY c.level DESC, c.experience DESC

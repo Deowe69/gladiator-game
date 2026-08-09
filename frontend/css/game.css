@@ -3695,3 +3695,20 @@ select.adm-input{width:190px}
   .pal-karta{grid-template-columns:1fr;text-align:center}
   .pal-akce{align-items:center}
 }
+
+/* Popis lokace lezi na hnedem podkladu, ne na svetlem - potrebuje
+   tedy svetle pismo. Napoprve jsem si podklad spletl a text zustal
+   tmavy na tmavem (kontrast 1,6). */
+.exped-desc,
+.exped-desc p,
+#centerContent .exped-desc,
+#centerContent .exped-desc p{
+  color:#f0e4c8;
+  text-shadow:0 1px 3px rgba(0,0,0,.9);
+  font-size:13px;line-height:1.7;
+}
+#centerContent .exped-desc-title{
+  color:#f8e6ae;
+  text-shadow:0 1px 3px rgba(0,0,0,.9);
+  font-weight:bold;letter-spacing:.4px;
+}

@@ -1988,6 +1988,8 @@ async function saveChar() {
       gold: character.gold, strength: character.strength,
       defense: character.defense, agility: character.agility,
       skill: character.skill,
+      pocta: character.pocta,
+      emeralds: character.emeralds,
       intelligence: character.intelligence,
     });
     localStorage.removeItem('neulozeno');
@@ -3719,7 +3721,7 @@ function expedition() {
               onclick="attackMonster(${i})">Útok</button>
 
       <div class="mon-rew">
-        <span title="Zlato"><img class="res-ico" src="img/ui/coin.png" alt=""> ${m.gold[0]}–${m.gold[1]}</span>
+        <span title="Zlato">${m.gold[0]}–${m.gold[1]} zlata</span>
         <span title="Zkušenosti">✦ ${m.exp[0]}–${m.exp[1]}</span>
       </div>
 

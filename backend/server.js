@@ -57,6 +57,17 @@ async function initDB() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    // Sloupce, ktere pribyly az pozdeji. IF NOT EXISTS je bezpecne
+    // spoustet pri kazdem startu - na uz upravene databazi neudela nic.
+    const noveSloupce = [
+      ['skill',    'INTEGER DEFAULT 10'],   // Dovednost
+      ['pocta',    'INTEGER DEFAULT 0'],    // Pocta z areny
+      ['emeralds', 'INTEGER DEFAULT 0'],    // smaragdy na premium
+    ];
+    for (const [jmeno, typ] of noveSloupce) {
+      await pool.query(`ALTER TABLE characters ADD COLUMN IF NOT EXISTS ${jmeno} ${typ};`);
+    }
+
     console.log('✅ Database tables ready!');
   } catch (err) {
     console.error('❌ DB init error:', err);
