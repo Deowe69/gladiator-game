@@ -3276,3 +3276,19 @@ select.adm-input{width:190px}
 }
 .opp-btn:hover{filter:brightness(1.12)}
 .ar-foot{margin-top:12px;text-align:center}
+
+/* Ikonky v hlavicce byly moc male. */
+.hb-icons{gap:7px;padding:7px 9px}
+.hb-icon{
+  width:48px;height:48px;
+  font-size:26px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:5px;
+  transition:transform .12s, filter .12s;
+}
+.hb-icon:hover{transform:translateY(-2px) scale(1.06);filter:brightness(1.15)}
+.hb-icon .badge{
+  min-width:17px;height:17px;line-height:17px;
+  font-size:10.5px;
+  top:-4px;right:-4px;
+}
