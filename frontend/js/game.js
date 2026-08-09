@@ -113,6 +113,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const res = await API.getCharacter();
     character = res.character;
+
+    // Kdyz se posledni postup nestihl ulozit na server, je v prohlizeci
+    // novejsi stav - ten ma prednost, jinak by se hrac vratil o uroven zpet.
+    const mistni = JSON.parse(localStorage.getItem('character') || 'null');
+    if (mistni && mistni.name === character.name &&
+        (mistni.level > character.level ||
+         (mistni.level === character.level && (mistni.experience || 0) > (character.experience || 0)))) {
+      console.warn('V prohlizeci je novejsi postup nez na serveru, pouzivam ten.');
+      character = mistni;
+      saveChar();                     // a hned ho zkusime dostat na server
+    }
     questData = JSON.parse(localStorage.getItem('questData') || 'null');
     normalizeCharacter();
     updateUI();
@@ -1959,6 +1970,11 @@ function checkLevelUp() {
 
 // ========== SAVE ==========
 async function saveChar() {
+  // Do prohlizece ulozime vzdy a hned. Driv se to delalo az po
+  // uspesnem ulozeni na server, takze kdyz server nedojel, prisel
+  // hrac o postup uplne - po nacteni se vratila stara uroven.
+  localStorage.setItem('character', JSON.stringify(character));
+
   try {
     await API.updateCharacter({
       level: character.level, experience: character.experience,
@@ -1968,8 +1984,13 @@ async function saveChar() {
       skill: character.skill,
       intelligence: character.intelligence,
     });
-    localStorage.setItem('character', JSON.stringify(character));
-  } catch(e) { console.error('Save err:', e); }
+    localStorage.removeItem('neulozeno');
+  } catch (e) {
+    // Server neodpovedel. Poznacime si to, at se to da poznat
+    // a pri dalsim ulozeni zkusit znovu.
+    localStorage.setItem('neulozeno', '1');
+    console.error('Ulozeni na server selhalo, drzim to zatim v prohlizeci:', e);
+  }
 }
 
 // ========== LEADERBOARD ==========
@@ -2792,21 +2813,57 @@ function messages() {
 }
 
 // ---- zásilky (kořist z výprav) ----
+
+// ---- filtrovani zasilek ----
+const ZASILKA_FILTRY = [
+  { key:'vse',    nazev:'Vše',       sedne: () => true },
+  { key:'zbrane', nazev:'Zbraně',    sedne: it => slotForItem(it) === 'weapon' },
+  { key:'zbroje', nazev:'Zbroje',    sedne: it => ['chest','helmet','gloves','boots','shield','belt'].includes(slotForItem(it)) },
+  { key:'sperky', nazev:'Šperky',    sedne: it => ['ring','amulet'].includes(slotForItem(it)) },
+  { key:'ostatni',nazev:'Ostatní',   sedne: it => !slotForItem(it) },
+];
+
+let zasilkaFiltr = 'vse';
+
+const sedneFiltr = it => (ZASILKA_FILTRY.find(f => f.key === zasilkaFiltr) || ZASILKA_FILTRY[0]).sedne(it);
+
+function setZasilkaFiltr(k) { zasilkaFiltr = k; openView('loot'); }
+
+// Proda jen to, co je zrovna vyfiltrovane - jinak by filtr uspal
+// pozornost a smazal i to, co hrac nevidi.
+function prodejVybrane() {
+  const vybrane = lootLog.filter(z => sedneFiltr(z.kus));
+  if (!vybrane.length) { toast('Není co prodat.'); return; }
+  const celkem = vybrane.reduce((a, z) => a + sellPrice(z.kus), 0);
+  character.gold += celkem;
+  lootLog = lootLog.filter(z => !vybrane.includes(z));
+  ulozSeznam('lootLog', lootLog);
+  persist();
+  toast(`Prodáno ${vybrane.length} kusů za ${celkem} zlata.`);
+  openView('loot');
+}
+
 function loot() {
   oznacPrectene('loot');
   const propadlo = protridZasilky();
 
-  const hodnota = lootLog.reduce((a, z) => a + sellPrice(z.kus), 0);
+  const vybrane = lootLog.filter(z => sedneFiltr(z.kus));
+  const hodnota = vybrane.reduce((a, z) => a + sellPrice(z.kus), 0);
 
-  const policka = lootLog.map((z, i) => {
+  const filtry = ZASILKA_FILTRY.map(fl =>
+    `<button class="zf-btn ${zasilkaFiltr === fl.key ? 'active' : ''}"
+             onclick="setZasilkaFiltr('${fl.key}')">${fl.nazev}</button>`).join('');
+
+  const policka = vybrane.map((z, i) => {
     const q = qualityOf(z.kus);
     const [w, h] = itemSize(z.kus);
+    const idx = lootLog.indexOf(z);
     return `
       <div class="g-slot zasilka"
            style="grid-column:span ${w};grid-row:span ${h}"
-           onclick="vyzvedni(${i})"
-           oncontextmenu="prodejZasilku(${i});return false"
-           data-tip="loot:${i}">
+           onclick="vyzvedni(${idx})"
+           oncontextmenu="prodejZasilku(${idx});return false"
+           data-tip="loot:${idx}">
         <span class="g-lvl" style="color:${q.color}">${z.kus.lvl || 1}</span>
         ${itemIcon(z.kus, 'g-ico')}
         <span class="z-cas">${zbyvaText((z.plati || 0) - Date.now())}</span>
@@ -2824,18 +2881,27 @@ function loot() {
         ${propadlo ? `<br><b>${propadlo}</b> zásilek mezitím propadlo.` : ''}
       </p>
 
-      <div class="zas-wrap">
-        <div class="goods-wrap" style="--rows:${SHOP_ROWS}">
-          ${latticeHTML(SHOP_ROWS)}
-          <div class="goods-grid zas-grid">${policka}</div>
+      <div class="zf-row">${filtry}</div>
+
+      <div class="zas-body">
+        <div class="zas-sloupec">
+          <div class="zas-nadpis">Zásilky</div>
+          <div class="frame frame-shop">
+            <div class="goods-grid">${policka}</div>
+          </div>
+        </div>
+
+        <div class="zas-sloupec">
+          <div class="zas-nadpis">Batoh — ${inventory.length} / ${BAG_SIZE}</div>
+          ${bagFrameHTML('use')}
         </div>
       </div>
 
       <div class="zas-foot">
-        <span>Zásilek: <b>${lootLog.length}</b></span>
+        <span>Vybráno: <b>${vybrane.length}</b> z ${lootLog.length}</span>
         <span>Hodnota při prodeji: <b>${hodnota.toLocaleString('cs-CZ')}</b>
               <img class="res-ico" src="img/ui/coin.png" alt="zlata"></span>
-        <button class="btn-green" ${lootLog.length ? '' : 'disabled'} onclick="prodejVse()">Prodat vše</button>
+        <button class="btn-green" ${vybrane.length ? '' : 'disabled'} onclick="prodejVybrane()">Prodat vybrané</button>
       </div>
 
     </div>

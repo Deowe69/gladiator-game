@@ -3292,3 +3292,191 @@ select.adm-input{width:190px}
   font-size:10.5px;
   top:-4px;right:-4px;
 }
+
+/* Znak hry nad prehledem misto orla. */
+.banner-top{padding:6px;display:flex;align-items:center;justify-content:center}
+.banner-logo{
+  width:100%;max-width:76px;height:auto;display:block;
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));
+}
+
+/* Kamenna hlavice mela 34 px, ale znak ma 76 - pretekal ven.
+   Hlavice se ted prizpusobi znaku. */
+.banner-top{
+  height:auto;min-height:96px;
+  padding:11px 10px;
+  display:flex;align-items:center;justify-content:center;
+  overflow:visible;
+}
+.banner-logo{
+  width:auto;max-width:78px;max-height:78px;
+  filter:drop-shadow(0 3px 8px rgba(0,0,0,.65));
+  transition:transform .16s;
+}
+.banner-logo:hover{transform:scale(1.05)}
+
+/* Znak stoji volne, bez kamenne desky pod sebou. */
+.banner-top{
+  background:none;
+  border:none;
+  box-shadow:none;
+}
+
+/* =========================================================
+   TLACITKA V BARVE MENU
+   Zelena se s cervenym praporem a zlatem tloukla.
+   ========================================================= */
+.btn-green,
+.opp-btn,
+.quest-btn,
+.tr-plus,
+.shop-refresh,
+.parchment button:not(.pg-tab):not(.set-toggle):not(.btn-back){
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.16) 0%, transparent 44%),
+    linear-gradient(180deg,#a8272a 0%,#8a1c1f 52%,#611013 100%);
+  border:1px solid #4a0b0b;
+  border-top-color:#d06a6a;
+  color:#f4dfa4;
+  text-shadow:0 1px 2px rgba(0,0,0,.7);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 2px 4px rgba(0,0,0,.4);
+}
+.btn-green:hover,
+.opp-btn:hover,
+.quest-btn:hover,
+.tr-plus:hover,
+.shop-refresh:hover{filter:brightness(1.15)}
+
+.btn-green:disabled,
+.opp-btn:disabled,
+.quest-btn:disabled{
+  background:linear-gradient(180deg,#6b5a4a,#4a3d31);
+  border-color:#332a22;border-top-color:#8a7565;
+  color:#b8a68c;
+  filter:none;cursor:default;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+/* prepinac v nastaveni: zapnuto cervene, vypnuto sede */
+.set-toggle.on{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.16) 0%, transparent 44%),
+    linear-gradient(180deg,#a8272a 0%,#8a1c1f 52%,#611013 100%);
+  border-color:#4a0b0b;border-top-color:#d06a6a;color:#f4dfa4;
+}
+
+/* =========================================================
+   HLAVICKA NA MALOVANEM PRUHU
+   Ctyri mramorove panely v obrazku odpovidaji ctyrem skupinam.
+   Procenta jsou zmerena z img/ui/headerband.png (2116x289).
+   ========================================================= */
+.headerband{
+  height:auto;
+  background:none;
+  border-bottom:none;
+  box-shadow:none;
+  padding:0;
+}
+.headerband::after{content:none}       /* meandr uz je v kresbe */
+
+.hb-inner{
+  position:relative;
+  max-width:1180px;margin:0 auto;
+  aspect-ratio:2116/289;
+  background:url('../img/ui/headerband.png?v=1') center/100% 100% no-repeat;
+  padding:0;
+  display:block;
+}
+
+/* skupiny posazene na namalovane panely */
+.hb-inner > .hb-box{
+  position:absolute;top:11%;height:78%;
+  background:none;border:none;box-shadow:none;
+  border-radius:0;
+  padding:0 0.6%;
+  display:flex;flex-direction:column;justify-content:center;gap:4%;
+}
+.hb-inner > .hb-box:nth-child(1){left:5.53%;width:21.69%}
+.hb-inner > .hb-box:nth-child(2){left:29.91%;width:18.62%}
+.hb-inner > .hb-box:nth-child(3){left:51.13%;width:19.52%}
+.hb-inner > .hb-box:nth-child(4){left:73.39%;width:20.79%}
+
+.hb-icons{flex-direction:row;align-items:center;justify-content:space-evenly;gap:0}
+.hb-icon{width:auto;aspect-ratio:1;height:62%;font-size:1.9vw;max-font-size:26px}
+@media (min-width:1200px){ .hb-icon{font-size:24px} }
+
+.hb-res-row{display:flex;justify-content:space-around;gap:6px;font-size:12px}
+.hb-bars{gap:3px}
+.hb-act-row{display:flex;align-items:center;gap:6px}
+.hb-act-row .btn-green{padding:5px 9px;font-size:11.5px;white-space:nowrap}
+.hb-act-count{font-size:11.5px;min-width:38px}
+
+/* obsah zacina pod hlavickou; ta uz nema pevnou vysku */
+.game-container{padding-top:12px}
+.topbar{position:static}
+.headerband{position:static}
+
+/* Ikonky patri vedle sebe; pravidlo pro skupiny je stavelo pod sebe. */
+.hb-inner > .hb-icons{
+  flex-direction:row;
+  align-items:center;
+  justify-content:space-evenly;
+  gap:2%;
+  padding:0 2%;
+}
+.hb-inner > .hb-icons .hb-icon{
+  flex:0 0 auto;
+  width:19%;height:auto;aspect-ratio:1;
+  font-size:22px;
+  min-width:0;
+}
+@media (max-width:900px){ .hb-inner > .hb-icons .hb-icon{font-size:16px} }
+
+/* Malovana tlacitka misto emoji. */
+.hb-inner > .hb-icons .hb-icon{
+  background:none;border:none;box-shadow:none;
+  padding:0;
+}
+.hb-inner > .hb-icons .hb-icon img{
+  width:100%;height:100%;object-fit:contain;
+  filter:drop-shadow(0 2px 5px rgba(0,0,0,.6));
+  transition:transform .12s, filter .12s;
+}
+.hb-inner > .hb-icons .hb-icon:hover img{
+  transform:translateY(-2px) scale(1.07);
+  filter:drop-shadow(0 4px 9px rgba(0,0,0,.7)) brightness(1.12);
+}
+
+/* Ikonky v hlavicce jeste o kus vetsi. */
+.hb-inner > .hb-icons{gap:1%;padding:0 1%}
+.hb-inner > .hb-icons .hb-icon{width:23%}
+
+/* =========================================================
+   ZASILKY: filtry a batoh vedle sebe
+   ========================================================= */
+.zf-row{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 12px}
+.zf-btn{
+  padding:6px 14px;border-radius:3px;cursor:pointer;
+  background:linear-gradient(180deg, rgba(46,35,20,.9), rgba(28,21,12,.94));
+  border:1px solid rgba(198,160,84,.45);
+  color:#c9b48a;font:12px Georgia,serif;
+  transition:background .14s, color .14s;
+}
+.zf-btn:hover{background:linear-gradient(180deg, rgba(70,52,28,.94), rgba(44,33,18,.96));color:#e8d4a0}
+.zf-btn.active{
+  background:linear-gradient(180deg,#a8272a 0%,#8a1c1f 52%,#611013 100%);
+  border-color:#4a0b0b;color:#f4dfa4;
+}
+
+.zas-body{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:16px;align-items:start;
+}
+.zas-nadpis{
+  margin-bottom:7px;
+  color:#f0d886;font:bold 12.5px Georgia,serif;
+  letter-spacing:.5px;text-transform:uppercase;
+  text-shadow:0 1px 3px rgba(0,0,0,.85);
+}
+.zas-body .frame{max-width:none}
+@media (max-width:900px){ .zas-body{grid-template-columns:1fr} }

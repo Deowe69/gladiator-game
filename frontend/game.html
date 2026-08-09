@@ -3,19 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="img/ui/favicon.png">
   <title>Olympus</title>
-  <link rel="stylesheet" href="css/game.css?v=tji8c7">
+  <link rel="stylesheet" href="css/game.css?v=tjiiji">
 </head>
 <body>
 
 <!-- ===== HORNÍ TMAVÝ PRUH ===== -->
 <div class="topbar">
   <div class="topbar-inner">
-    <a class="topbar-link" onclick="openView('profile')">Profil</a>
-    <a class="topbar-link" onclick="openView('quests')">Mise</a>
-    <a class="topbar-link" onclick="openView('hall')">Síň slávy</a>
-    <a class="topbar-link gold" onclick="openMerchant('jeweler')">Klenotník</a>
-    <a class="topbar-link" onclick="openView('city')">Město</a>
     <a class="topbar-link" onclick="openView('settings')">Nastavení</a>
     <a class="topbar-link admin-link" id="adminLink" style="display:none" onclick="openView('admin')">Admin</a>
     <a class="topbar-link" onclick="logout()">Odhlásit</a>
@@ -28,10 +24,10 @@
 
     <!-- Ikonky -->
     <div class="hb-box hb-icons">
-      <div class="hb-icon" onclick="openView('news')"     title="Novinky a aktualizace"><span>📜</span><i class="badge" id="badgeNews"></i></div>
-      <div class="hb-icon" onclick="openView('fights')"   title="Historie soubojů"><span>⚔️</span><i class="badge" id="badgeFights"></i></div>
-      <div class="hb-icon" onclick="openView('messages')" title="Zprávy"><span>✉️</span><i class="badge" id="badgeInbox"></i></div>
-      <div class="hb-icon" onclick="openView('loot')"     title="Kořist z výprav"><span>🧰</span><i class="badge" id="badgeLoot"></i></div>
+      <div class="hb-icon" onclick="openView('news')"     title="Novinky a aktualizace"><img src="img/ui/btn-news.png"   alt="Novinky"><i class="badge" id="badgeNews"></i></div>
+      <div class="hb-icon" onclick="openView('fights')"   title="Historie soubojů"><img src="img/ui/btn-fights.png" alt="Souboje"><i class="badge" id="badgeFights"></i></div>
+      <div class="hb-icon" onclick="openView('messages')" title="Zprávy"><img src="img/ui/btn-inbox.png"  alt="Zprávy"><i class="badge" id="badgeInbox"></i></div>
+      <div class="hb-icon" onclick="openView('loot')"     title="Kořist z výprav"><img src="img/ui/btn-loot.png"   alt="Zásilky"><i class="badge" id="badgeLoot"></i></div>
     </div>
 
     <!-- Zdroje + pruhy -->
@@ -41,7 +37,6 @@
         <span class="res"><img class="res-ico" src="img/ui/gem.png" alt="Smaragdy"><b id="navRuby">0</b></span>
       </div>
       <div class="hb-res-row">
-        <span class="res"><i>❤️</i><b id="hpVal">0/0</b></span>
         <span class="res"><i>⭐</i><b id="navLevel">1</b></span>
       </div>
       <div class="hb-bars">
@@ -92,7 +87,7 @@
 
   <!-- ===== LEVÝ ČERVENÝ BANNER ===== -->
   <aside class="left-banner">
-    <div class="banner-top">🦅</div>
+    <div class="banner-top"><img class="banner-logo" src="img/ui/logo.png" alt="Olympus"></div>
 
     <div class="banner-body">
       <div class="menu-list">
@@ -161,9 +156,9 @@
   </div>
 </div>
 
-<script src="js/api.js?v=tji8c7"></script>
-<script src="js/avatars.js?v=tji8c7"></script>
-<script src="js/game.js?v=tji8c7"></script>
+<script src="js/api.js?v=tjiiji"></script>
+<script src="js/avatars.js?v=tjiiji"></script>
+<script src="js/game.js?v=tjiiji"></script>
 
 <script>
   // Najeti mysi jen prepne, co je v nabidce videt.
