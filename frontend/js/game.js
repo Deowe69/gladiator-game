@@ -306,36 +306,93 @@ function city() {
 }
 
 // ===== ARENA =====
+// ========== ARÉNA: SOUBOJ S HRÁČI ==========
+// Bojuje se proti otisku soupeřovy postavy ze žebříčku, ne živě —
+// server neumí dva hráče spojit v jednom souboji. Soupeř o zápase
+// neví a jeho výsledek se mu nikam nezapíše.
+
+let souperi = null;        // nactene ze serveru
+let souperiChyba = null;
+
+async function nactiSoupere() {
+  try {
+    const data = await API.getLeaderboard();
+    const vsichni = (data && data.leaderboard) || [];
+    // sebe ze seznamu vyhodíme
+    souperi = vsichni.filter(h => h.name !== character.name);
+    souperiChyba = null;
+  } catch (e) {
+    souperi = [];
+    souperiChyba = 'Server neodpovídá, soupeře teď nenačtu.';
+  }
+  if (posledniPohled === 'arena') openView('arena');
+}
+
+// Z otisku postavy udelame soupere, se kterym umi pracovat souboj.
+function souperZHrace(h) {
+  const lvl = h.level || 1;
+  return {
+    name: h.name,
+    level: lvl,
+    // dovednost v databazi neni, dopocitame ji z urovne stejne jako u priser
+    hp:    (h.max_health || 100) + (h.defense || 0) * HP_ZA_ODOLNOST,
+    maxHp: (h.max_health || 100) + (h.defense || 0) * HP_ZA_ODOLNOST,
+    str:   h.strength || 5,
+    def:   h.defense || 0,
+    gold:  Math.round(20 + lvl * 12),
+    exp:   Math.round(15 + lvl * 9),
+    hrac:  true,
+  };
+}
+
+function bojujSHracem(i) {
+  const h = souperi && souperi[i];
+  if (!h) return;
+  beginFight(souperZHrace(h), 'arena');
+}
+
 function arena() {
-  const enemyCards = ENEMIES.map((e,i) => `
+  if (souperi === null) { nactiSoupere(); }
+
+  const radky = (souperi || []).map((h, i) => `
     <div class="opponent-row">
-      <span class="opp-rank">${i+1}.</span>
-      <div class="opp-avatar">${e.icon.length > 2 ? `<div style="font-size:2em;text-align:center;padding-top:8px;">${e.icon}</div>` : `<div style="font-size:2em;text-align:center;padding-top:8px;">${e.icon}</div>`}</div>
+      <span class="opp-rank">${i + 1}.</span>
+      <div class="opp-avatar">${avatarProUroven(h.level, 'opp-img')}</div>
       <div class="opp-info">
-        <div class="opp-name">${e.name}</div>
-        <div class="opp-details">Lv.${e.level} · ❤️${e.hp} · ⚔️${e.str} · 🛡️${e.def}</div>
+        <div class="opp-name">${h.name}</div>
+        <div class="opp-details">
+          Úroveň ${h.level} · Síla ${h.strength || 0} · Odolnost ${h.defense || 0}
+          · Obratnost ${h.agility || 0}
+        </div>
       </div>
-      <button class="opp-btn" onclick="startCombat(${i})">⚔ Bojovat</button>
+      <button class="opp-btn" onclick="bojujSHracem(${i})">Vyzvat</button>
     </div>`).join('');
+
+  const obsah =
+      souperi === null ? '<p class="hall-note">Načítám soupeře…</p>'
+    : souperiChyba     ? `<p class="hall-note">${souperiChyba}</p>`
+    : !souperi.length  ? '<p class="hall-note">Zatím tu nikdo jiný není. Aréna ožije, až přibudou další hráči.</p>'
+    : `<div class="opponent-list">${radky}</div>`;
 
   return `
   <div class="panel">
-    <div class="panel-header">⚔️ Aréna Olympu</div>
+    <div class="panel-header">Aréna Olympu</div>
     <div class="panel-body">
-      <div class="arena-tabs">
-        <div class="arena-tab active">⚔ PvE Nepřátelé</div>
-        <div class="arena-tab">👥 PvP Aréna</div>
-        <div class="arena-tab">🏆 Turnaj</div>
+      <p class="hall-note">
+        Vyzýváš skutečné gladiátory podle jejich vlastností ze žebříčku.
+        Soupeř se souboje neúčastní živě — bojuješ proti otisku jeho postavy
+        a jemu se zápas nikam nezapíše.
+      </p>
+      ${obsah}
+      <div class="ar-foot">
+        <button class="btn-green" onclick="souperi=null; openView('arena')">Načíst soupeře znovu</button>
       </div>
-      <div class="opponents-list">${enemyCards}</div>
     </div>
   </div>
+
   ${combatPanelHTML()}`;
 }
 
-// ===== DUNGEON =====
-
-// ===== QUESTS =====
 function quests() {
   // Mise jeste nejsou hotove.
   return lockedSoon('Mise');

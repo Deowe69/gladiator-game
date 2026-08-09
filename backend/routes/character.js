@@ -72,12 +72,17 @@ router.put('/update', authenticateToken, async (req, res) => {
 // Žebříček - top 10 hráčů
 router.get('/leaderboard', async (req, res) => {
   try {
+    // Vraci i vlastnosti, aby se proti hraci dalo v arene bojovat.
+    // Zebricek je verejny, takze zadne citlive udaje - jen to,
+    // co je stejne videt na jeho profilu.
     const result = await pool.query(
-      `SELECT c.name, c.level, c.class, c.gender, u.username
+      `SELECT c.name, c.level, c.class, c.gender, u.username,
+              c.strength, c.defense, c.agility, c.intelligence,
+              c.max_health, c.experience
        FROM characters c
        JOIN users u ON c.user_id = u.id
        ORDER BY c.level DESC, c.experience DESC
-       LIMIT 10`
+       LIMIT 30`
     );
     res.json({ leaderboard: result.rows });
   } catch (error) {
