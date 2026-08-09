@@ -705,7 +705,7 @@ const DOLL_POZICE = [
   { key:'shield', x:58.20, y:35.45, w:16.47, h:28.29 },
   { key:'gloves', x:12.21, y:69.11, w:15.90, h:21.49 },
   { key:'boots',  x:35.49, y:69.11, w:15.90, h:21.49 },
-  { key:'belt',   x:57.63, y:74.49, w: 9.37, h:13.25 },
+  { key:'ring',   x:57.63, y:74.49, w: 9.37, h:13.25 },   // misto pasu prsten
   { key:'amulet', x:68.13, y:74.84, w: 8.52, h:12.18 },
   // sloupec oček na pomocníky vpravo (od 20. úrovně)
   { key:'pom1', x:86.02, y: 8.24, w:7.95, h:10.03, pomocnik:true },
