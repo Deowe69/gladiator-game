@@ -2344,33 +2344,28 @@ function training() {
       </div>`;
   }).join('');
 
+  // Vse je v jednom ramu: nahore obrazek a popis, dole radky vlastnosti.
+  // Driv byl popis ve zvlastnim panelu, takze na kresbu ramu nesedel.
   return `
-  <div class="panel">
-    <div class="panel-header">Popis</div>
-    <div class="panel-body">
-      <div class="tr-intro">
-        <div class="tr-portrait">
-          ${artImg('img/merchants/trainer.png', '🛡️', 'tr-img', 'Veterán')}
-        </div>
-        <div class="tr-text">
-          <p>
-            Jakmile vstoupíš na cvičiště arény, spatříš několik gladiátorů,
-            kteří zlepšují své bojové schopnosti. Pozoruje je veterán z římské
-            legie a čas od času jim dá nějakou radu.
-          </p>
-          <p>Zde můžeš zlepšit své válečnické schopnosti.</p>
-        </div>
+  <div class="tr-panel">
+    <div class="tr-intro">
+      <!-- obrazek cviciste je namalovany primo v ramu, nic sem nekreslime -->
+      <div class="tr-portrait"></div>
+      <div class="tr-text">
+        <p>
+          Jakmile vstoupíš na cvičiště arény, spatříš několik gladiátorů,
+          kteří zlepšují své bojové schopnosti. Pozoruje je veterán z římské
+          legie a čas od času jim dá nějakou radu.
+        </p>
+        <p><em>Zde můžeš zlepšit své válečnické schopnosti.</em></p>
       </div>
     </div>
-  </div>
 
-  <div class="panel tr-panel">
-    <div class="panel-body">
-      <div class="tr-list">${rows}</div>
-      <div class="tr-foot">
-        Tvé zlato: <b>${zlato.toLocaleString('cs-CZ')}</b>
-        <img class="res-ico" src="img/ui/coin.png" alt="zlata">
-      </div>
+    <div class="tr-list">${rows}</div>
+
+    <div class="tr-foot">
+      Tvé zlato: <b>${zlato.toLocaleString('cs-CZ')}</b>
+      <img class="res-ico" src="img/ui/coin.png" alt="zlata">
     </div>
   </div>`;
 }
