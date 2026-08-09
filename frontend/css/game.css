@@ -3648,3 +3648,50 @@ select.adm-input{width:190px}
   object-fit:cover;object-position:center;
   display:block;
 }
+
+/* Obrazek prisery ma sedet na krajich ramecku - obecna trida .ico
+   mu davala vnitrni lem a max-width. */
+.mon-frame{
+  padding:0;
+  border-width:2px;
+  aspect-ratio:4/3;
+}
+.mon-frame > .ico,
+.mon-frame .mon-img{
+  width:100%;height:100%;
+  max-width:none;max-height:none;
+  padding:0;margin:0;
+  object-fit:cover;object-position:center;
+  border-radius:0;
+  display:block;
+}
+
+/* =========================================================
+   PREMIUM: Paladin
+   ========================================================= */
+.pal-karta{
+  display:grid;grid-template-columns:88px 1fr auto;
+  align-items:center;gap:18px;
+  padding:18px 20px;margin-bottom:14px;
+  background:linear-gradient(180deg, rgba(46,35,20,.9), rgba(28,21,12,.94));
+  border:2px solid rgba(198,160,84,.5);border-radius:5px;
+  box-shadow:inset 0 1px 0 rgba(240,216,134,.16), 0 5px 16px rgba(0,0,0,.45);
+}
+.pal-karta.aktivni{
+  border-color:#d8b13a;
+  box-shadow:inset 0 1px 0 rgba(240,216,134,.28), 0 0 22px rgba(216,177,58,.28);
+}
+.pal-znak{font-size:52px;text-align:center;filter:drop-shadow(0 3px 7px rgba(0,0,0,.7))}
+.pal-nadpis{
+  color:#f0d886;font:bold 17px Georgia,serif;letter-spacing:.4px;
+  text-shadow:0 1px 3px rgba(0,0,0,.85);margin-bottom:5px;
+}
+.pal-popis{color:#d9c9a4;font-size:13px;line-height:1.6}
+.pal-popis b{color:#f0d886}
+.pal-akce{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.pal-stav{color:#c9b48a;font-size:12.5px;display:flex;align-items:center;gap:5px}
+.pal-stav b{color:#f0d886}
+@media (max-width:760px){
+  .pal-karta{grid-template-columns:1fr;text-align:center}
+  .pal-akce{align-items:center}
+}

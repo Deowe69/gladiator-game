@@ -190,6 +190,7 @@ function updateUI() {
     hpPct: document.getElementById('hpPct'),
     xpPct: document.getElementById('xpPct'),
     navPocta: document.getElementById('navPocta'),
+    navRuby:  document.getElementById('navRuby'),
     navGold: document.getElementById('navGold'),
     charNameSm: document.getElementById('charNameSm'),
     charClassSm: document.getElementById('charClassSm'),
@@ -213,6 +214,7 @@ function updateUI() {
   if (els.hpPct) els.hpPct.textContent = Math.round(hpPct) + ' %';
   if (els.xpPct) els.xpPct.textContent = Math.round(xpPct) + ' %';
   if (els.navPocta) els.navPocta.textContent = (c.pocta || 0).toLocaleString('cs-CZ');
+  if (els.navRuby) els.navRuby.textContent = (c.emeralds || 0).toLocaleString('cs-CZ');
   if (els.navGold) els.navGold.textContent = c.gold;
   if (els.charNameSm) els.charNameSm.textContent = c.name;
   if (els.charClassSm) els.charClassSm.textContent = c.class;
@@ -1219,6 +1221,7 @@ function normalizeCharacter() {
   // Dovednost přibyla později – starší postavy ji dostanou dopočtenou
   if (typeof character.skill !== 'number') character.skill = 10;
   if (typeof character.pocta !== 'number') character.pocta = 0;
+  if (typeof character.emeralds !== 'number') character.emeralds = 0;
   if (localStorage.getItem('statsFixed') === '1') return;
   for (const k of STAT_KEYS) {
     if (typeof character[k] === 'number') {
@@ -2442,7 +2445,84 @@ function lockedSoon(nazev) {
   </div>`;
 }
 const work    = () => lockedSoon('Práce');
-const premium = () => lockedSoon('Prémium');
+// ========== PRÉMIUM: PALADIN ==========
+// Paladin je casove predplatne za smaragdy. Vyhody zatim nejsou
+// domluvene, takze je panel necha otevrene misto toho, aby sliboval
+// neco, co hra nedela.
+const PALADIN_DNI = 14;
+const PALADIN_CENA = 30;      // smaragdu
+
+const paladinDo = () => parseInt(localStorage.getItem('paladinDo'), 10) || 0;
+const jePaladin = () => paladinDo() > Date.now();
+
+function paladinZbyva() {
+  const ms = paladinDo() - Date.now();
+  if (ms <= 0) return '';
+  const dni = Math.floor(ms / 86400000);
+  const hod = Math.floor(ms % 86400000 / 3600000);
+  return dni ? `${dni} dní a ${hod} h` : `${hod} h`;
+}
+
+function kupPaladina() {
+  const mam = character.emeralds || 0;
+  if (mam < PALADIN_CENA) {
+    toast(`Na Paladina potřebuješ ${PALADIN_CENA} smaragdů, máš ${mam}.`);
+    return;
+  }
+  if (!confirm(`Stát se Paladinem na ${PALADIN_DNI} dní za ${PALADIN_CENA} smaragdů?`)) return;
+
+  character.emeralds = mam - PALADIN_CENA;
+  // Kdyz uz Paladina ma, dalsi nakup se pricte k tomu, co zbyva.
+  const odkud = Math.max(Date.now(), paladinDo());
+  localStorage.setItem('paladinDo', odkud + PALADIN_DNI * 86400000);
+
+  saveChar(); updateUI(); openView('premium');
+  toast(`Jsi Paladin na dalších ${PALADIN_DNI} dní.`);
+}
+
+function premium() {
+  const aktivni = jePaladin();
+  const mam = character.emeralds || 0;
+
+  return `
+  <div class="panel">
+    <div class="panel-header">Prémium</div>
+    <div class="panel-body">
+
+      <div class="pal-karta ${aktivni ? 'aktivni' : ''}">
+        <div class="pal-znak">${aktivni ? '\u{1F396}' : '\u{1F6E1}'}</div>
+
+        <div class="pal-text">
+          <div class="pal-nadpis">
+            ${aktivni ? 'Jsi Paladin' : 'Chceš se stát Paladinem?'}
+          </div>
+          <div class="pal-popis">
+            ${aktivni
+              ? `Zbývá ti <b>${paladinZbyva()}</b>. Další nákup se přičte k tomu, co ti zůstalo.`
+              : `<b>${PALADIN_DNI} dní</b> za <b>${PALADIN_CENA} smaragdů</b>.`}
+          </div>
+        </div>
+
+        <div class="pal-akce">
+          <div class="pal-stav">
+            Máš <b>${mam}</b>
+            <img class="res-ico" src="img/ui/gem.png" alt="smaragdů">
+          </div>
+          <button class="btn-green" ${mam >= PALADIN_CENA ? '' : 'disabled'}
+                  onclick="kupPaladina()">
+            ${aktivni ? 'Prodloužit' : 'Stát se Paladinem'}
+          </button>
+        </div>
+      </div>
+
+      <p class="hall-note">
+        Výhody Paladina zatím nejsou domluvené, takže tu nic neslibujeme —
+        až se rozhodneš, co má dávat, doplníme to sem i do hry.
+      </p>
+
+    </div>
+  </div>`;
+}
 
 
 // ========== ŽIVOTNOST PŘEDMĚTŮ ==========
