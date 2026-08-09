@@ -9,6 +9,7 @@ const { VYCHOZI: PALADIN_VYCHOZI } = require('./config/paladin');
 const authRoutes = require('./routes/auth');
 const characterRoutes = require('./routes/character');
 const paladinRoutes = require('./routes/paladin');
+const gameRoutes = require('./routes/game');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,6 +23,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/character', characterRoutes);
 app.use('/api/paladin', paladinRoutes);
+app.use('/api/game', gameRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -91,6 +93,26 @@ async function initDB() {
         [klic, hodnota]
       );
     }
+
+    // Body a odpocty. Drive to bylo v prohlizeci, takze si je hrac
+    // mohl prepsat; ted o nich rozhoduje server.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS character_points (
+        character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+        druh         TEXT    NOT NULL,
+        body         INTEGER NOT NULL DEFAULT 0,
+        doplneno_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (character_id, druh)
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS character_cooldowns (
+        character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+        druh         TEXT    NOT NULL,
+        plati_do     TIMESTAMPTZ NOT NULL,
+        PRIMARY KEY (character_id, druh)
+      );
+    `);
 
     // Tabulka zkusenosti. Je to herni pravidlo, ne data hrace, ale
     // v databazi ji chceme, aby si ji server mohl overit sam.
