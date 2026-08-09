@@ -114,6 +114,17 @@ async function initDB() {
       );
     `);
 
+    // Kolik obnov zbozi hrac dnes vycerpal. Den urcuje databaze,
+    // ne prohlizec.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS merchant_refreshes (
+        character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+        den          DATE    NOT NULL,
+        pouzito      INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (character_id, den)
+      );
+    `);
+
     // Tabulka zkusenosti. Je to herni pravidlo, ne data hrace, ale
     // v databazi ji chceme, aby si ji server mohl overit sam.
     await pool.query(`

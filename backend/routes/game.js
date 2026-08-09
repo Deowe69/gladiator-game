@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('../config/db');
 const { authenticateToken } = require('../middleware/auth');
 const { nactiNastaveni, stavPaladina } = require('./paladin');
+const { odmenaZaSouboj, sBonusem } = require('../config/odmeny');
 
 const router = express.Router();
 
@@ -218,6 +219,130 @@ router.post('/spend', authenticateToken, async (req, res) => {
   } catch (err) {
     await klient.query('ROLLBACK').catch(() => {});
     console.error('game/spend:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    klient.release();
+  }
+});
+
+
+// ---------------------------------------------------------------
+// POST /api/game/reward — připíše odměnu za vyhraný souboj
+//
+// Klient hlásí jen KOHO porazil (úroveň lokace a pořadí protivníka),
+// ne kolik za to chce. Částku počítá server ze svého vzorce a přidá
+// bonus Paladina, pokud členství skutečně platí.
+//
+// Poctivé anti-cheat by potřebovalo vyhodnocovat celý souboj na
+// serveru — to je další etapa. Tady je zajištěná aspoň VÝŠE odměny.
+// ---------------------------------------------------------------
+router.post('/reward', authenticateToken, async (req, res) => {
+  const druh = String((req.body && req.body.druh) || 'exped');
+  if (!['exped', 'dungeon', 'arena', 'turma'].includes(druh)) {
+    return res.status(400).json({ error: 'Neznámý druh' });
+  }
+  const urovenLokace = Number((req.body && req.body.urovenLokace) || 1);
+  const poradi = Number((req.body && req.body.poradi) || 0);
+
+  const klient = await pool.connect();
+  try {
+    await klient.query('BEGIN');
+
+    const { rows: postavy } = await klient.query(
+      'SELECT id, level, gold, experience FROM characters WHERE user_id = $1 FOR UPDATE',
+      [req.user.id]
+    );
+    if (!postavy.length) { await klient.query('ROLLBACK'); return res.status(404).json({ error: 'Character not found' }); }
+    const postava = postavy[0];
+
+    const [nastaveni, stav] = await Promise.all([nactiNastaveni(), stavPaladina(req.user.id)]);
+
+    const zaklad = odmenaZaSouboj(urovenLokace, poradi, druh);
+    const zlato = sBonusem(zaklad.zlato, stav.aktivni ? nastaveni.paladin_gold_bonus_percent : 0);
+    const exp   = sBonusem(zaklad.exp,   stav.aktivni ? nastaveni.paladin_xp_bonus_percent   : 0);
+
+    const { rows: nove } = await klient.query(
+      `UPDATE characters
+          SET gold = gold + $1, experience = experience + $2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+    RETURNING gold, experience`,
+      [zlato.celkem, exp.celkem, postava.id]
+    );
+
+    await klient.query('COMMIT');
+
+    // Zaklad, bonus a vysledek zvlast - at je v logu videt, odkud
+    // se cislo vzalo, kdyby se nekdy nezdalo.
+    console.log(
+      `[odmena] hráč ${req.user.id} (${druh}): ` +
+      `zlato ${zlato.zaklad}+${zlato.bonus}=${zlato.celkem}, ` +
+      `xp ${exp.zaklad}+${exp.bonus}=${exp.celkem}` +
+      (stav.aktivni ? ' [paladin]' : '')
+    );
+
+    res.json({
+      ok: true, druh, paladin: stav.aktivni,
+      zlato, exp,                       // kazde s poli zaklad/bonus/celkem
+      gold: nove[0].gold, experience: nove[0].experience,
+    });
+  } catch (err) {
+    await klient.query('ROLLBACK').catch(() => {});
+    console.error('game/reward:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    klient.release();
+  }
+});
+
+// ---------------------------------------------------------------
+// POST /api/game/merchant-refresh — obnova zboží
+//
+// Paladin má denně pár obnov zdarma. Kolik jich vyčerpal, si drží
+// server podle svého data — z prohlížeče by to šlo přepsat.
+// ---------------------------------------------------------------
+router.post('/merchant-refresh', authenticateToken, async (req, res) => {
+  const klient = await pool.connect();
+  try {
+    await klient.query('BEGIN');
+
+    const { rows: postavy } = await klient.query(
+      'SELECT id FROM characters WHERE user_id = $1 FOR UPDATE', [req.user.id]
+    );
+    if (!postavy.length) { await klient.query('ROLLBACK'); return res.status(404).json({ error: 'Character not found' }); }
+    const characterId = postavy[0].id;
+
+    const [nastaveni, stav] = await Promise.all([nactiNastaveni(), stavPaladina(req.user.id)]);
+    const zdarmaDenne = stav.aktivni
+      ? Math.max(0, Math.round(nastaveni.paladin_free_merchant_refreshes_per_day))
+      : 0;
+
+    // Den bereme z databaze, ne z prohlizece.
+    const { rows: dnesRows } = await klient.query(
+      `SELECT pouzito FROM merchant_refreshes
+        WHERE character_id = $1 AND den = CURRENT_DATE FOR UPDATE`,
+      [characterId]
+    );
+    const pouzito = dnesRows.length ? dnesRows[0].pouzito : 0;
+    const zdarma = pouzito < zdarmaDenne;
+
+    await klient.query(
+      `INSERT INTO merchant_refreshes (character_id, den, pouzito)
+       VALUES ($1, CURRENT_DATE, 1)
+       ON CONFLICT (character_id, den) DO UPDATE SET pouzito = merchant_refreshes.pouzito + 1`,
+      [characterId]
+    );
+
+    await klient.query('COMMIT');
+    res.json({
+      ok: true, zdarma,
+      pouzito: pouzito + 1,
+      zdarmaDenne,
+      zbyvaZdarma: Math.max(0, zdarmaDenne - (pouzito + 1)),
+      paladin: stav.aktivni,
+    });
+  } catch (err) {
+    await klient.query('ROLLBACK').catch(() => {});
+    console.error('game/merchant-refresh:', err);
     res.status(500).json({ error: 'Internal server error' });
   } finally {
     klient.release();
