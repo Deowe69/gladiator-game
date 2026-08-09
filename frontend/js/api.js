@@ -72,6 +72,17 @@ class API {
     return this.request('/character/update', 'PUT', data);
   }
 
+  // --- Paladin a herni stav ---
+  // O bodech, odpoctech i clenstvi rozhoduje server. Hra si je jen
+  // vyzvedne a zobrazi; nic z toho nepocita sama.
+  static async paladinStatus()      { return this.request('/paladin/status'); }
+  static async paladinBuy()         { return this.request('/paladin/buy', 'POST'); }
+  static async paladinConfig()      { return this.request('/paladin/config'); }
+  static async paladinSaveConfig(config) { return this.request('/paladin/config', 'PUT', { config }); }
+
+  static async gameState()          { return this.request('/game/state'); }
+  static async gameSpend(druh)      { return this.request('/game/spend', 'POST', { druh }); }
+
   static async getLeaderboard() {
     return this.request('/character/leaderboard');
   }
