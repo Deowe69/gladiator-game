@@ -3742,3 +3742,11 @@ select.adm-input{width:190px}
 }
 .pv-znak{font-size:19px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.8))}
 .pv-text{line-height:1.45}
+
+/* stav spravcovskych prav v nastaveni */
+.set-stav{
+  flex:0 0 auto;padding:6px 14px;border-radius:3px;
+  background:rgba(20,15,8,.7);border:1px solid rgba(198,160,84,.35);
+  color:#a8987a;font:12.5px Georgia,serif;
+}
+.set-stav.ano{border-color:rgba(216,177,58,.6);color:#f0d886}

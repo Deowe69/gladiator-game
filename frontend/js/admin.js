@@ -1,8 +1,8 @@
 // ============================================================
 //  SPRÁVA OLYMPU
-//  Rozhraní nad /api/admin. Nic si nepočítá samo — všechna čísla
-//  přicházejí ze serveru a každý zásah jde přes API, které si
-//  práva ověřuje znovu.
+//  Vykresluje se do panelu Admin uvnitř hry. Nic si nepočítá sama —
+//  všechna čísla přicházejí ze serveru a každý zásah jde přes API,
+//  které si práva ověřuje znovu.
 // ============================================================
 
 const obsah = () => document.getElementById('admObsah');
@@ -365,39 +365,50 @@ async function sekceLogy() {
 }
 
 // ============================================================
-//  START
+//  VYKRESLENÍ DO HRY
 // ============================================================
 const SEKCE = { prehled: sekcePrehled, hraci: sekceHraci, paladin: sekcePaladin, logy: sekceLogy };
 
-document.getElementById('admMenu').addEventListener('click', e => {
-  const p = e.target.closest('.adm-polozka');
-  if (!p) return;
-  document.querySelectorAll('.adm-polozka').forEach(x => x.classList.remove('active'));
-  p.classList.add('active');
-  (SEKCE[p.dataset.sekce] || sekcePrehled)();
-});
+// Kostra panelu. Vrací HTML, které si hra vloží do svého pohledu.
+function spravaHTML() {
+  return `
+  <div class="adm-uvnitr">
+    <nav class="adm-menu vodorovne" id="admMenu">
+      <a class="adm-polozka active" data-sekce="prehled">Přehled</a>
+      <a class="adm-polozka" data-sekce="hraci">Hráči</a>
+      <a class="adm-polozka" data-sekce="paladin">Paladin</a>
+      <a class="adm-polozka" data-sekce="logy">Historie zásahů</a>
+    </nav>
+    <div class="adm-obsah" id="admObsah">
+      <div class="adm-nacitani">Načítám…</div>
+    </div>
+  </div>`;
+}
 
-(async () => {
-  if (!localStorage.getItem('token')) { location.href = 'index.html'; return; }
+// Zavěsí ovládání a načte první sekci. Volá se až když je kostra
+// v dokumentu, jinak by nebylo na co věšet.
+async function spustSpravu() {
+  const menu = document.getElementById('admMenu');
+  if (!menu) return;
 
-  // Práva ověřuje server. Když nás nepustí, nemá smysl nic kreslit.
+  menu.addEventListener('click', e => {
+    const p = e.target.closest('.adm-polozka');
+    if (!p) return;
+    menu.querySelectorAll('.adm-polozka').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    (SEKCE[p.dataset.sekce] || sekcePrehled)();
+  });
+
+  // Prava overuje server. Kdyz nepustí, nema smysl nic kreslit.
   try {
     await API.adminDashboard();
   } catch (e) {
-    document.body.innerHTML = `
+    obsah().innerHTML = `
       <div class="adm-zamceno">
         <h1>Sem nemáš přístup</h1>
         <p>${esc((e && e.message) || 'Správcovská práva nebyla potvrzena.')}</p>
-        <a class="adm-btn" href="game.html">Zpět do hry</a>
       </div>`;
     return;
   }
-
-  const kdo = document.getElementById('admKdo');
-  try {
-    const ch = JSON.parse(localStorage.getItem('character') || 'null');
-    if (kdo && ch) kdo.textContent = ch.name;
-  } catch (e) { /* jméno je jen ozdoba */ }
-
   sekcePrehled();
-})();
+}

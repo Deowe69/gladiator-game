@@ -2160,6 +2160,7 @@ let serverStavKdy = 0;
 let serverNedostupny = false;
 
 async function nactiServerStav() {
+  if (!jsemSpravce) overSpravce();          // jednou za nacteni stranky
   try {
     serverStav = await API.gameState();
     serverStavKdy = Date.now();
@@ -3170,11 +3171,10 @@ function settings() {
         ${radky}
         <div class="gl-row">
           <div class="gl-main">
-            <div class="gl-nm">Admin režim</div>
-            <div class="gl-sub">Vývojářský panel. Není to zabezpečení — hlídat práva musí server.</div>
+            <div class="gl-nm">Správcovská práva</div>
+            <div class="gl-sub">Uděluje je server podle účtu, ve hře se zapnout nedají.</div>
           </div>
-          <button class="btn-green set-toggle ${jeAdmin() ? 'on' : 'off'}"
-                  onclick="${jeAdmin() ? 'vypniAdmin()' : 'zapniAdmin()'}">${jeAdmin() ? 'Zapnuto' : 'Vypnuto'}</button>
+          <span class="set-stav ${jeAdmin() ? 'ano' : ''}">${jeAdmin() ? 'Máš je' : 'Nemáš'}</span>
         </div>
       </div>
     </div>
@@ -3216,10 +3216,18 @@ const auction = () => lockedSoon('Aukční síň');
 // POZOR: tohle je nástroj pro vývoj, ne ochrana.
 // Přepínač je v prohlížeči, takže si ho může zapnout kdokoliv.
 // Skutečná práva musí hlídat server, jinak jsou jen na oko.
-const jeAdmin = () => localStorage.getItem('admin') === '1';
+// Spravcovska prava potvrzuje server. Prepinac v prohlizeci uz
+// nerozhoduje o nicem - jen o tom, jestli je odkaz videt driv,
+// nez dorazi odpoved.
+let jsemSpravce = false;
+const jeAdmin = () => jsemSpravce;
 
-function zapniAdmin() { localStorage.setItem('admin', '1'); location.reload(); }
-function vypniAdmin() { localStorage.removeItem('admin'); openView('city'); }
+async function overSpravce() {
+  try { await API.adminDashboard(); jsemSpravce = true; }
+  catch (e) { jsemSpravce = false; }
+  refreshAdminLink();
+}
+
 
 // odkaz v liště se ukáže jen když je režim zapnutý
 function refreshAdminLink() {
@@ -3283,106 +3291,10 @@ function admNoveZbozi() {
 }
 
 function admin() {
-  if (!jeAdmin()) {
-    return `
-    <div class="panel">
-      <div class="panel-header">Admin</div>
-      <div class="panel-body">
-        <div class="coming-soon">
-          <div class="cs-icon">🔒</div>
-          <h2>Režim je vypnutý</h2>
-          <p>Zapneš ho v Nastavení.</p>
-        </div>
-      </div>
-    </div>`;
-  }
-
-  const c = character;
-  const pole = (popis, klic) => `
-    <div class="gl-row">
-      <div class="gl-main"><div class="gl-nm">${popis}</div>
-        <div class="gl-sub">nyní ${c[klic]}</div></div>
-      <input class="adm-input" type="number" min="0" value="${c[klic]}" id="adm-${klic}">
-      <button class="btn-green" onclick="admSet('${klic}', document.getElementById('adm-${klic}').value)">Nastavit</button>
-    </div>`;
-
-  const sablony = Object.values(SHOP_ITEMS).flat();
-  const nabidka = sablony.map((t, i) =>
-    `<option value="${i}">${t.name} (${t.quality})</option>`).join('');
-
-  return `
-  <div class="panel adm-warn">
-    <div class="panel-header">Admin – vývojářský nástroj</div>
-    <div class="panel-body">
-      <p class="hall-note">
-        <b>Tohle není zabezpečení.</b> Přepínač sedí v prohlížeči, takže si ho
-        může zapnout kdokoliv, kdo si otevře konzoli. Aby admin práva něco
-        znamenala, musí je hlídat server — jinak jsou jen na oko.
-      </p>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-header">Postava</div>
-    <div class="panel-body">
-      <div class="gl-list">
-        ${pole('Úroveň', 'level')}
-        ${pole('Zlato', 'gold')}
-        ${pole('Síla', 'strength')}
-        ${pole('Dovednost', 'skill')}
-        ${pole('Obratnost', 'agility')}
-        ${pole('Odolnost', 'defense')}
-        ${pole('Inteligence', 'intelligence')}
-      </div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-header">Rychlé zásahy</div>
-    <div class="panel-body">
-      <div class="gl-list">
-        <div class="gl-row">
-          <div class="gl-main"><div class="gl-nm">Doplnit životy</div>
-            <div class="gl-sub">${c.health} / ${maxHP()}</div></div>
-          <button class="btn-green" onclick="admHeal()">Doplnit</button>
-        </div>
-        <div class="gl-row">
-          <div class="gl-main"><div class="gl-nm">Body výpravy a bludiště</div>
-            <div class="gl-sub">výprava ${points('exped')}, bludiště ${points('dungeon')} · zruší i odpočinek</div></div>
-          <button class="btn-green" onclick="admBody()">Doplnit</button>
-        </div>
-        <div class="gl-row">
-          <div class="gl-main"><div class="gl-nm">Vyloosovat zboží u všech kupců</div>
-            <div class="gl-sub">jako kdyby doplnili pult</div></div>
-          <button class="btn-green" onclick="admNoveZbozi()">Vyloosovat</button>
-        </div>
-        <div class="gl-row">
-          <div class="gl-main"><div class="gl-nm">Přidat zásilky</div>
-            <div class="gl-sub">nyní ${lootLog.length}</div></div>
-          <button class="btn-green" onclick="admDejKorist(5)">+5</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-header">Předmět do batohu</div>
-    <div class="panel-body">
-      <div class="gl-row">
-        <div class="gl-main"><div class="gl-nm">Vyber šablonu</div>
-          <div class="gl-sub">vlastnosti se vylosují jako u koupeného kusu · batoh ${inventory.length}/${BAG_SIZE}</div></div>
-        <select class="adm-input" id="admItem">${nabidka}</select>
-        <button class="btn-green" onclick="admDejPredmet(document.getElementById('admItem').value)">Přidat</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-header">Ukončit</div>
-    <div class="panel-body">
-      <button class="btn-back" onclick="vypniAdmin()">Vypnout admin režim</button>
-    </div>
-  </div>`;
+  // Kostru vykreslí správa z admin.js. Ovládání se věší až když
+  // je kostra v dokumentu, proto to odložení.
+  setTimeout(spustSpravu, 0);
+  return spravaHTML();
 }
 
 
