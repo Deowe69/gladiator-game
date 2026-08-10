@@ -3718,3 +3718,27 @@ select.adm-input{width:190px}
   font-style:normal;font-size:11px;
   color:#8a7550;letter-spacing:.3px;
 }
+
+/* Vyhody Paladina */
+.pal-nadpis-vyhod{
+  margin:16px 0 9px;
+  color:#f0d886;font:bold 13px Georgia,serif;
+  letter-spacing:.5px;text-transform:uppercase;
+  text-shadow:0 1px 3px rgba(0,0,0,.85);
+}
+.pal-vyhody{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+@media (max-width:760px){ .pal-vyhody{grid-template-columns:1fr} }
+.pal-vyhoda{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-radius:3px;
+  background:linear-gradient(180deg, rgba(46,35,20,.85), rgba(28,21,12,.9));
+  border:1px solid rgba(198,160,84,.35);
+  color:#d9c9a4;font-size:12.5px;
+}
+.pal-vyhoda.ma{
+  border-color:rgba(216,177,58,.6);
+  background:linear-gradient(180deg, rgba(70,52,28,.9), rgba(44,33,18,.94));
+  color:#f0e4c8;
+}
+.pv-znak{font-size:19px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.8))}
+.pv-text{line-height:1.45}

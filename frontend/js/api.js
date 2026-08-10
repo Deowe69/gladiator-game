@@ -82,6 +82,8 @@ class API {
 
   static async gameState()          { return this.request('/game/state'); }
   static async gameSpend(druh)      { return this.request('/game/spend', 'POST', { druh }); }
+  static async gameReward(data)     { return this.request('/game/reward', 'POST', data); }
+  static async merchantRefresh()    { return this.request('/game/merchant-refresh', 'POST'); }
 
   static async getLeaderboard() {
     return this.request('/character/leaderboard');

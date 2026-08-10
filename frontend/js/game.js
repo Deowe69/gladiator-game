@@ -503,7 +503,19 @@ function restockLeft() {
   return `${p(h)}:${p(m)}:${p(s)}`;
 }
 
-function newGoods() {
+async function newGoods() {
+  // Kolik obnov zdarma hrac dnes vycerpal, vi server - z prohlizece
+  // by to slo prepsat.
+  try {
+    const o = await API.merchantRefresh();
+    toast(o.zdarma
+      ? `Zboží obnoveno zdarma. Dnes ti zbývá ${o.zbyvaZdarma}.`
+      : 'Zboží obnoveno.');
+  } catch (e) { /* bez serveru se obnovi jen mistne */ }
+  return newGoodsMistne();
+}
+
+function newGoodsMistne() {
   localStorage.removeItem('restockAt');
   toast('Kupec doplnil zboží!');
   openView('shop');
@@ -1765,8 +1777,9 @@ function endCombat(won) {
 
   let rewards = '';
   if (won) {
-    character.gold       += currentEnemy.gold;
-    character.experience += currentEnemy.exp;
+    // Odmenu pripisuje server ze sveho vzorce a s bonusem Paladina.
+    // Hra si ji nepocita, jen ukaze, co prislo zpet.
+    pripisOdmenu(lastFight && lastFight.view, currentEnemy);
     rewards = `+${currentEnemy.gold} zlata · +${currentEnemy.exp} zkušeností` +
               (korist ? ` · ${korist.name}` : '');
     addLog(`Vítězství! ${rewards}`, 'log-w');
@@ -2106,6 +2119,33 @@ function logout() {
 
 
 // ========== BODY VÝPRAVY A ODPOČINEK ==========
+// Odmenu za vyhrany souboj pripisuje server. Posilame jen to, KOHO
+// hrac porazil - vysi urcuje server, aby ji neslo nafouknout.
+async function pripisOdmenu(view, souper) {
+  const druh = view === 'dungeon' ? 'dungeon' : view === 'arena' ? 'arena' : 'exped';
+  const lok = EXPEDITIONS.find(e => e.id === currentExped);
+  const poradi = lok ? Math.max(0, lok.monsters.findIndex(m => m.name === (souper && souper.name))) : 0;
+
+  try {
+    const o = await API.gameReward({
+      druh,
+      urovenLokace: lok ? lok.minLevel : (character.level || 1),
+      poradi,
+    });
+    if (typeof o.gold === 'number')       character.gold = o.gold;
+    if (typeof o.experience === 'number') character.experience = o.experience;
+    checkLevelUp(); updateUI();
+
+    if (o.paladin && o.zlato && o.zlato.bonus) {
+      addLog(`Paladin: +${o.zlato.bonus} zlata a +${o.exp.bonus} zkušeností navíc`, 'log-w');
+    }
+  } catch (e) {
+    // Kdyz server neodpovi, odmenu nepripisujeme - jinak by ji hrac
+    // dostal dvakrat, az se spojeni obnovi.
+    toast('Odměnu se nepodařilo připsat, zkus to za chvíli.');
+  }
+}
+
 // ========== STAV ZE SERVERU ==========
 // O bodech, odpočtech i členství Paladina rozhoduje server. Hra si
 // drží poslední odpověď a čas, kdy dorazila, aby šly odpočty
@@ -2536,9 +2576,34 @@ const work    = () => lockedSoon('Práce');
 // Paladin je casove predplatne za smaragdy. Vyhody zatim nejsou
 // domluvene, takze je panel necha otevrene misto toho, aby sliboval
 // neco, co hra nedela.
+// Výhody Paladina. Čísla se berou z nastavení, ne z textu —
+// když je admin změní, panel je ukáže sám.
+function paladinVyhody() {
+  const pct = k => Math.round((1 - palNastaveni(k)) * 100);
+  return [
+    { znak: '🗺️', text: `O ${pct('paladin_expedition_time_multiplier')} % kratší odpočinek po výpravě` },
+    { znak: '🏰', text: `O ${pct('paladin_labyrinth_time_multiplier')} % kratší odpočinek v bludišti` },
+    { znak: '⚔️', text: `O ${pct('paladin_arena_cooldown_multiplier')} % kratší odpočinek v aréně` },
+    { znak: '🛡️', text: `O ${pct('paladin_circus_turma_cooldown_multiplier')} % kratší odpočinek v Circus Turma` },
+    { znak: '💰', text: `+${palNastaveni('paladin_gold_bonus_percent')} % zlata z odměn` },
+    { znak: '✦',  text: `+${palNastaveni('paladin_xp_bonus_percent')} % zkušeností z odměn` },
+    { znak: '🔄', text: `${palNastaveni('paladin_free_merchant_refreshes_per_day')}× denně obnova zboží zdarma` },
+    { znak: '🗺️', text: `${palNastaveni('paladin_expedition_points_max')} bodů výpravy místo ${palNastaveni('normal_expedition_points_max')}` },
+    { znak: '🏰', text: `${palNastaveni('paladin_labyrinth_points_max')} bodů bludiště místo ${palNastaveni('normal_labyrinth_points_max')}` },
+  ];
+}
+
 function premium() {
   const aktivni = jePaladin();
   const mam = character.emeralds || 0;
+  const cena = palNastaveni('paladin_price_emeralds');
+  const dni  = palNastaveni('paladin_duration_days');
+
+  const vyhody = paladinVyhody().map(v => `
+    <div class="pal-vyhoda ${aktivni ? 'ma' : ''}">
+      <span class="pv-znak">${v.znak}</span>
+      <span class="pv-text">${v.text}</span>
+    </div>`).join('');
 
   return `
   <div class="panel">
@@ -2546,7 +2611,7 @@ function premium() {
     <div class="panel-body">
 
       <div class="pal-karta ${aktivni ? 'aktivni' : ''}">
-        <div class="pal-znak">${aktivni ? '\u{1F396}' : '\u{1F6E1}'}</div>
+        <div class="pal-znak">${aktivni ? '🎖' : '🛡'}</div>
 
         <div class="pal-text">
           <div class="pal-nadpis">
@@ -2555,7 +2620,7 @@ function premium() {
           <div class="pal-popis">
             ${aktivni
               ? `Zbývá ti <b>${paladinZbyva()}</b>. Další nákup se přičte k tomu, co ti zůstalo.`
-              : `<b>${palNastaveni('paladin_duration_days')} dní</b> za <b>${palNastaveni('paladin_price_emeralds')} smaragdů</b>.`}
+              : `<b>${dni} dní</b> za <b>${cena} smaragdů</b>.`}
           </div>
         </div>
 
@@ -2564,17 +2629,18 @@ function premium() {
             Máš <b>${mam}</b>
             <img class="res-ico" src="img/ui/gem.png" alt="smaragdů">
           </div>
-          <button class="btn-green" ${mam >= palNastaveni('paladin_price_emeralds') ? '' : 'disabled'}
-                  onclick="kupPaladina()">
+          <button class="btn-green" ${mam >= cena ? '' : 'disabled'} onclick="kupPaladina()">
             ${aktivni ? 'Prodloužit' : 'Stát se Paladinem'}
           </button>
         </div>
       </div>
 
-      <p class="hall-note">
-        Výhody Paladina zatím nejsou domluvené, takže tu nic neslibujeme —
-        až se rozhodneš, co má dávat, doplníme to sem i do hry.
-      </p>
+      <div class="pal-nadpis-vyhod">Co Paladin dává</div>
+      <div class="pal-vyhody">${vyhody}</div>
+
+      ${serverNedostupny
+        ? '<p class="hall-note">Server neodpovídá, takže tu vidíš výchozí hodnoty a členství se nedá koupit.</p>'
+        : ''}
 
     </div>
   </div>`;
