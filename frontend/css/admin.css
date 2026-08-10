@@ -1,0 +1,223 @@
+/* =========================================================
+   SPRÁVA OLYMPU
+   Stejná paleta jako hra — kámen, bronz, zlato, tmavě červená.
+   Střídmější, protože se v tom pracuje, ne hraje.
+   ========================================================= */
+
+.adm-body{
+  margin:0;
+  min-height:100vh;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 0%, rgba(60,45,24,.5), transparent 70%),
+    linear-gradient(180deg,#1d1710 0%,#141009 100%);
+  color:#e0d0aa;
+  font-family:Georgia, 'Times New Roman', serif;
+}
+
+/* ---- horní pruh ---- */
+.adm-top{
+  display:flex;align-items:center;gap:14px;
+  padding:10px 20px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.1) 0%, transparent 40%),
+    linear-gradient(180deg,#8f2427 0%,#5e1417 55%,#3f0c0e 100%);
+  border-bottom:2px solid #d8b13a;
+  box-shadow:0 3px 12px rgba(0,0,0,.5);
+}
+.adm-logo{width:38px;height:38px;filter:drop-shadow(0 2px 5px rgba(0,0,0,.6))}
+.adm-nazev{
+  color:#f4dfa4;font-weight:bold;font-size:17px;letter-spacing:1px;
+  text-shadow:0 1px 3px rgba(0,0,0,.8);
+}
+.adm-kdo{margin-left:auto;color:#e0c8a0;font-size:13px}
+.adm-zpet{
+  color:#f4dfa4;text-decoration:none;font-size:13px;
+  padding:6px 13px;border:1px solid rgba(240,216,134,.45);border-radius:3px;
+}
+.adm-zpet:hover{background:rgba(240,216,134,.14)}
+
+/* ---- rozvržení ---- */
+.adm-obal{display:grid;grid-template-columns:210px 1fr;gap:20px;padding:20px;align-items:start}
+@media (max-width:820px){ .adm-obal{grid-template-columns:1fr} }
+
+.adm-menu{
+  display:flex;flex-direction:column;gap:5px;
+  padding:11px;
+  background:linear-gradient(180deg, rgba(30,23,12,.85), rgba(18,13,7,.9));
+  border:2px solid rgba(198,160,84,.4);border-radius:5px;
+  position:sticky;top:20px;
+}
+.adm-polozka{
+  padding:10px 13px;border-radius:3px;cursor:pointer;
+  color:#d9c9a4;font-size:13.5px;
+  border:1px solid transparent;
+  transition:background .13s, color .13s;
+}
+.adm-polozka:hover{background:rgba(240,216,134,.09);color:#f0d886}
+.adm-polozka.active{
+  background:linear-gradient(180deg,#a8272a,#611013);
+  border-color:#4a0b0b;color:#f4dfa4;font-weight:bold;
+}
+
+.adm-obsah{min-width:0}
+
+/* ---- nadpisy ---- */
+.adm-nadpis{
+  margin:0 0 5px;font-size:24px;color:#f0d886;letter-spacing:.5px;
+  text-shadow:0 2px 5px rgba(0,0,0,.7);
+}
+.adm-podnadpis{
+  margin:18px 0 9px;font-size:14px;color:#e8c860;
+  letter-spacing:.6px;text-transform:uppercase;
+}
+.adm-podtitulek{margin-bottom:16px;font-size:12.5px}
+.adm-pocet{
+  font-size:14px;color:#bda878;font-weight:normal;
+  padding:2px 9px;border:1px solid rgba(198,160,84,.4);border-radius:11px;
+  vertical-align:middle;margin-left:8px;
+}
+.adm-slabe{color:#a8987a}
+.adm-zvyraz{color:#f0d886;font-weight:bold}
+.adm-nacitani{padding:40px;text-align:center;color:#a8987a;font-style:italic}
+
+/* ---- dlaždice přehledu ---- */
+.adm-dlazdice-mrizka{
+  display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));
+  gap:11px;margin:16px 0;
+}
+.adm-dlazdice{
+  padding:14px 16px;border-radius:4px;
+  background:linear-gradient(180deg, rgba(46,35,20,.9), rgba(28,21,12,.94));
+  border:1px solid rgba(198,160,84,.38);
+}
+.adm-dl-nazev{font-size:11.5px;color:#a8987a;letter-spacing:.3px;text-transform:uppercase}
+.adm-dl-hod{
+  margin-top:5px;font-size:25px;color:#f0d886;font-weight:bold;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ---- panely ---- */
+.adm-panel{
+  padding:16px 18px;margin-bottom:16px;border-radius:5px;
+  background:linear-gradient(180deg, rgba(30,23,12,.85), rgba(18,13,7,.9));
+  border:2px solid rgba(198,160,84,.4);
+}
+.adm-panel.nebezpeci{border-color:rgba(200,60,60,.5)}
+.adm-dva{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media (max-width:900px){ .adm-dva{grid-template-columns:1fr} }
+
+.adm-poznamka{
+  padding:11px 14px;margin:12px 0;border-radius:3px;
+  background:rgba(216,177,58,.1);
+  border-left:3px solid #d8b13a;
+  font-size:12.5px;line-height:1.6;color:#d9c9a4;
+}
+.adm-poznamka b{color:#f0d886}
+.adm-poznamka-mala{margin-top:11px;font-size:12px}
+
+/* ---- tabulky ---- */
+.adm-tabulka-obal{
+  overflow-x:auto;border-radius:4px;
+  border:2px solid rgba(198,160,84,.4);
+  background:linear-gradient(180deg, rgba(30,23,12,.7), rgba(18,13,7,.8));
+}
+.adm-tabulka{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+.adm-tabulka th{
+  padding:11px 13px;text-align:left;white-space:nowrap;
+  background:linear-gradient(180deg,#a8272a,#611013);
+  color:#f4dfa4;font-size:11.5px;letter-spacing:.4px;text-transform:uppercase;
+}
+.adm-tabulka td{
+  padding:10px 13px;color:#d9c9a4;
+  border-bottom:1px solid rgba(140,115,80,.22);
+  font-variant-numeric:tabular-nums;
+}
+.adm-tabulka tbody tr:last-child td{border-bottom:none}
+.adm-tabulka.klikaci tbody tr{cursor:pointer;transition:background .12s}
+.adm-tabulka.klikaci tbody tr:hover{background:rgba(240,216,134,.08)}
+.adm-radit{cursor:pointer;user-select:none}
+.adm-radit:hover{filter:brightness(1.15)}
+.adm-radit.aktivni{color:#fff0c0}
+.adm-prazdno{text-align:center;color:#8a7a5c;font-style:italic;padding:22px}
+
+/* stav a značky */
+.adm-tecka{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:#6b5a44;margin-right:7px;vertical-align:middle;
+}
+.adm-tecka.online{background:#8fd44a;box-shadow:0 0 6px rgba(143,212,74,.7)}
+.adm-znacka{
+  display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;
+  font-size:10px;letter-spacing:.3px;text-transform:uppercase;vertical-align:middle;
+}
+.adm-znacka.spravce{background:rgba(216,177,58,.22);color:#f0d886;border:1px solid rgba(216,177,58,.5)}
+.adm-znacka.ban{background:rgba(200,60,60,.22);color:#f0a0a0;border:1px solid rgba(200,60,60,.5)}
+.adm-znacka.paladin{background:rgba(90,140,220,.2);color:#a8c8f0;border:1px solid rgba(90,140,220,.5)}
+
+/* ---- formuláře ---- */
+.adm-radek-nastroju{display:flex;gap:10px;margin:14px 0}
+.adm-hledani,.adm-pole input{
+  padding:9px 12px;border-radius:3px;
+  background:rgba(20,15,8,.9);
+  border:1px solid rgba(198,160,84,.42);
+  color:#e8d4a0;font:13px Georgia,serif;
+}
+.adm-hledani{flex:1;max-width:340px}
+.adm-hledani::placeholder,.adm-pole input::placeholder{color:#7a6c50}
+.adm-hledani:focus,.adm-pole input:focus{outline:none;border-color:#d8b13a}
+
+.adm-mrizka-poli{display:grid;grid-template-columns:repeat(auto-fill, minmax(180px,1fr));gap:11px}
+.adm-mrizka-poli.siroka{grid-template-columns:repeat(auto-fill, minmax(250px,1fr))}
+.adm-pole{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:#c9b48a}
+.adm-pole span{letter-spacing:.2px}
+.adm-pole small{font-size:10.5px}
+
+.adm-akce{margin-top:16px;display:flex;gap:10px}
+.adm-seznam{margin:0;padding-left:18px;font-size:13px;line-height:1.9}
+.adm-cara{border:none;border-top:1px solid rgba(198,160,84,.28);margin:16px 0}
+
+/* ---- tlačítka ---- */
+.adm-btn{
+  padding:9px 17px;border-radius:3px;cursor:pointer;
+  background:linear-gradient(180deg, rgba(70,52,28,.95), rgba(44,33,18,.98));
+  border:1px solid rgba(198,160,84,.45);
+  color:#e8d4a0;font:bold 12.5px Georgia,serif;
+  text-decoration:none;display:inline-block;
+  transition:filter .13s;
+}
+.adm-btn:hover{filter:brightness(1.2)}
+.adm-btn:disabled{opacity:.45;cursor:default;filter:none}
+.adm-btn.hlavni{
+  background:linear-gradient(180deg,#a8272a,#611013);
+  border-color:#4a0b0b;color:#f4dfa4;
+}
+.adm-btn.varovny{background:linear-gradient(180deg,#b06a20,#6d3f0e);border-color:#4a2c08;color:#f4dfa4}
+.adm-btn.nebezpecny{background:linear-gradient(180deg,#c03030,#7a1414);border-color:#4a0b0b;color:#ffe0e0}
+.adm-btn.zpet{margin-bottom:14px;background:none;border-color:rgba(198,160,84,.3)}
+
+.adm-strankovani{
+  display:flex;align-items:center;justify-content:center;gap:14px;
+  margin-top:14px;font-size:12.5px;color:#a8987a;
+}
+
+/* ---- hlášky ---- */
+.adm-hlaska{
+  position:fixed;right:20px;bottom:20px;z-index:100;
+  padding:12px 18px;border-radius:4px;
+  background:linear-gradient(180deg, rgba(46,35,20,.97), rgba(28,21,12,.99));
+  border:2px solid rgba(216,177,58,.6);
+  color:#f0d886;font-size:13px;
+  box-shadow:0 6px 20px rgba(0,0,0,.6);
+  transition:opacity .4s, transform .4s;
+}
+.adm-hlaska.chyba{border-color:rgba(200,60,60,.7);color:#f0b0b0}
+.adm-hlaska.pryc{opacity:0;transform:translateY(9px)}
+
+/* ---- zamčeno ---- */
+.adm-zamceno{
+  max-width:460px;margin:100px auto;padding:34px;text-align:center;
+  background:linear-gradient(180deg, rgba(30,23,12,.9), rgba(18,13,7,.95));
+  border:2px solid rgba(200,60,60,.5);border-radius:6px;
+}
+.adm-zamceno h1{color:#f0a0a0;margin:0 0 12px}
+.adm-zamceno p{color:#c9b48a;font-size:13.5px;margin-bottom:20px}

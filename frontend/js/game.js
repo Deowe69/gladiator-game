@@ -217,6 +217,10 @@ function updateUI() {
   if (els.xpPct) els.xpPct.textContent = Math.round(xpPct) + ' %';
   if (els.navPocta) els.navPocta.textContent = (c.pocta || 0).toLocaleString('cs-CZ');
   if (els.navRuby) els.navRuby.textContent = (c.emeralds || 0).toLocaleString('cs-CZ');
+
+  // Mista otevrena az od urovne se prepocitavaji tady, aby se
+  // objevila hned po postupu, ne az pri jine akci.
+  skryjZamcenaMista();
   if (els.navGold) els.navGold.textContent = c.gold;
   if (els.charNameSm) els.charNameSm.textContent = c.name;
   if (els.charClassSm) els.charClassSm.textContent = c.class;
@@ -261,7 +265,8 @@ function openView(view, highlight) {
   const views = { city, arena, dungeon, quests, shop, inventory: profileView, profile: profileView,
                   guild, forge, expedition, hall, stats, training, work, premium,
                   report: fightReport, news, fights, messages, loot,
-                  settings, market, auction, admin, combat };
+                  settings, market, auction, admin, combat,
+                  ...Object.fromEntries(MISTA.map(m => [m.klic, window[m.klic]])) };
   const viewFn = views[view] || (() => `
     <div class="coming-soon">
       <div class="cs-icon">🚧</div>
@@ -2298,6 +2303,7 @@ function refreshExpedUI() {
 
   refreshBadges();
   refreshAdminLink();
+  skryjZamcenaMista();
 
   const cd = expedCdLeft();
 
@@ -3595,6 +3601,43 @@ const avatarSoubor = uroven =>
 function avatarProUroven(uroven, cls) {
   return artImg(`img/avatars/${avatarSoubor(uroven)}.jpg`, '🧑', cls || 'av-img', 'Postava');
 }
+
+// ========== DALŠÍ MÍSTA VE MĚSTĚ ==========
+// Některá se otevřou až na dané úrovni. Do té doby je hráč
+// v nabídce vůbec nevidí.
+const MISTA = [
+  { klic:'prekupnik', nazev:'Překupník',          od:0   },
+  { klic:'uschovna',  nazev:'Úschovna',           od:0   },
+  { klic:'staj',      nazev:'Stáj',               od:0   },
+  { klic:'spravce',   nazev:'Správce gladiátorů', od:20  },
+  { klic:'kovar',     nazev:'Mistr kovář',        od:50  },
+  { klic:'carodejka', nazev:'Čarodějnice',        od:75  },
+  { klic:'hefaistos', nazev:'Héfaistos',          od:100 },
+];
+
+// Skryje z nabídky to, na co hráč ještě nemá úroveň.
+function skryjZamcenaMista() {
+  const uroven = (character && character.level) || 1;
+  document.querySelectorAll('.sub-item[data-od]').forEach(el => {
+    el.style.display = uroven >= Number(el.dataset.od) ? '' : 'none';
+  });
+}
+
+// Zatím jen zamčené panely - až budou hotová, nahradí se obsahem.
+MISTA.forEach(m => {
+  window[m.klic] = () => {
+    const uroven = (character && character.level) || 1;
+    if (m.od && uroven < m.od) {
+      return `
+      <div class="coming-soon">
+        <div class="cs-icon">🔒</div>
+        <h2>${m.nazev}</h2>
+        <p>Otevře se na ${m.od}. úrovni. Teď jsi na ${uroven}.</p>
+      </div>`;
+    }
+    return lockedSoon(m.nazev);
+  };
+});
 
 // ===== SÍŇ SLÁVY =====
 

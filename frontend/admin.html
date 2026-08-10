@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="img/ui/favicon.png">
+  <title>Olympus — správa</title>
+  <link rel="stylesheet" href="css/game.css?v=1">
+  <link rel="stylesheet" href="css/admin.css?v=1">
+</head>
+<body class="adm-body">
+
+<div class="adm-top">
+  <img class="adm-logo" src="img/ui/logo.png" alt="Olympus">
+  <span class="adm-nazev">Správa Olympu</span>
+  <span class="adm-kdo" id="admKdo"></span>
+  <a class="adm-zpet" href="game.html">Zpět do hry</a>
+</div>
+
+<div class="adm-obal">
+
+  <nav class="adm-menu" id="admMenu">
+    <a class="adm-polozka active" data-sekce="prehled">Přehled</a>
+    <a class="adm-polozka" data-sekce="hraci">Hráči</a>
+    <a class="adm-polozka" data-sekce="paladin">Paladin</a>
+    <a class="adm-polozka" data-sekce="logy">Historie zásahů</a>
+  </nav>
+
+  <main class="adm-obsah" id="admObsah">
+    <div class="adm-nacitani">Načítám…</div>
+  </main>
+
+</div>
+
+<script src="js/api.js?v=1"></script>
+<script src="js/admin.js?v=1"></script>
+</body>
+</html>

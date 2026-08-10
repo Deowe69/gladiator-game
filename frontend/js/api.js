@@ -85,6 +85,22 @@ class API {
   static async gameReward(data)     { return this.request('/game/reward', 'POST', data); }
   static async merchantRefresh()    { return this.request('/game/merchant-refresh', 'POST'); }
 
+  // --- sprava ---
+  // Prava si server overuje u kazdeho volani znovu; tohle je jen
+  // pohodlnejsi zapis, ne obchazeni kontroly.
+  static async adminDashboard()  { return this.request('/admin/dashboard'); }
+  static async adminPlayers(q = {}) {
+    const p = new URLSearchParams();
+    Object.entries(q).forEach(([k, v]) => { if (v !== '' && v != null) p.set(k, v); });
+    return this.request('/admin/players' + (p.toString() ? '?' + p : ''));
+  }
+  static async adminPlayer(id)              { return this.request('/admin/players/' + id); }
+  static async adminSavePlayer(id, data)    { return this.request('/admin/players/' + id, 'PUT', data); }
+  static async adminBan(id, dny, duvod)     { return this.request('/admin/players/' + id + '/ban', 'POST', { dny, duvod }); }
+  static async adminUnban(id)               { return this.request('/admin/players/' + id + '/unban', 'POST'); }
+  static async adminDeletePlayer(id, potvrzeni) { return this.request('/admin/players/' + id, 'DELETE', { potvrzeni }); }
+  static async adminLogs(limit = 100)       { return this.request('/admin/logs?limit=' + limit); }
+
   static async getLeaderboard() {
     return this.request('/character/leaderboard');
   }
