@@ -6,6 +6,26 @@ const { odmenaZaSouboj, sBonusem } = require('../config/odmeny');
 
 const router = express.Router();
 
+/**
+ * Zapíše, co se ve hře stalo.
+ *
+ * Bez těchto záznamů nešlo spočítat, kolik bylo výprav ani kolik
+ * zlata přibylo. Selhání zápisu nesmí shodit samotnou akci — proto
+ * jen zaloguje a jde dál.
+ */
+async function zapisUdalost(klient, characterId, druh, zlato = 0, exp = 0, podrobnosti = null) {
+  try {
+    await klient.query(
+      `INSERT INTO game_events (character_id, druh, zlato, exp, podrobnosti)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [characterId, druh, zlato, exp, podrobnosti ? JSON.stringify(podrobnosti) : null]
+    );
+  } catch (err) {
+    console.error('Zápis události selhal:', err.message);
+  }
+}
+
+
 // Jeden bod za deset minut. Stejné pro výpravu i bludiště.
 const REGENERACE_MS = 10 * 60 * 1000;
 
@@ -208,6 +228,9 @@ router.post('/spend', authenticateToken, async (req, res) => {
       [postava.id, druh, delka]
     );
 
+    await zapisUdalost(klient, postava.id, 'zacatek_' + druh, 0, 0,
+                       { paladin: stav.aktivni, odpocinek: delka });
+
     await klient.query('COMMIT');
     res.json({
       ok: true, druh,
@@ -268,6 +291,11 @@ router.post('/reward', authenticateToken, async (req, res) => {
     RETURNING gold, experience`,
       [zlato.celkem, exp.celkem, postava.id]
     );
+
+    await zapisUdalost(klient, postava.id, 'odmena_' + druh, zlato.celkem, exp.celkem,
+                       { zaklad: { zlato: zlato.zaklad, exp: exp.zaklad },
+                         bonus:  { zlato: zlato.bonus,  exp: exp.bonus },
+                         paladin: stav.aktivni, urovenLokace, poradi });
 
     await klient.query('COMMIT');
 

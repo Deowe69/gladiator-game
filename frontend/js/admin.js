@@ -52,6 +52,12 @@ async function sekcePrehled() {
     ['Zlata v oběhu',        cislo(d.ekonomika.zlato)],
     ['Smaragdů v oběhu',     cislo(d.ekonomika.smaragdy)],
     ['Průměrné zlato',       cislo(d.ekonomika.prumer_zlato)],
+    ['Výprav celkem',        cislo(d.udalosti && d.udalosti.vypravy)],
+    ['Soubojů v bludišti',   cislo(d.udalosti && d.udalosti.bludiste)],
+    ['Soubojů v aréně',      cislo(d.udalosti && d.udalosti.arena)],
+    ['Vyplaceno zlata',      cislo(d.udalosti && d.udalosti.zlato_vyplaceno)],
+    ['Vyplaceno XP',         cislo(d.udalosti && d.udalosti.exp_vyplaceno)],
+    ['Událostí za 24 h',     cislo(d.udalosti && d.udalosti.za_24h)],
   ].map(([n, v]) => `
     <div class="adm-dlazdice">
       <div class="adm-dl-nazev">${esc(n)}</div>
@@ -72,8 +78,9 @@ async function sekcePrehled() {
 
     ${(d.chybejici || []).length ? `
       <div class="adm-poznamka">
-        <b>Co zatím neumíme spočítat:</b> ${d.chybejici.map(esc).join(', ')}.
-        Tyhle události se nikde neukládají — přibudou, až se začnou zapisovat.
+        <b>Zatím neumíme spočítat:</b> ${d.chybejici.map(esc).join(', ')}.
+        Ostatní čísla se počítají od chvíle, kdy se události začaly
+        zapisovat — starší hraní v nich není.
       </div>` : ''}
 
     <h2 class="adm-podnadpis">Poslední zásahy správců</h2>

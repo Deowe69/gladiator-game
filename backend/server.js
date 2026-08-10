@@ -171,6 +171,37 @@ async function initDB() {
       console.log(`✅ Tabulka zkušeností naplněna: ${MAX_UROVEN} úrovní, celkem ${celkem.toLocaleString('cs-CZ')} XP`);
     }
 
+    // Správcovská práva při startu. Jména se berou z proměnné
+    // prostředí ADMIN_USERS (oddělená čárkou), jinak platí výchozí.
+    // Děláme to při každém startu, aby šlo právo obnovit, aniž by
+    // se muselo lézt přímo do databáze.
+    const spravci = (process.env.ADMIN_USERS || 'deowe')
+      .split(',').map(s => s.trim()).filter(Boolean);
+    for (const jmeno of spravci) {
+      const { rowCount } = await pool.query(
+        `UPDATE users SET is_admin = TRUE
+          WHERE LOWER(username) = LOWER($1) AND is_admin IS DISTINCT FROM TRUE`,
+        [jmeno]
+      );
+      if (rowCount) console.log(`✅ Správcovská práva udělena: ${jmeno}`);
+    }
+
+    // Záznamy o tom, co se ve hře dělo. Bez nich nešlo spočítat,
+    // kolik bylo výprav a soubojů ani kolik zlata přibylo.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS game_events (
+        id           BIGSERIAL PRIMARY KEY,
+        character_id INTEGER REFERENCES characters(id) ON DELETE CASCADE,
+        druh         TEXT    NOT NULL,
+        zlato        INTEGER NOT NULL DEFAULT 0,
+        exp          INTEGER NOT NULL DEFAULT 0,
+        podrobnosti  JSONB,
+        vytvoreno    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS game_events_cas ON game_events (vytvoreno DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS game_events_druh ON game_events (druh, vytvoreno DESC);`);
+
     console.log('✅ Database tables ready!');
   } catch (err) {
     console.error('❌ DB init error:', err);

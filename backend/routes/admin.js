@@ -25,7 +25,7 @@ const cislo = (v, min = 0, max = 2000000000) => {
 // ---------------------------------------------------------------
 router.get('/dashboard', async (req, res) => {
   try {
-    const [uzivatele, postavy, ekonomika, logy] = await Promise.all([
+    const [uzivatele, postavy, ekonomika, logy, udalosti] = await Promise.all([
       pool.query(`
         SELECT COUNT(*)::int AS celkem,
                COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '1 day')::int AS dnes,
@@ -47,6 +47,16 @@ router.get('/dashboard', async (req, res) => {
         SELECT l.id, l.akce, l.cil, l.cil_id, l.vytvoreno, u.username AS spravce
           FROM admin_logs l LEFT JOIN users u ON u.id = l.spravce_id
          ORDER BY l.vytvoreno DESC LIMIT 10`),
+      pool.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE druh = 'zacatek_exped')::int   AS vypravy,
+          COUNT(*) FILTER (WHERE druh = 'zacatek_dungeon')::int AS bludiste,
+          COUNT(*) FILTER (WHERE druh = 'zacatek_arena')::int   AS arena,
+          COUNT(*) FILTER (WHERE druh LIKE 'odmena_%')::int     AS odmen,
+          COALESCE(SUM(zlato), 0)::bigint AS zlato_vyplaceno,
+          COALESCE(SUM(exp), 0)::bigint   AS exp_vyplaceno,
+          COUNT(*) FILTER (WHERE vytvoreno > NOW() - INTERVAL '1 day')::int AS za_24h
+          FROM game_events`),
     ]);
 
     res.json({
@@ -54,9 +64,10 @@ router.get('/dashboard', async (req, res) => {
       postavy: postavy.rows[0],
       ekonomika: ekonomika.rows[0],
       posledniAkce: logy.rows,
-      // Cisla, ktera zatim nemame kde vzit - rikame to rovnou,
-      // misto abychom ukazovali nulu jako fakt.
-      chybejici: ['dokončené výpravy', 'souboje v bludišti', 'souboje v aréně', 'turnaje'],
+      udalosti: udalosti.rows[0],
+      // Cisla se pocitaji az od chvile, kdy se udalosti zacaly
+      // zapisovat - starsi hrani v nich neni.
+      chybejici: ['turnaje'],
     });
   } catch (err) {
     console.error('admin/dashboard:', err);
