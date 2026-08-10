@@ -3520,6 +3520,11 @@ function avatarProUroven(uroven, cls) {
   return artImg(`img/avatars/${avatarSoubor(uroven)}.jpg`, '🧑', cls || 'av-img', 'Postava');
 }
 
+// Portrét NPC nad jeho panelem, stejně jako ho mají kupci.
+function npcPortret(klic) {
+  return `<div class="npc-portret">${artImg('img/npc/' + klic + '.png', '', 'npc-img', '')}</div>`;
+}
+
 // ========== DALŠÍ MÍSTA VE MĚSTĚ ==========
 // Některá se otevřou až na dané úrovni. Do té doby je hráč
 // v nabídce vůbec nevidí.
@@ -3579,6 +3584,8 @@ function prekupnik() {
     <div class="panel-header">Překupník</div>
     <div class="panel-body">
 
+      ${npcPortret('prekupnik')}
+
       <p class="hall-note">
         Vykoupí cokoliv za <b>${on} %</b> ceny — kupci ve městě dávají jen
         ${bezneKupci} %. Sám nic neprodává. Klikni na kus v batohu
@@ -3622,15 +3629,22 @@ MISTA.forEach(m => {
   if (m.klic === 'prekupnik') return;      // ten už je hotový
   window[m.klic] = () => {
     const uroven = (character && character.level) || 1;
-    if (m.od && uroven < m.od) {
-      return `
-      <div class="coming-soon">
-        <div class="cs-icon">🔒</div>
-        <h2>${m.nazev}</h2>
-        <p>Otevře se na ${m.od}. úrovni. Teď jsi na ${uroven}.</p>
-      </div>`;
-    }
-    return lockedSoon(m.nazev);
+    const zamceno = m.od && uroven < m.od;
+
+    return `
+    <div class="panel">
+      <div class="panel-header">${m.nazev}</div>
+      <div class="panel-body">
+        ${npcPortret(m.klic)}
+        <div class="coming-soon">
+          <div class="cs-icon">${zamceno ? '🔒' : '🛠'}</div>
+          <h2>${m.nazev}</h2>
+          <p>${zamceno
+            ? `Otevře se na ${m.od}. úrovni. Teď jsi na ${uroven}.`
+            : 'Tuhle část Olympu teprve stavíme.'}</p>
+        </div>
+      </div>
+    </div>`;
   };
 });
 

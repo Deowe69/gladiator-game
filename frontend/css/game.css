@@ -3751,11 +3751,11 @@ select.adm-input{width:190px}
 }
 .set-stav.ano{border-color:rgba(216,177,58,.6);color:#f0d886}
 
-/* Ikonky u polozek v nabidce mesta. */
-.sub-item{display:flex;align-items:center;gap:8px;text-align:left}
-.npc-ico{
-  width:22px;height:22px;flex:0 0 auto;
-  object-fit:contain;
-  filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));
+/* Portret NPC nad jeho panelem - stejne jako maji kupci. */
+.npc-portret{
+  max-width:340px;margin:0 auto 14px;
+  border:3px solid #4a3a1c;border-radius:6px;overflow:hidden;
+  background:#1a1409;
+  box-shadow:0 6px 18px rgba(0,0,0,.55), inset 0 0 0 2px rgba(216,177,58,.5);
 }
-.menu-btn .npc-ico{width:20px;height:20px}
+.npc-portret img{width:100%;height:auto;display:block}
