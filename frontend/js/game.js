@@ -67,6 +67,10 @@ const SHOP_ITEMS = {
     { id:'b4', name:'Bronzové Holeně', icon:'🥾', stat:'+8 Hbitost', key:'agility',   val:8,  price:160,  quality:'uncommon', tint:'bronze'  },
     { id:'b2', name:'Hermovy Boty',    icon:'🥾', stat:'+10 Hbitost',key:'agility',   val:10, price:180,  quality:'rare'     },
     { id:'b5', name:'Ocelové Holeně',  icon:'🥾', stat:'+16 Hbitost',key:'agility',   val:16, price:340,  quality:'rare'     },
+    { id:'b7', name:'Kožešinové Boty',  icon:'🥾', stat:'zbroj', key:'defense', val:9,  price:190, quality:'uncommon' },
+    { id:'b8', name:'Boty Poutníka',    icon:'👢', stat:'zbroj', key:'agility', val:17, price:470, quality:'rare'     },
+    { id:'g5', name:'Rukavice Vichru',  icon:'🧤', stat:'zbroj', key:'agility', val:19, price:520, quality:'rare'     },
+    { id:'g6', name:'Rukavice Strážce', icon:'🧤', stat:'zbroj', key:'defense', val:12, price:280, quality:'uncommon' },
     { id:'b6', name:'Boty Nesmrtelných',icon:'🥾',stat:'+28 Hbitost',key:'agility',   val:28, price:720,  quality:'epic'     },
     { id:'b3', name:'Kožený Pás',      icon:'🔗', stat:'+3 Obrana',  key:'defense',   val:3,  price:60,   quality:'common',   tint:'leather' },
   ],
@@ -85,6 +89,8 @@ const SHOP_ITEMS = {
     { id:'m1', name:'Hermův Amulet',   icon:'💍', stat:'+8 Hbitost', key:'agility',   val:8,  price:180,  quality:'uncommon' },
     { id:'m2', name:'Apollónův Prsten',icon:'💎', stat:'+10 Intel.', key:'intelligence',val:10,price:220, quality:'uncommon' },
     { id:'m4', name:'Afroditin Amulet',icon:'✨', stat:'+12 Hbitost',key:'agility',   val:12, price:280,  quality:'rare'     },
+    { id:'m6', name:'Amulet Bojovníka', icon:'📿', stat:'ozdoba', key:'strength', val:16, price:440, quality:'rare' },
+    { id:'m7', name:'Amulet Věštby',    icon:'📿', stat:'ozdoba', key:'intelligence', val:14, price:390, quality:'rare' },
     { id:'m5', name:'Zeusův Prsten',   icon:'⚡', stat:'+15 Síla',   key:'strength',  val:15, price:400,  quality:'rare'     },
   ],
   potions: [
@@ -3522,7 +3528,7 @@ function avatarProUroven(uroven, cls) {
 
 // Portrét NPC nad jeho panelem, stejně jako ho mají kupci.
 function npcPortret(klic) {
-  return `<div class="npc-portret">${artImg('img/npc/' + klic + '.png', '', 'npc-img', '')}</div>`;
+  return `<div class="npc-portret">${artImg('img/npc/' + klic + '.jpg', '', 'npc-img', '')}</div>`;
 }
 
 // ========== DALŠÍ MÍSTA VE MĚSTĚ ==========
