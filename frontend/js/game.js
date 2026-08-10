@@ -40,6 +40,9 @@ const SHOP_ITEMS = {
     { id:'a2', name:'Bronzová Zbroj',  icon:'🛡️', stat:'+14 Obrana', key:'defense',   val:14, price:200,  quality:'uncommon', tint:'bronze'  },
     { id:'a3', name:'Athénin Štít',    icon:'⛨',  stat:'+25 Obrana', key:'defense',   val:25, price:480,  quality:'rare'     },
     { id:'a4', name:'Zbroj Spartana',  icon:'💠', stat:'+40 Obrana', key:'defense',   val:40, price:950,  quality:'epic'     },
+    { id:'a14', name:'Spartský Štít',    icon:'🛡️', stat:'zbroj', key:'defense', val:13, price:330, quality:'rare'     },
+    { id:'a15', name:'Štít s Vavřínem',  icon:'🛡️', stat:'zbroj', key:'defense', val:9,  price:200, quality:'uncommon' },
+    { id:'a16', name:'Železný Štít',     icon:'🛡️', stat:'zbroj', key:'defense', val:6,  price:120, quality:'common'   },
     { id:'a5',  name:'Plátěná Suknice',  icon:'🥋', stat:'zbroj',  key:'defense', val:4,  price:60,   quality:'common'   },
     { id:'a6',  name:'Kožich Barbarův',  icon:'🧥', stat:'zbroj',  key:'defense', val:6,  price:110,  quality:'common'   },
     { id:'a7',  name:'Zbroj Hraničáře',  icon:'🥼', stat:'zbroj',  key:'agility', val:9,  price:210,  quality:'uncommon' },
@@ -437,7 +440,7 @@ let shopPage = 0;      // 0 nebo 1 - ram maluje dve zalozky
 const MERCHANTS = {
   blacksmith: { name:'Zbrojíř',    emoji:'🧔', menu:'shop',    desc:'Zbraně všeho druhu',       get items(){ return SHOP_ITEMS.weapons; } },
   armorer:    { name:'Platnéř',    emoji:'👨', menu:'armorer', desc:'Zbroje, boty a rukavice',  get items(){ return SHOP_ITEMS.armor.concat(SHOP_ITEMS.armor_extra || []); } },
-  jeweler:    { name:'Šperkař',    emoji:'👳', menu:'jeweler', desc:'Amulety a ozdoby',         get items(){ return SHOP_ITEMS.jewelry; } },
+  jeweler:    { name:'Šperkař',    emoji:'👳', menu:'jeweler', desc:'Amulety, prsteny a ozdoby',         get items(){ return SHOP_ITEMS.jewelry.concat(SHOP_ITEMS.rings || []); } },
   alchemist:  { name:'Alchymista', emoji:'🧙', menu:'alchemy', desc:'Lektvary a elixíry',       get items(){ return SHOP_ITEMS.potions; } },
 };
 
@@ -474,6 +477,39 @@ function itemSize(it) {
   if (Array.isArray(it.size)) return it.size;          // vlastní rozměr má přednost
   const s = slotForItem(it);
   return ITEM_SIZE[s] || [1, 1];                       // lektvary a drobnosti
+}
+
+// Kolik kusů se v daném pořadí vejde na jeden pult.
+//
+// Napodobuje skládání, jaké dělá CSS (grid-auto-flow: dense):
+// hledá první místo shora zleva, kam se kus vejde celý.
+function poskladej(kusy) {
+  const mrizka = Array.from({ length: SHOP_ROWS }, () => new Array(SHOP_COLS).fill(false));
+
+  const vejdeSe = (r, s, w, h) => {
+    if (r + h > SHOP_ROWS || s + w > SHOP_COLS) return false;
+    for (let y = r; y < r + h; y++)
+      for (let x = s; x < s + w; x++)
+        if (mrizka[y][x]) return false;
+    return true;
+  };
+  const obsad = (r, s, w, h) => {
+    for (let y = r; y < r + h; y++)
+      for (let x = s; x < s + w; x++) mrizka[y][x] = true;
+  };
+
+  const vesle = [];
+  for (const it of kusy) {
+    const [w, h] = itemSize(it);
+    let umisteno = false;
+    for (let r = 0; r < SHOP_ROWS && !umisteno; r++) {
+      for (let s = 0; s < SHOP_COLS && !umisteno; s++) {
+        if (vejdeSe(r, s, w, h)) { obsad(r, s, w, h); vesle.push(it); umisteno = true; }
+      }
+    }
+    if (!umisteno) break;      // dál už se nic nevejde, zbytek jde na další stranu
+  }
+  return vesle;
 }
 
 // Pult má u všech kupců stejný rozměr, ať je nabídka jakákoliv.
@@ -540,18 +576,13 @@ function shop() {
     `<div class="s2tab ${k === id ? 'active' : ''}" onclick="openMerchant('${k}')">${MERCHANTS[k].name}</div>`
   ).join('');
 
-  // Nabídka rozdělená na stránky podle zabrané plochy,
-  // ne podle počtu kusů – meč zabere třikrát víc než prsten.
+  // Nabídku dělíme podle toho, jak se kusy doopravdy poskládají.
+  // Dřív se počítala jen zabraná plocha, jenže dvě zbroje 2x2 vedle
+  // sebe nechají v pětisloupcovém pultu jeden sloupec nevyužitý —
+  // poslední kus pak přetekl pod mřížku a byl zploštělý.
   const stock = shopStock(id);
-  const KAPACITA = SHOP_COLS * SHOP_ROWS;
-  const pages = [[], []];
-  let plocha = 0, strana = 0;
-  for (const it of stock) {
-    const [w, h] = itemSize(it);
-    if (strana === 0 && plocha + w * h > KAPACITA) { strana = 1; plocha = 0; }
-    pages[strana].push(it);
-    plocha += w * h;
-  }
+  const pages = [poskladej(stock), []];
+  pages[1] = poskladej(stock.slice(pages[0].length));
 
   const pageTabs =
     ['I', 'II'].map((lbl, i) =>
@@ -758,7 +789,7 @@ function iconFallback(img) {
 function slotForItem(item) {
   const id = (item && item.id) || '';
   if (/^w/.test(id)) return 'weapon';
-  if (id === 'a3')   return 'shield';
+  if (['a3','a14','a15','a16'].includes(id)) return 'shield';
   if (/^a/.test(id)) return 'chest';
   if (/^h/.test(id)) return 'helmet';
   if (/^g/.test(id)) return 'gloves';
