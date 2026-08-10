@@ -10,6 +10,7 @@ const authRoutes = require('./routes/auth');
 const characterRoutes = require('./routes/character');
 const paladinRoutes = require('./routes/paladin');
 const gameRoutes = require('./routes/game');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -24,6 +25,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/character', characterRoutes);
 app.use('/api/paladin', paladinRoutes);
 app.use('/api/game', gameRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -124,6 +126,23 @@ async function initDB() {
         PRIMARY KEY (character_id, den)
       );
     `);
+
+    // Bany a historie spravcovskych zasahu.
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS banned_until TIMESTAMPTZ;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS ban_reason TEXT;`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_logs (
+        id           SERIAL PRIMARY KEY,
+        spravce_id   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        akce         TEXT    NOT NULL,
+        cil          TEXT,
+        cil_id       INTEGER,
+        hodnota_pred JSONB,
+        hodnota_po   JSONB,
+        vytvoreno    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS admin_logs_cas ON admin_logs (vytvoreno DESC);`);
 
     // Tabulka zkusenosti. Je to herni pravidlo, ne data hrace, ale
     // v databazi ji chceme, aby si ji server mohl overit sam.

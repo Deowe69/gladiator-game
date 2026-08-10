@@ -86,6 +86,18 @@ router.post('/login', async (req, res) => {
     // Ověření hesla
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
 
+    // Zabanovanemu heslo nepomuze. Kontrolujeme az po overeni hesla,
+    // aby se z odpovedi nedalo vycist, ktere ucty existuji.
+    if (passwordMatch && user.banned_until && new Date(user.banned_until) > new Date()) {
+      const natrvalo = new Date(user.banned_until).getFullYear() > 9000;
+      return res.status(403).json({
+        error: 'Účet je zablokovaný',
+        duvod: user.ban_reason || null,
+        do: natrvalo ? null : user.banned_until,
+        natrvalo,
+      });
+    }
+
     if (!passwordMatch) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
