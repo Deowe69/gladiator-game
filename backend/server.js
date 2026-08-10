@@ -11,6 +11,8 @@ const characterRoutes = require('./routes/character');
 const paladinRoutes = require('./routes/paladin');
 const gameRoutes = require('./routes/game');
 const adminRoutes = require('./routes/admin');
+const { PREDMETY, NEPRATELE } = require('./config/katalog');
+const katalogRoutes = require('./routes/katalog');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -26,6 +28,7 @@ app.use('/api/character', characterRoutes);
 app.use('/api/paladin', paladinRoutes);
 app.use('/api/game', gameRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/katalog', katalogRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -201,6 +204,65 @@ async function initDB() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS game_events_cas ON game_events (vytvoreno DESC);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS game_events_druh ON game_events (druh, vytvoreno DESC);`);
+
+    // Katalog předmětů a nepřátel. Dřív byl napsaný v game.js,
+    // takže každá úprava znamenala zásah do kódu.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS items (
+        id              TEXT PRIMARY KEY,
+        nazev           TEXT NOT NULL,
+        skupina         TEXT NOT NULL,
+        ikona           TEXT,
+        kvalita         TEXT NOT NULL DEFAULT 'common',
+        klic_vlastnosti TEXT,
+        hodnota         INTEGER NOT NULL DEFAULT 0,
+        cena            INTEGER NOT NULL DEFAULT 0,
+        poskozeni_od    INTEGER,
+        poskozeni_do    INTEGER,
+        popis_statu     TEXT,
+        povoleno        BOOLEAN NOT NULL DEFAULT TRUE
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS enemies (
+        klic          TEXT PRIMARY KEY,
+        jmeno         TEXT NOT NULL,
+        obrazek       TEXT,
+        lokace        TEXT NOT NULL,
+        lokace_nazev  TEXT,
+        uroven_lokace INTEGER NOT NULL DEFAULT 1,
+        poradi        INTEGER NOT NULL DEFAULT 0,
+        povoleno      BOOLEAN NOT NULL DEFAULT TRUE
+      );
+    `);
+
+    // Naplní se jen to, co ještě není. DO NOTHING znamená, že
+    // restart serveru nikdy nepřepíše, co si admin upravil.
+    for (const it of PREDMETY) {
+      await pool.query(
+        `INSERT INTO items (id, nazev, skupina, ikona, kvalita, klic_vlastnosti,
+                            hodnota, cena, poskozeni_od, poskozeni_do, popis_statu, povoleno)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+         ON CONFLICT (id) DO NOTHING`,
+        [it.id, it.nazev, it.skupina, it.ikona, it.kvalita, it.klic_vlastnosti,
+         it.hodnota, it.cena, it.poskozeni_od, it.poskozeni_do, it.popis_statu, it.povoleno]
+      );
+    }
+    for (const n of NEPRATELE) {
+      await pool.query(
+        `INSERT INTO enemies (klic, jmeno, obrazek, lokace, lokace_nazev,
+                              uroven_lokace, poradi, povoleno)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         ON CONFLICT (klic) DO NOTHING`,
+        [n.klic, n.jmeno, n.obrazek, n.lokace, n.lokace_nazev,
+         n.uroven_lokace, n.poradi, n.povoleno]
+      );
+    }
+    const { rows: pocty } = await pool.query(
+      `SELECT (SELECT COUNT(*)::int FROM items) AS predmetu,
+              (SELECT COUNT(*)::int FROM enemies) AS nepratel`
+    );
+    console.log(`✅ Katalog: ${pocty[0].predmetu} předmětů, ${pocty[0].nepratel} nepřátel`);
 
     console.log('✅ Database tables ready!');
   } catch (err) {

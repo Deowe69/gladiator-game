@@ -618,7 +618,13 @@ function setShopPage(p) {
 }
 
 // ---------- prodej ----------
-const sellPrice = it => Math.max(1, Math.floor((it.price || 10) * 0.4));
+// Kolik za kus dostaneš. Běžný kupec dává 40 %, Překupník 60 % —
+// proto se k němu vyplatí zajít, i když je cesta delší.
+const VYKUP_KUPEC = 0.4;
+const VYKUP_PREKUPNIK = 0.6;
+
+const sellPrice = (it, sazba = VYKUP_KUPEC) =>
+  Math.max(1, Math.floor((it.price || 10) * sazba));
 
 function sellItem(i) {
   const it = inventory[i];
@@ -3535,8 +3541,85 @@ function skryjZamcenaMista() {
   });
 }
 
+// ---------- Překupník ----------
+// Vykupuje cokoliv z batohu za 60 % ceny. Nic neprodává.
+function prodejPrekupnikovi(i) {
+  const it = inventory[i];
+  if (!it) return;
+  const got = sellPrice(it, VYKUP_PREKUPNIK);
+  inventory.splice(i, 1);
+  character.gold += got;
+  persist(); updateUI();
+  toast(`${it.name} prodán za ${got} zlata.`);
+  openView('prekupnik');
+}
+
+function prekupnik() {
+  const bezneKupci = Math.round(VYKUP_KUPEC * 100);
+  const on = Math.round(VYKUP_PREKUPNIK * 100);
+
+  const policka = inventory.map((it, i) => {
+    const q = qualityOf(it);
+    const [w, h] = itemSize(it);
+    return `
+      <div class="g-slot zasilka"
+           style="grid-column:span ${w};grid-row:span ${h}"
+           onclick="prodejPrekupnikovi(${i})"
+           data-tip="inv:${i}">
+        <span class="g-lvl" style="color:${q.color}">${it.lvl || 1}</span>
+        ${itemIcon(it, 'g-ico')}
+        <span class="z-cas">${sellPrice(it, VYKUP_PREKUPNIK)}</span>
+      </div>`;
+  }).join('');
+
+  const celkem = inventory.reduce((a, it) => a + sellPrice(it, VYKUP_PREKUPNIK), 0);
+
+  return `
+  <div class="panel">
+    <div class="panel-header">Překupník</div>
+    <div class="panel-body">
+
+      <p class="hall-note">
+        Vykoupí cokoliv za <b>${on} %</b> ceny — kupci ve městě dávají jen
+        ${bezneKupci} %. Sám nic neprodává. Klikni na kus v batohu
+        a máš zaplaceno; číslo v rohu je, co za něj dostaneš.
+      </p>
+
+      ${inventory.length ? `
+        <div class="zas-wrap">
+          <div class="frame frame-shop">
+            <div class="goods-grid">${policka}</div>
+          </div>
+        </div>
+
+        <div class="zas-foot">
+          <span>V batohu: <b>${inventory.length}</b> / ${BAG_SIZE}</span>
+          <span>Za všechno: <b>${celkem.toLocaleString('cs-CZ')}</b>
+                <img class="res-ico" src="img/ui/coin.png" alt="zlata"></span>
+          <button class="btn-green" onclick="prodejVsePrekupnikovi()">Prodat vše</button>
+        </div>`
+        : '<div class="coming-soon"><div class="cs-icon">🎒</div><h2>Batoh je prázdný</h2><p>Nemáš co prodat.</p></div>'}
+
+    </div>
+  </div>`;
+}
+
+function prodejVsePrekupnikovi() {
+  if (!inventory.length) { toast('Batoh je prázdný.'); return; }
+  const celkem = inventory.reduce((a, it) => a + sellPrice(it, VYKUP_PREKUPNIK), 0);
+  const kolik = inventory.length;
+  if (!confirm(`Prodat všech ${kolik} kusů za ${celkem} zlata?`)) return;
+
+  character.gold += celkem;
+  inventory = [];
+  persist(); updateUI();
+  toast(`Prodáno ${kolik} kusů za ${celkem} zlata.`);
+  openView('prekupnik');
+}
+
 // Zatím jen zamčené panely - až budou hotová, nahradí se obsahem.
 MISTA.forEach(m => {
+  if (m.klic === 'prekupnik') return;      // ten už je hotový
   window[m.klic] = () => {
     const uroven = (character && character.level) || 1;
     if (m.od && uroven < m.od) {
