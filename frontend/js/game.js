@@ -40,7 +40,6 @@ const SHOP_ITEMS = {
     { id:'a2', name:'Bronzová Zbroj',  icon:'🛡️', stat:'+14 Obrana', key:'defense',   val:14, price:200,  quality:'uncommon', tint:'bronze'  },
     { id:'a3', name:'Athénin Štít',    icon:'⛨',  stat:'+25 Obrana', key:'defense',   val:25, price:480,  quality:'rare'     },
     { id:'a4', name:'Zbroj Spartana',  icon:'💠', stat:'+40 Obrana', key:'defense',   val:40, price:950,  quality:'epic'     },
-    { id:'a14', name:'Spartský Štít',    icon:'🛡️', stat:'zbroj', key:'defense', val:13, price:330, quality:'rare'     },
     { id:'a15', name:'Štít s Vavřínem',  icon:'🛡️', stat:'zbroj', key:'defense', val:9,  price:200, quality:'uncommon' },
     { id:'a16', name:'Železný Štít',     icon:'🛡️', stat:'zbroj', key:'defense', val:6,  price:120, quality:'common'   },
     { id:'a5',  name:'Plátěná Suknice',  icon:'🥋', stat:'zbroj',  key:'defense', val:4,  price:60,   quality:'common'   },
@@ -789,7 +788,7 @@ function iconFallback(img) {
 function slotForItem(item) {
   const id = (item && item.id) || '';
   if (/^w/.test(id)) return 'weapon';
-  if (['a3','a14','a15','a16'].includes(id)) return 'shield';
+  if (['a3','a15','a16'].includes(id)) return 'shield';
   if (/^a/.test(id)) return 'chest';
   if (/^h/.test(id)) return 'helmet';
   if (/^g/.test(id)) return 'gloves';
