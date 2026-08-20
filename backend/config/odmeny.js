@@ -7,8 +7,9 @@
 // `poradi` je index protivníka v lokaci (0 = první, 3 = poslední).
 
 // Strop úrovně, kterou klient smí nahlásit. Bez něj by šlo poslat
-// úroveň 9999 a nechat si vyplatit nesmysl.
-const MAX_UROVEN_LOKACE = 200;
+// úroveň 9999 a nechat si vyplatit nesmysl. Bereme autoritativní strop
+// hry (config/xp.js), ne vlastní literál.
+const MAX_UROVEN_LOKACE = require('./xp').MAX_UROVEN;
 
 function zakladniOdmena(urovenLokace, poradi = 0) {
   const T = Math.max(1, Math.min(MAX_UROVEN_LOKACE, Math.round(urovenLokace || 1)));

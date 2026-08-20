@@ -44,8 +44,7 @@ for (const L of [20, 50, 100, 200, 300, 400, 500]) {
     `${String(L).padEnd(6)}${nadStrop ? '*' : ' '}| ${String(a.baseBudget).padEnd(9)} | ${String(a.budgetMerchant).padEnd(17)} | ${String(a.budgetAukce).padEnd(14)} | ${(a.biasProc + '%').padEnd(4)} | ${r0(a.startZlatoMed).padEnd(16)} | ${String(a.buyNowMed).padEnd(20)} | ${a.pocStatu.padEnd(21)} | ${a.zaporProc}%`
   );
 }
-console.log('\n* L300–500 jsou NAD stropem Olympu (200). Generátor je clampuje na 200;');
-console.log('  BaseBudget je vypsán dle čistého vzorce round(10+(L-1)*4/3) jen ilustrativně.\n');
+console.log(`\n(Strop hry je ${G.MAX_UROVEN_PREDMETU} — všechny úrovně výše jsou v rozsahu, nic se neclampuje.)\n`);
 
 console.log('=== UKÁZKY AUKČNÍCH PŘEDMĚTŮ (Úroveň 100, různé rolly) ===\n');
 const r = proud(424242).dalsi;

@@ -27,9 +27,9 @@ const SLOUPCE = { sila: 'strength', dovednost: 'skill', obratnost: 'agility', od
 // --- sloty výstroje ---
 const SLOTY = ['weapon', 'helmet', 'chest', 'shield', 'gloves', 'boots', 'belt', 'amulet', 'ring'];
 
-// Strop úrovně předmětu = strop úrovně postavy v téhle hře (200; zadání
-// mluví o 500, ale Olympus má 200 — držíme skutečný strop hry).
-const MAX_UROVEN_PREDMETU = 200;
+// Strop úrovně předmětu = autoritativní strop úrovně postavy (config/xp.js).
+// Žádný vlastní literál — když se změní MAX_UROVEN hry, změní se i tady.
+const MAX_UROVEN_PREDMETU = require('./xp').MAX_UROVEN;
 
 // ==========================================================================
 //  KONFIGURACE (centrálně laditelná)

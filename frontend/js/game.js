@@ -2103,8 +2103,10 @@ function claimDaily() {
 // ========== ZKUŠENOSTI ==========
 // Kolik zkušeností je potřeba z dané úrovně na další. Index = úroveň.
 // Na 200. úrovni je strop, dál se nepostupuje.
-const MAX_UROVEN = 200;
-const XP_DO_DALSI = [
+// Autoritativní strop hry. Musí sedět se serverem (config/xp.js) — proto
+// i stejná tabulka a stejný generátor pokračování za úroveň 199.
+const MAX_UROVEN = 500;
+const XP_RUCNI = [
   null,
   100, 190, 310, 440, 600, 780, 980, 1200, 1450, 1750,
   2050, 2400, 2800, 3200, 3650, 4100, 4600, 5200, 5750, 6400,
@@ -2128,8 +2130,21 @@ const XP_DO_DALSI = [
   1779000, 1806000, 1832000, 1859000, 1886000, 1914000, 1942000, 1969000, 1998000,
 ];
 
+// Pokračování křivky z úrovně 199 na MAX_UROVEN-1 — deterministicky a stejně
+// jako na serveru, ať se klient a server nerozejdou. Úrovně 1..200 se nemění.
+function rozsirNa500(zaklad) {
+  const out = zaklad.slice();
+  let last = out[out.length - 1];
+  for (let L = out.length; L <= MAX_UROVEN - 1; L++) {
+    last += 28000 + 200 * (L - 199);
+    out[L] = Math.round(last / 500) * 500;
+  }
+  return out;
+}
+const XP_DO_DALSI = rozsirNa500(XP_RUCNI);
+
 // Kolik chce další úroveň; na stropu vrací nekonečno, takže
-// checkLevelUp nikdy nepřeteče přes 200.
+// checkLevelUp nikdy nepřeteče přes MAX_UROVEN.
 const xpNaDalsi = uroven =>
   uroven >= MAX_UROVEN ? Infinity : (XP_DO_DALSI[uroven] || 100);
 

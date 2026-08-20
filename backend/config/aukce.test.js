@@ -9,12 +9,13 @@ const test = (n, f) => { try { f(); console.log('  ✓ ' + n); ok++; } catch (e)
 
 console.log('\n=== Aukční logika ===\n');
 
-test('viditelnost = úroveň + 5, stropovaná na 200', () => {
+test('viditelnost = úroveň + 5, stropovaná na MAX_UROVEN (500)', () => {
   assert.strictEqual(A.viditelnyStrop(20), 25);
   assert.strictEqual(A.viditelnyStrop(50), 55);
   assert.strictEqual(A.viditelnyStrop(100), 105);
-  assert.strictEqual(A.viditelnyStrop(195), 200);   // 200 by bylo 200
-  assert.strictEqual(A.viditelnyStrop(200), 200);
+  assert.strictEqual(A.viditelnyStrop(200), 205);
+  assert.strictEqual(A.viditelnyStrop(495), 500);
+  assert.strictEqual(A.viditelnyStrop(500), 500);   // strop se nepřekročí
 });
 
 test('smiVidet: nad úroveň+5 nesmí, pod ano', () => {

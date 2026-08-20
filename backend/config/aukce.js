@@ -31,7 +31,7 @@ const VYCHOZI = {
 
   // --- viditelnost podle úrovně ---
   viditelnost_nad: 5,           // hráč vidí předměty do (úroveň + 5)
-  strop_urovne: predmety.MAX_UROVEN_PREDMETU,   // 200 (strop hry)
+  strop_urovne: predmety.MAX_UROVEN_PREDMETU,   // = autoritativní strop hry (500)
 
   // --- ceny ---
   zlato_za_hodnotu: 18,         // startovní přihoz = hodnota × tohle

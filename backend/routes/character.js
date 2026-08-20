@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../config/db');
 const { authenticateToken } = require('../middleware/auth');
+const { MAX_UROVEN } = require('../config/xp');
 
 const router = express.Router();
 
@@ -42,8 +43,13 @@ router.get('/my-character', authenticateToken, async (req, res) => {
 // Aktualizace postavy (všechny stats)
 router.put('/update', authenticateToken, async (req, res) => {
   try {
-    const { level, experience, health, max_health, gold, strength, defense, agility, intelligence,
+    const { experience, health, max_health, gold, strength, defense, agility, intelligence,
             skill, pocta, emeralds } = req.body;
+    let { level } = req.body;
+
+    // Autoritativní strop úrovně. Klient nesmí nahlásit víc než MAX_UROVEN —
+    // úroveň se natvrdo ořízne, ať přes běžný postup nikdy nevznikne 501+.
+    if (level != null) level = Math.max(1, Math.min(MAX_UROVEN, Math.round(Number(level) || 1)));
 
     const result = await pool.query(
       `UPDATE characters

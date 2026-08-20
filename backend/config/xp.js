@@ -1,8 +1,17 @@
 // Kolik zkusenosti je potreba z dane urovne na dalsi. Index = uroven.
 // Stejna tabulka jako ve hre - drzi se na jednom miste, aby se
 // server a hra nemohly rozejit.
-const MAX_UROVEN = 200;
-const XP_DO_DALSI = [
+//
+// MAX_UROVEN je JEDINY autoritativni strop hry. Vsechny systemy (postup,
+// predmety, odmeny, arena, simulator, admin...) se ridi timto cislem, ne
+// vlastnimi literaly. Az se strop zmeni, meni se jen tady (+ stejna zmena
+// v game.js, ktery drzi identickou tabulku pro offline vypocet).
+const MAX_UROVEN = 500;
+
+// Rucne vyladena krivka 1..199. Za urovni 200 uz se generuje deterministicky
+// (viz rozsirNa500), aby se cisla nemusela psat rucne a klient i server meli
+// PRESNE stejnou tabulku. Urovne 1..200 se timto NEMENI.
+const XP_RUCNI = [
   null,
   100, 190, 310, 440, 600, 780, 980, 1200, 1450, 1750,
   2050, 2400, 2800, 3200, 3650, 4100, 4600, 5200, 5750, 6400,
@@ -26,4 +35,19 @@ const XP_DO_DALSI = [
   1779000, 1806000, 1832000, 1859000, 1886000, 1914000, 1942000, 1969000, 1998000,
 ];
 
-module.exports = { MAX_UROVEN, XP_DO_DALSI };
+// Pokracovani krivky z urovne 199 az na MAX_UROVEN-1. Prirustek mezi
+// sousednimi hodnotami roste o 200/uroven (stejne tempo jako na konci rucni
+// casti), zaokrouhluje se na 500. Deterministicke - stejny vysledek vsude.
+function rozsirNa500(zaklad) {
+  const out = zaklad.slice();
+  let last = out[out.length - 1];
+  for (let L = out.length; L <= MAX_UROVEN - 1; L++) {
+    last += 28000 + 200 * (L - 199);
+    out[L] = Math.round(last / 500) * 500;
+  }
+  return out;
+}
+
+const XP_DO_DALSI = rozsirNa500(XP_RUCNI);
+
+module.exports = { MAX_UROVEN, XP_DO_DALSI, rozsirNa500, XP_RUCNI };

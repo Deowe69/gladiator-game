@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('../config/db');
+const { MAX_UROVEN } = require('../config/xp');
 const { authenticateToken } = require('../middleware/auth');
 const { pouzeSpravce, zapisAkci } = require('../middleware/admin');
 
@@ -65,6 +66,7 @@ router.get('/dashboard', async (req, res) => {
       ekonomika: ekonomika.rows[0],
       posledniAkce: logy.rows,
       udalosti: udalosti.rows[0],
+      maxUroven: MAX_UROVEN,          // autoritativní strop hry (config/xp.js)
       // Cisla se pocitaji az od chvile, kdy se udalosti zacaly
       // zapisovat - starsi hrani v nich neni.
       chybejici: ['turnaje'],

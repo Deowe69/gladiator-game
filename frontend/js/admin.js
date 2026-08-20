@@ -49,6 +49,7 @@ async function sekcePrehled() {
     ['Paladinů',             cislo(d.postavy.paladinu)],
     ['Zabanovaných',         cislo(d.hraci.zabanovanych)],
     ['Nejvyšší úroveň',      cislo(d.ekonomika.nejvyssi_uroven)],
+    ['Maximální úroveň',     cislo(d.maxUroven)],
     ['Zlata v oběhu',        cislo(d.ekonomika.zlato)],
     ['Smaragdů v oběhu',     cislo(d.ekonomika.smaragdy)],
     ['Průměrné zlato',       cislo(d.ekonomika.prumer_zlato)],
