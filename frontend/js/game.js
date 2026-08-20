@@ -4446,10 +4446,8 @@ function expedition() {
   const locked = character.level < loc.minLevel;
   if (expedVybrany >= loc.monsters.length) expedVybrany = 0;
 
-  const [uOd, uDo] = expedRozsahUrovni(loc);
-  const heroImg = loc.monsters[loc.monsters.length - 1].img;   // boss = tvář oblasti
-  // (Přepínač lokací i box bodů jsou schválně pryč — lokace jsou v levém
-  //  menu a body v horním panelu; nedublujeme je.)
+  // (Přepínač lokací, box bodů, filtr i panel oblasti jsou schválně pryč —
+  //  lokace jsou v levém menu, body v horním panelu; stránka je čistě o kartách.)
 
   // karty příšer — vždy všechny (5 běžných + boss)
   const karty = loc.monsters.map((m, i) => {
@@ -4478,14 +4476,7 @@ function expedition() {
       </div>
     </div>
 
-    <div class="exped-mist" style="--hero:url('img/${heroImg}')">
-      <div class="exped-mist-vrstva">
-        <h2 class="exped-mist-nazev">${loc.name}</h2>
-        <div class="exped-mist-uroven">Úroveň oblasti: ${uOd}–${uDo}</div>
-        <p class="exped-mist-popis">${loc.desc}</p>
-        ${locked ? `<div class="exped-lock">🔒 Tato oblast se otevře na úrovni ${loc.minLevel}. Jsi na ${character.level}.</div>` : ''}
-      </div>
-    </div>
+    ${locked ? `<div class="exped-lock">🔒 Tato oblast se otevře na úrovni ${loc.minLevel}. Jsi na ${character.level}.</div>` : ''}
 
     <div class="exped-grid">
       <div class="expm-mrizka">${karty}</div>
