@@ -3973,3 +3973,55 @@ select.adm-input{width:190px}
 .zah-text{font-size:13.5px;color:#d8cce8;line-height:1.6;margin:0 0 12px}
 .zah-pozn{font-size:11.5px;color:#9a86b0;margin:0 0 18px}
 @media(max-width:640px){.cest-mrizka{grid-template-columns:1fr}}
+
+/* ============================================================
+   NEW THELYON STYLE — levá navigace: pergamenový sloup,
+   antické zlato, MODRÝ výběr (dle oficiální reference).
+   Blok je na konci schválně: přepíše dřívější burgundy nav.
+   ============================================================ */
+.banner-body{
+  background:
+    var(--fiber),
+    linear-gradient(180deg,#efe6cc 0%,#e6d8b4 55%,#dbc99f 100%) !important;
+  background-blend-mode:soft-light, normal !important;
+  border:2px solid #b8912f !important;
+  border-top:3px solid #e8c860 !important;
+  box-shadow:0 6px 18px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.5) !important;
+}
+.banner-bottom{
+  background:linear-gradient(180deg,#c9a24a 0%,#8a6a1e 100%) !important;
+}
+/* položky menu = pergamenové řádky se zlatým rámem, tmavě vínový text */
+.menu-btn{
+  background:linear-gradient(180deg,#f4ebd2 0%,#e7d9b4 100%) !important;
+  border:1px solid #c9a24a !important;
+  color:#6b1e14 !important;
+  text-shadow:0 1px 0 rgba(255,255,255,.5) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55), 0 1px 2px rgba(0,0,0,.25) !important;
+  text-align:left !important;padding-left:12px !important;letter-spacing:.3px;
+}
+.menu-btn:hover{
+  filter:none !important;
+  background:linear-gradient(180deg,#fdf6e1 0%,#efe1bd 100%) !important;
+  border-color:#e0b64a !important;color:#8a2418 !important;
+}
+/* VYBRANÁ položka = modrý přechod se zlatým rámem (jako v referenci) */
+.menu-btn.active{
+  background:linear-gradient(180deg,#3f74b4 0%,#2c568c 100%) !important;
+  border:1px solid #e8c860 !important;
+  color:#fff8e6 !important;font-weight:700 !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3), 0 0 10px rgba(90,140,200,.45) !important;
+  text-shadow:0 1px 2px rgba(0,0,0,.5) !important;
+}
+.menu-btn.premium.active .gem, .menu-btn .gem{filter:none}
+/* pod-položky (budovy města) — vybraná také modrá */
+.sub-item.active{
+  background:linear-gradient(180deg,#3f74b4 0%,#2c568c 100%) !important;
+  border-color:#e8c860 !important;color:#fff8e6 !important;
+  text-shadow:0 1px 2px rgba(0,0,0,.5) !important;
+}
+/* záložky nad podmenu (Město / Výpravy) — na pergamenu */
+.submenu-body{
+  background:linear-gradient(180deg,#efe6cc,#e2d3ad) !important;
+  border-color:#c9a24a !important;
+}
