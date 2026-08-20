@@ -7,7 +7,7 @@
 // nastavení. Se stejným `zakladniSeminko` vyjde totéž.
 
 const { simulujHistorii } = require('./svet');
-const { agreguj } = require('./metriky');
+const { agreguj, grafy } = require('./metriky');
 const { otiskBalance } = require('./verze');
 const { vyhodnot } = require('./alerty');
 const { ARCHETYPY } = require('./archetypy');
@@ -51,6 +51,7 @@ async function spustSimulaci(opts) {
   }
 
   const agg = agreguj(vsechnyPostavy);
+  const grafyData = grafy(vsechnyPostavy);
   const upozorneni = vyhodnot(agg, prahy);
   const trvani = Date.now() - start;
   const t = hodiny(dni);
@@ -68,6 +69,7 @@ async function spustSimulaci(opts) {
     balanc: verze,
     populace,
     vysledek: agg,
+    grafy: grafyData,
     upozorneni,
   };
 }

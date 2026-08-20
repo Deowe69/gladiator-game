@@ -15,7 +15,15 @@ let citac = 1;
 const ulohy = new Map();            // id -> úloha
 const fronta = [];
 let bezi = 0;
-const maxSoubezne = 1;
+// Souběh je záměrně nízký a stropovaný. Simulace je CPU práce v jednom
+// vlákně Node — víc souběžných běhů nezrychlí, jen by ukrajovalo výkon
+// serveru hráčům. Proto povolujeme jen 1–3 a výchozí je 1.
+let maxSoubezne = 1;
+const STROP_SOUBEH = 3;
+function nastavSoubeh(n) {
+  maxSoubezne = Math.max(1, Math.min(STROP_SOUBEH, Math.round(+n || 1)));
+  return maxSoubezne;
+}
 
 function novaUloha(nastaveni, kdo) {
   const id = 'sim' + (citac++);
@@ -31,13 +39,19 @@ function novaUloha(nastaveni, kdo) {
   return verejna(u);
 }
 
-async function poJedne() {
-  if (bezi >= maxSoubezne) return;
-  const id = fronta.shift();
-  if (!id) return;
-  const u = ulohy.get(id);
-  if (!u || u.stav !== 'ceka') return poJedne();
-  bezi++;
+// Naplní běžící sloty z fronty až do maxSoubezne.
+function poJedne() {
+  while (bezi < maxSoubezne) {
+    const id = fronta.shift();
+    if (!id) return;
+    const u = ulohy.get(id);
+    if (!u || u.stav !== 'ceka') continue;
+    bezi++;
+    spustJednu(u);   // async, nečekáme — poběží na pozadí
+  }
+}
+
+async function spustJednu(u) {
   u.stav = 'bezi'; u.zacatek = Date.now();
   try {
     const v = await spustSimulaci({
@@ -97,4 +111,4 @@ function detail(id) {
   return u ? verejna(u, true) : null;
 }
 
-module.exports = { novaUloha, zrus, seznam, detail, PRESETY };
+module.exports = { novaUloha, zrus, seznam, detail, nastavSoubeh, STROP_SOUBEH, PRESETY };

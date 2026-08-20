@@ -4,7 +4,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { pouzeSpravce } = require('../middleware/admin');
-const { novaUloha, zrus, seznam, detail, PRESETY } = require('../sim/ulohy');
+const { novaUloha, zrus, seznam, detail, nastavSoubeh, STROP_SOUBEH, PRESETY } = require('../sim/ulohy');
 const { ARCHETYPY } = require('../sim/archetypy');
 const { analyzuj } = require('../sim/analyza');
 const { otiskBalance } = require('../sim/verze');
@@ -23,6 +23,7 @@ router.get('/meta', (req, res) => {
     })),
     presety: Object.entries(PRESETY).map(([k, v]) => ({ id: k, ...v })),
     balanc: otiskBalance(),
+    stropSoubeh: STROP_SOUBEH,
   });
 });
 
@@ -40,10 +41,18 @@ router.post('/beh', (req, res) => {
       hracuNaArchetyp: Math.min(50, Math.max(1, +b.hracuNaArchetyp || 5)),
     };
   }
+  // Výběr archetypů: pokud přijde seznam id, postav z nich populaci.
+  if (Array.isArray(b.archetypy) && b.archetypy.length) {
+    const platne = new Set(ARCHETYPY.map(a => a.id));
+    const vybrane = b.archetypy.filter(id => platne.has(id));
+    if (vybrane.length) nast.populace = vybrane.map(id => ({ archetyp: id, pocet: nast.hracuNaArchetyp }));
+  }
   if (Array.isArray(b.populace) && b.populace.length) nast.populace = b.populace;
   if (b.prahy && typeof b.prahy === 'object') nast.prahy = b.prahy;
   nast.zakladniSeminko = (+b.zakladniSeminko >>> 0) || (Date.now() >>> 0);
   nast.nazev = String(b.nazev || `beh-${Date.now()}`).slice(0, 60);
+
+  if (b.workers != null) nastavSoubeh(b.workers);   // stropováno 1..3
 
   res.json(novaUloha(nast, req.user?.username || 'admin'));
 });

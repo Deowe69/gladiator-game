@@ -103,6 +103,7 @@ class API {
   static async simDetail(id)           { return this.request('/sim/beh/' + id); }
   static async simAnalyza(id)          { return this.request('/sim/beh/' + id + '/analyza'); }
   static async simZrus(id)             { return this.request('/sim/beh/' + id + '/zrusit', 'POST'); }
+  static async simPorovnat(a, b)       { return this.request('/sim/porovnat/' + a + '/' + b); }
   static simExportJson(id)             { return API_URL + '/sim/beh/' + id + '/export.json'; }
   static simExportCsv(id)              { return API_URL + '/sim/beh/' + id + '/export.csv'; }
 

@@ -87,4 +87,63 @@ function agreguj(historie) {
   };
 }
 
-module.exports = { agreguj, rozdeleni, vyberMetriky, KLICE };
+// ---- podklady pro grafy ----
+// Agregujeme na serveru (do košů), ať do panelu neteče desetitisíce bodů.
+function median(arr) {
+  const s = [...arr].sort((a, b) => a - b);
+  if (!s.length) return 0;
+  const m = Math.floor((s.length - 1) / 2);
+  return s.length % 2 ? s[m] : (s[m] + s[m + 1]) / 2;
+}
+
+function grafy(historie) {
+  const vse = historie.flat();
+
+  // metriky podle úrovně (koše po 5) — příčný řez populací
+  const koseL = new Map();
+  for (const p of vse) {
+    const bin = Math.max(5, Math.ceil(p.uroven / 5) * 5);
+    (koseL.get(bin) || koseL.set(bin, []).get(bin)).push(p);
+  }
+  const poLevelu = [...koseL.keys()].sort((a, b) => a - b).map(bin => {
+    const ps = koseL.get(bin);
+    const crit = [], blok = [], staty = [], gold = [], zisk = [], utrata = [], win = [];
+    for (const p of ps) {
+      const pr = P.profilBoje(P.naPostavuBoje(p));
+      crit.push(pr.kritika * 100); blok.push(pr.blokace * 100);
+      staty.push(p.strength + p.defense + p.agility + p.skill + p.intelligence);
+      gold.push(p.zlato); zisk.push(p.m.zlatoZiskano);
+      utrata.push(p.m.zlatoDoTreninku + p.m.zlatoDoVybaveni);
+      win.push(p.m.souboje ? (p.m.vyhry / p.m.souboje) * 100 : 0);
+    }
+    return {
+      level: bin, n: ps.length,
+      critPct: median(crit), blokPct: median(blok), staty: Math.round(median(staty)),
+      zlato: Math.round(median(gold)), zlatoZiskano: Math.round(median(zisk)),
+      zlatoUtraceno: Math.round(median(utrata)), winrate: median(win),
+    };
+  });
+
+  // zlato získané vs utracené podle archetypu
+  const koseA = {};
+  for (const p of vse) (koseA[p.archetyp] ??= []).push(p);
+  const zlatoTok = Object.entries(koseA).map(([id, ps]) => ({
+    archetyp: id,
+    ziskano: Math.round(median(ps.map(p => p.m.zlatoZiskano))),
+    utraceno: Math.round(median(ps.map(p => p.m.zlatoDoTreninku + p.m.zlatoDoVybaveni))),
+  }));
+
+  // úroveň vs aktivní dny (koše po 15 dnech)
+  const koseD = new Map();
+  for (const p of vse) {
+    const bin = Math.max(15, Math.ceil(p.m.aktivnichDnu / 15) * 15);
+    (koseD.get(bin) || koseD.set(bin, []).get(bin)).push(p);
+  }
+  const urovenVsDny = [...koseD.keys()].sort((a, b) => a - b).map(bin => ({
+    dny: bin, level: Math.round(median(koseD.get(bin).map(p => p.uroven))),
+  }));
+
+  return { poLevelu, zlatoTok, urovenVsDny };
+}
+
+module.exports = { agreguj, grafy, rozdeleni, vyberMetriky, KLICE };

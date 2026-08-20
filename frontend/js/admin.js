@@ -435,6 +435,14 @@ async function sekceSimulator() {
       nejbližším možným chováním a v reportu jsou tak označené — nic se nedomýšlí.
     </div>` : '';
 
+  const archBoxy = meta.archetypy.map(a =>
+    `<label class="sim-arch ${a.existuje ? '' : 'neexist'}">
+       <input type="checkbox" class="sim-arch-check" value="${esc(a.id)}" checked>
+       ${esc(a.nazev)}${a.existuje ? '' : ' <small>(systém není)</small>'}
+     </label>`).join('');
+
+  const strop = meta.stropSoubeh || 3;
+
   obsah().innerHTML = `
     <h1 class="adm-nadpis">Balanční simulátor</h1>
     <div class="adm-poznamka">
@@ -445,17 +453,50 @@ async function sekceSimulator() {
     ${pozn}
     <div class="adm-panel">
       <div class="sim-presety">${presety}</div>
+
+      <details class="sim-detaily">
+        <summary>Výběr archetypů (výchozí: všechny)</summary>
+        <div class="sim-archy">${archBoxy}</div>
+        <div class="sim-arch-akce">
+          <button class="adm-btn maly" id="simArchAll">Vše</button>
+          <button class="adm-btn maly" id="simArchNone">Nic</button>
+        </div>
+      </details>
+
       <div class="sim-vlastni">
         <label class="adm-pole"><span>Dní</span><input type="number" id="simDni" value="180" min="1" max="3650"></label>
         <label class="adm-pole"><span>Historií (Monte Carlo)</span><input type="number" id="simHist" value="60" min="1" max="500"></label>
         <label class="adm-pole"><span>Hráčů/archetyp</span><input type="number" id="simHrac" value="5" min="1" max="50"></label>
         <label class="adm-pole"><span>Semínko</span><input type="number" id="simSem" value="12345"></label>
+        <label class="adm-pole"><span>Souběžné úlohy (1–${strop})</span><input type="number" id="simWork" value="1" min="1" max="${strop}"></label>
         <button class="adm-btn hlavni" id="simSpustVlastni">Spustit vlastní</button>
       </div>
     </div>
+
     <h2 class="adm-podnadpis">Běhy</h2>
     <div id="simBehy"><div class="adm-nacitani">Načítám…</div></div>
-    <div id="simDetail"></div>`;
+    <div id="simDetail"></div>
+
+    <h2 class="adm-podnadpis">Porovnat dva běhy (regrese)</h2>
+    <div class="adm-poznamka">Vyber dva dokončené běhy a uvidíš rozdíly v mediánech i změnu pravidel mezi jejich balančními verzemi.</div>
+    <div class="sim-porovnani-ovladani">
+      <select id="simCmpA" class="sim-select"></select>
+      <span>vs</span>
+      <select id="simCmpB" class="sim-select"></select>
+      <button class="adm-btn" id="simCmpBtn">Porovnat</button>
+    </div>
+    <div id="simPorovnani"></div>`;
+
+  // archetypy: výběr
+  const vybraneArchetypy = () =>
+    [...obsah().querySelectorAll('.sim-arch-check:checked')].map(x => x.value);
+  document.getElementById('simArchAll').addEventListener('click', () =>
+    obsah().querySelectorAll('.sim-arch-check').forEach(x => x.checked = true));
+  document.getElementById('simArchNone').addEventListener('click', () =>
+    obsah().querySelectorAll('.sim-arch-check').forEach(x => x.checked = false));
+
+  // porovnání
+  document.getElementById('simCmpBtn').addEventListener('click', simPorovnej);
 
   // Společné spuštění: hned dá vědět, že se něco děje, zamkne tlačítka a
   // vypíše chybu, kdyby server neodpověděl (třeba když Render po nečinnosti
@@ -477,14 +518,22 @@ async function sekceSimulator() {
     }
   }
 
+  const spolecne = () => {
+    const arch = vybraneArchetypy();
+    const o = { workers: +document.getElementById('simWork').value };
+    if (arch.length && arch.length < meta.archetypy.length) o.archetypy = arch;
+    return o;
+  };
+
   obsah().querySelectorAll('.sim-preset').forEach(b =>
-    b.addEventListener('click', () => spust(b, { preset: b.dataset.preset })));
+    b.addEventListener('click', () => spust(b, { preset: b.dataset.preset, ...spolecne() })));
   document.getElementById('simSpustVlastni').addEventListener('click', function () {
     spust(this, {
       dni: +document.getElementById('simDni').value,
       historie: +document.getElementById('simHist').value,
       hracuNaArchetyp: +document.getElementById('simHrac').value,
       zakladniSeminko: +document.getElementById('simSem').value,
+      ...spolecne(),
     });
   });
 
@@ -497,19 +546,28 @@ async function nactiSimBehy() {
   if (!box) { if (simPoll) { clearInterval(simPoll); simPoll = null; } return; }
   if (!behy) return;
 
+  const pct = b => b.prubeh && b.prubeh.celkem ? Math.floor((b.prubeh.hotovo / b.prubeh.celkem) * 100) : 0;
+  const behTrvani = b => b.trvaniMs ? (b.trvaniMs / 1000).toFixed(1) + ' s' : (b.stav === 'bezi' ? 'běží…' : '—');
+
   box.innerHTML = behy.length ? `
     <div class="adm-tabulka-obal"><table class="adm-tabulka">
-      <thead><tr><th>ID</th><th>Stav</th><th>Průběh</th><th>Nastavení</th><th>Upozornění</th><th></th></tr></thead>
+      <thead><tr><th>ID</th><th>Stav</th><th>Průběh</th><th>Nastavení</th><th>Verze</th><th>Reálný čas</th><th>Vytvořeno</th><th>Alertů</th><th></th></tr></thead>
       <tbody>${behy.map(b => `
         <tr>
           <td class="adm-zvyraz">${esc(b.id)}</td>
           <td>${simStavStitek(b.stav)}</td>
-          <td>${b.prubeh ? `${b.prubeh.hotovo}/${b.prubeh.celkem}` : '—'}</td>
+          <td>${b.stav === 'bezi'
+              ? `<div class="sim-progress"><div class="sim-progress-fill" style="width:${pct(b)}%"></div><span>${b.prubeh.hotovo}/${b.prubeh.celkem}</span></div>`
+              : (b.prubeh ? `${b.prubeh.hotovo}/${b.prubeh.celkem}` : '—')}</td>
           <td class="adm-slabe">${b.nastaveni.dni}d · ${b.nastaveni.historie}× · ${b.nastaveni.hracuNaArchetyp}/arch</td>
+          <td class="adm-slabe">${b.meta ? esc(b.meta.balancVerze) : '—'}</td>
+          <td class="adm-slabe">${behTrvani(b)}</td>
+          <td class="adm-slabe">${datum(b.pridano)}</td>
           <td>${b.pocetUpozorneni != null ? b.pocetUpozorneni : '—'}</td>
           <td>
             ${b.stav === 'hotovo' ? `<button class="adm-btn maly" data-vysledek="${esc(b.id)}">Výsledek</button>` : ''}
             ${(b.stav === 'ceka' || b.stav === 'bezi') ? `<button class="adm-btn maly zrus" data-zrus="${esc(b.id)}">Zrušit</button>` : ''}
+            ${b.stav === 'chyba' ? `<span class="adm-slabe" title="${esc(b.chyba || '')}">chyba</span>` : ''}
           </td>
         </tr>`).join('')}</tbody>
     </table></div>` : '<div class="adm-prazdno">Zatím žádné běhy.</div>';
@@ -519,10 +577,88 @@ async function nactiSimBehy() {
     await zavolej(() => API.simZrus(b.dataset.zrus)); nactiSimBehy();
   }));
 
+  // naplň porovnávací selektory dokončenými běhy
+  const hotove = behy.filter(b => b.stav === 'hotovo');
+  ['simCmpA', 'simCmpB'].forEach(idSel => {
+    const sel = document.getElementById(idSel);
+    if (!sel) return;
+    const drzeno = sel.value;
+    sel.innerHTML = hotove.map(b => `<option value="${esc(b.id)}">${esc(b.id)} · ${b.meta ? esc(b.meta.balancVerze) : ''}</option>`).join('');
+    if ([...sel.options].some(o => o.value === drzeno)) sel.value = drzeno;
+  });
+
   // poll, dokud něco běží
   const zive = behy.some(b => b.stav === 'ceka' || b.stav === 'bezi');
   if (zive && !simPoll) simPoll = setInterval(nactiSimBehy, 1200);
   if (!zive && simPoll) { clearInterval(simPoll); simPoll = null; }
+}
+
+// ---- malé SVG grafy (bez knihovny, aby nic neběželo zvenčí) ----
+const CHART_BARVY = { zlata: '#d8b13a', modra: '#7aa8d0', zelena: '#7ac08a', cervena: '#d05656', fialova: '#b48ad0' };
+
+function svgCara(serie, opt = {}) {
+  const W = 560, H = 220, mL = 52, mR = 14, mT = 14, mB = 34;
+  const vsechnyX = serie.flatMap(s => s.body.map(b => b.x));
+  const vsechnyY = serie.flatMap(s => s.body.map(b => b.y));
+  if (!vsechnyX.length) return '<div class="adm-slabe">Bez dat.</div>';
+  const minX = Math.min(...vsechnyX), maxX = Math.max(...vsechnyX);
+  const minY = 0, maxY = Math.max(1, ...vsechnyY) * 1.08;
+  const px = x => mL + (maxX === minX ? 0 : (x - minX) / (maxX - minX)) * (W - mL - mR);
+  const py = y => H - mB - (y - minY) / (maxY - minY) * (H - mT - mB);
+  const kratke = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(0) + 'k' : Math.round(n);
+
+  const mrizka = [0, .25, .5, .75, 1].map(f => {
+    const y = minY + (maxY - minY) * f;
+    return `<line x1="${mL}" y1="${py(y)}" x2="${W - mR}" y2="${py(y)}" class="chart-grid"/>
+            <text x="${mL - 6}" y="${py(y) + 3}" class="chart-lbl" text-anchor="end">${kratke(y)}</text>`;
+  }).join('');
+  const osaX = [minX, (minX + maxX) / 2, maxX].map(x =>
+    `<text x="${px(x)}" y="${H - 12}" class="chart-lbl" text-anchor="middle">${Math.round(x)}</text>`).join('');
+  const cary = serie.map(s => {
+    const d = s.body.map((b, i) => `${i ? 'L' : 'M'}${px(b.x).toFixed(1)},${py(b.y).toFixed(1)}`).join(' ');
+    const body = s.body.map(b => `<circle cx="${px(b.x).toFixed(1)}" cy="${py(b.y).toFixed(1)}" r="2.4" fill="${s.barva}"/>`).join('');
+    return `<path d="${d}" fill="none" stroke="${s.barva}" stroke-width="2"/>${body}`;
+  }).join('');
+  const legenda = serie.length > 1 ? `<div class="chart-legenda">${serie.map(s =>
+    `<span><i style="background:${s.barva}"></i>${esc(s.nazev)}</span>`).join('')}</div>` : '';
+  return `<div class="chart-obal"><svg viewBox="0 0 ${W} ${H}" class="chart-svg" preserveAspectRatio="xMidYMid meet">
+    ${mrizka}${osaX}${cary}
+  </svg>${legenda}</div>`;
+}
+
+function svgSloupce(data, serie, opt = {}) {
+  const W = 560, H = 240, mL = 52, mR = 14, mT = 14, mB = 62;
+  const vsechnyY = data.flatMap(d => serie.map(s => d[s.klic] || 0));
+  const maxY = Math.max(1, ...vsechnyY) * 1.08;
+  const py = y => H - mB - y / maxY * (H - mT - mB);
+  const kratke = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(0) + 'k' : Math.round(n);
+  const pasmo = (W - mL - mR) / data.length;
+  const sirkaS = Math.min(18, pasmo / (serie.length + 1));
+  const mrizka = [0, .5, 1].map(f => {
+    const y = maxY * f;
+    return `<line x1="${mL}" y1="${py(y)}" x2="${W - mR}" y2="${py(y)}" class="chart-grid"/>
+            <text x="${mL - 6}" y="${py(y) + 3}" class="chart-lbl" text-anchor="end">${kratke(y)}</text>`;
+  }).join('');
+  const sloupce = data.map((d, i) => {
+    const x0 = mL + i * pasmo + (pasmo - sirkaS * serie.length) / 2;
+    const b = serie.map((s, j) => {
+      const h = (H - mB) - py(d[s.klic] || 0);
+      return `<rect x="${(x0 + j * sirkaS).toFixed(1)}" y="${py(d[s.klic] || 0).toFixed(1)}" width="${(sirkaS - 2).toFixed(1)}" height="${Math.max(0, h).toFixed(1)}" fill="${s.barva}"/>`;
+    }).join('');
+    const lbl = `<text x="${(mL + i * pasmo + pasmo / 2).toFixed(1)}" y="${H - mB + 14}" class="chart-lbl mini" text-anchor="end" transform="rotate(-40 ${(mL + i * pasmo + pasmo / 2).toFixed(1)} ${H - mB + 14})">${esc(String(d.label).slice(0, 12))}</text>`;
+    return b + lbl;
+  }).join('');
+  const legenda = `<div class="chart-legenda">${serie.map(s => `<span><i style="background:${s.barva}"></i>${esc(s.nazev)}</span>`).join('')}</div>`;
+  return `<div class="chart-obal"><svg viewBox="0 0 ${W} ${H}" class="chart-svg" preserveAspectRatio="xMidYMid meet">${mrizka}${sloupce}</svg>${legenda}</div>`;
+}
+
+// karta metriky; když systém neexistuje, jasně to řekne a nic si nevymýšlí
+function metrikaKarta(nazev, hodnota, existuje = true, pozn = '') {
+  return `<div class="sim-karta ${existuje ? '' : 'na'}">
+    <div class="sim-karta-nazev">${esc(nazev)}</div>
+    <div class="sim-karta-hodnota">${existuje ? hodnota : 'N/A'}</div>
+    ${pozn ? `<div class="sim-karta-pozn">${esc(pozn)}</div>` : ''}
+  </div>`;
 }
 
 async function zobrazSimVysledek(id) {
@@ -531,57 +667,171 @@ async function zobrazSimVysledek(id) {
   const d = await zavolej(() => API.simDetail(id));
   if (!d || !d.vysledek) { box.innerHTML = '<div class="adm-prazdno">Výsledek není hotový.</div>'; return; }
   const v = d.vysledek;
+  const g = v.vysledek.global, s = v.vysledek.stropy, gr = v.grafy || { poLevelu: [], zlatoTok: [], urovenVsDny: [] };
+  const r0 = n => cislo(Math.round(n));
 
+  // tabulka archetypů (P50)
   const rada = (id2, a) => `<tr>
     <td class="adm-zvyraz">${esc(id2)}</td>
-    <td>${a.uroven.p50.toFixed(0)}</td>
-    <td>${cislo(Math.round(a.zlato.p50))}</td>
-    <td>${cislo(Math.round(a.pocta.p50))}</td>
-    <td>${a.statySoucet.p50.toFixed(0)}</td>
-    <td>${(a.winrate.p50 * 100).toFixed(0)} %</td>
-    <td>${(a.pvpWin.p50 * 100).toFixed(0)} %</td>
+    <td>${a.uroven.p50.toFixed(0)}</td><td>${r0(a.zlato.p50)}</td><td>${r0(a.pocta.p50)}</td>
+    <td>${a.statySoucet.p50.toFixed(0)}</td><td>${(a.winrate.p50 * 100).toFixed(0)} %</td><td>${(a.pvpWin.p50 * 100).toFixed(0)} %</td>
   </tr>`;
   const telo = Object.entries(v.vysledek.archetypy).map(([k, a]) => rada(k, a)).join('');
+
+  // distribuce (P10/P50/P90/P99) globálně
+  const distRada = (nazev, dd, proc = false) => {
+    const f = x => proc ? (x * 100).toFixed(0) + ' %' : r0(x);
+    return `<tr><td class="adm-zvyraz">${nazev}</td><td>${f(dd.p10)}</td><td>${f(dd.p50)}</td><td>${f(dd.p90)}</td><td>${f(dd.p99)}</td></tr>`;
+  };
+  const dist = [
+    distRada('Úroveň', g.uroven), distRada('Zlato (zůstatek)', g.zlato),
+    distRada('Zlato získáno', g.zlatoZiskano), distRada('XP získáno', g.xpZiskano),
+    distRada('Součet statů', g.statySoucet), distRada('Pocta', g.pocta),
+    distRada('Winrate', g.winrate, true), distRada('PvP winrate', g.pvpWin, true),
+  ].join('');
+
+  // metriky – existující + poctivé N/A pro systémy, které hra nemá
+  const karty = [
+    metrikaKarta('Úroveň (P50)', g.uroven.p50.toFixed(0)),
+    metrikaKarta('XP získáno (P50)', r0(g.xpZiskano.p50)),
+    metrikaKarta('Zlato zůstatek (P50)', r0(g.zlato.p50)),
+    metrikaKarta('Zlato získáno (P50)', r0(g.zlatoZiskano.p50)),
+    metrikaKarta('Součet statů (P50)', g.statySoucet.p50.toFixed(0)),
+    metrikaKarta('Krit strop', (s.critMax * 100).toFixed(1) + ' %', true, 'engine CRIT_MAX'),
+    metrikaKarta('Blok strop', (s.blokMax * 100).toFixed(1) + ' %'),
+    metrikaKarta('Winrate (P50)', (g.winrate.p50 * 100).toFixed(0) + ' %'),
+    metrikaKarta('Aréna Pocta (P50)', r0(g.pocta.p50)),
+    metrikaKarta('Podzemí', 'bludiště jako odměna', true, 'samostatný systém obtížnosti není'),
+    metrikaKarta('Dodge', '', false, 'hra má Blok, ne Dodge'),
+    metrikaKarta('Strop tréninku', '', false, 'StatTrainingCap neexistuje'),
+    metrikaKarta('Vybavení (síla)', '', false, 'engine výbavu nečte'),
+    metrikaKarta('Pomocníci', '', false, 'systém neexistuje'),
+    metrikaKarta('Práce', '', false, 'panel zamčen, 0 XP'),
+    metrikaKarta('Aukční síň', '', false, 'systém neexistuje'),
+    metrikaKarta('Tržiště', '', false, 'systém neexistuje'),
+    metrikaKarta('Smaragdy (ekonomika)', '', false, 'z hraní neplynou'),
+    metrikaKarta('Zkouška božstva', '', false, 'systém neexistuje'),
+    metrikaKarta('Item-budget', '', false, 'systém předmětů 1–5 statů neexistuje'),
+  ].join('');
+
+  // grafy z reálných dat
+  const graf1 = svgCara([{ nazev: 'Úroveň', barva: CHART_BARVY.zlata, body: gr.urovenVsDny.map(x => ({ x: x.dny, y: x.level })) }]);
+  const graf2 = svgCara([
+    { nazev: 'Získáno', barva: CHART_BARVY.zelena, body: gr.poLevelu.map(x => ({ x: x.level, y: x.zlatoZiskano })) },
+    { nazev: 'Utraceno', barva: CHART_BARVY.cervena, body: gr.poLevelu.map(x => ({ x: x.level, y: x.zlatoUtraceno })) },
+  ]);
+  const graf3 = svgCara([{ nazev: 'Zůstatek', barva: CHART_BARVY.zlata, body: gr.poLevelu.map(x => ({ x: x.level, y: x.zlato })) }]);
+  const graf4 = svgCara([{ nazev: 'Krit %', barva: CHART_BARVY.fialova, body: gr.poLevelu.map(x => ({ x: x.level, y: x.critPct })) }]);
+  const graf5 = svgCara([{ nazev: 'Staty', barva: CHART_BARVY.modra, body: gr.poLevelu.map(x => ({ x: x.level, y: x.staty })) }]);
+  const graf6 = svgSloupce(
+    gr.zlatoTok.map(z => ({ label: z.archetyp, ziskano: z.ziskano, utraceno: z.utraceno })),
+    [{ nazev: 'Získáno', klic: 'ziskano', barva: CHART_BARVY.zelena }, { nazev: 'Utraceno', klic: 'utraceno', barva: CHART_BARVY.cervena }]);
+
+  const grafBlok = (nadpis, svg) => `<div class="sim-graf"><h4>${esc(nadpis)}</h4>${svg}</div>`;
 
   const upoz = v.upozorneni.length
     ? v.upozorneni.map(u => `<li class="sim-upoz sim-z-${esc(u.zavaznost)}"><b>${esc(u.zavaznost)}</b> — ${esc(u.zprava)}</li>`).join('')
     : '<li class="adm-prazdno">žádná</li>';
 
-  const a = await zavolej(() => API.simAnalyza(id));
   const seznamY = arr => (arr && arr.length) ? arr.map(x => `<li>${esc(x)}</li>`).join('') : '<li class="adm-slabe">—</li>';
 
-  const s = v.vysledek.stropy;
   box.innerHTML = `
     <div class="adm-panel sim-vysledek">
       <div class="sim-vys-hlava">
         <h2 class="adm-podnadpis">Výsledek ${esc(id)}</h2>
         <div class="sim-export">
+          <button class="adm-btn maly" id="simAnalyzaBtn">Spustit AI analýzu</button>
           <button class="adm-btn maly" id="simJson">Stáhnout JSON</button>
           <button class="adm-btn maly" id="simCsv">Stáhnout CSV</button>
         </div>
       </div>
-      <div class="adm-slabe">${esc(v.meta.hernidoba)} · ${cislo(v.meta.pocetPostavCelkem)} postav · verze ${esc(v.meta.balancVerze)} · semínko ${v.meta.zakladniSeminko}</div>
+      <div class="adm-slabe">${esc(v.meta.hernidoba)} · ${cislo(v.meta.pocetPostavCelkem)} postav · ${v.meta.historie}× · verze ${esc(v.meta.balancVerze)} · semínko ${v.meta.zakladniSeminko} · reálný čas ${(v.meta.trvaniMs / 1000).toFixed(1)} s</div>
 
       <div class="sim-stropy">Krit max <b>${(s.critMax * 100).toFixed(1)} %</b> · Blok max <b>${(s.blokMax * 100).toFixed(1)} %</b> · Dvojhmat max <b>${(s.dvojMax * 100).toFixed(1)} %</b></div>
 
+      <h3 class="adm-podnadpis">Metriky</h3>
+      <div class="sim-karty">${karty}</div>
+
+      <h3 class="adm-podnadpis">Rozdělení (percentily, globálně)</h3>
       <div class="adm-tabulka-obal"><table class="adm-tabulka">
-        <thead><tr><th>Archetyp</th><th>Úr. P50</th><th>Zlato P50</th><th>Pocta P50</th><th>Staty P50</th><th>Winrate</th><th>PvP</th></tr></thead>
+        <thead><tr><th>Metrika</th><th>P10</th><th>P50</th><th>P90</th><th>P99</th></tr></thead>
+        <tbody>${dist}</tbody>
+      </table></div>
+
+      <h3 class="adm-podnadpis">Po archetypech (P50)</h3>
+      <div class="adm-tabulka-obal"><table class="adm-tabulka">
+        <thead><tr><th>Archetyp</th><th>Úr.</th><th>Zlato</th><th>Pocta</th><th>Staty</th><th>Winrate</th><th>PvP</th></tr></thead>
         <tbody>${telo}</tbody>
       </table></div>
 
-      <h3 class="adm-podnadpis">Upozornění</h3>
+      <h3 class="adm-podnadpis">Grafy</h3>
+      <div class="sim-grafy">
+        ${grafBlok('Úroveň vs aktivní dny', graf1)}
+        ${grafBlok('Zlato získané vs utracené (podle úrovně)', graf2)}
+        ${grafBlok('Zlato — zůstatek podle úrovně', graf3)}
+        ${grafBlok('Krit % podle úrovně', graf4)}
+        ${grafBlok('Součet statů podle úrovně', graf5)}
+        ${grafBlok('Zlato získané vs utracené (podle archetypu)', graf6)}
+      </div>
+      <div class="adm-poznamka">Grafy pro Dodge, Item-budget, Pomocníky a Smaragdy tu nejsou — ty systémy hra zatím nemá, tak si je simulátor nevymýšlí.</div>
+
+      <h3 class="adm-podnadpis">Upozornění (${v.upozorneni.length})</h3>
       <ul class="sim-upozy">${upoz}</ul>
 
-      <h3 class="adm-podnadpis">Analýza <small class="adm-slabe">(poradní — nemění konfiguraci)</small></h3>
-      <div class="sim-analyza">
-        <div><b>Pozorování</b><ul>${seznamY(a && a.pozorovani)}</ul></div>
-        <div><b>Úvahy</b><ul>${seznamY(a && a.uvahy)}</ul></div>
-        <div><b>Doporučení</b><ul>${seznamY(a && a.doporuceni)}</ul></div>
-      </div>
+      <div id="simAnalyzaBox" class="sim-analyza-box"></div>
     </div>`;
 
   document.getElementById('simJson').addEventListener('click', () => stahni(API.simExportJson(id), id + '.json'));
   document.getElementById('simCsv').addEventListener('click', () => stahni(API.simExportCsv(id), id + '.csv'));
+  document.getElementById('simAnalyzaBtn').addEventListener('click', async () => {
+    const abox = document.getElementById('simAnalyzaBox');
+    abox.innerHTML = '<div class="adm-nacitani">Analyzuji…</div>';
+    const a = await zavolej(() => API.simAnalyza(id));
+    if (!a) { abox.innerHTML = ''; return; }
+    abox.innerHTML = `
+      <h3 class="adm-podnadpis">AI analýza <small class="adm-slabe">(poradní — NEMĚNÍ konfiguraci)</small></h3>
+      <div class="adm-poznamka">${esc(a.upozorneni || '')}</div>
+      <div class="sim-analyza">
+        <div><b>Pozorování</b><ul>${seznamY(a.pozorovani)}</ul></div>
+        <div><b>Úvaha</b><ul>${seznamY(a.uvahy)}</ul></div>
+        <div><b>Doporučení</b><ul>${seznamY(a.doporuceni)}</ul></div>
+      </div>`;
+  });
+
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// porovnání dvou dokončených běhů (regrese)
+async function simPorovnej() {
+  const a = document.getElementById('simCmpA').value, b = document.getElementById('simCmpB').value;
+  const box = document.getElementById('simPorovnani');
+  if (!a || !b || a === b) { box.innerHTML = '<div class="adm-prazdno">Vyber dva různé dokončené běhy.</div>'; return; }
+  box.innerHTML = '<div class="adm-nacitani">Porovnávám…</div>';
+  const r = await zavolej(() => API.simPorovnat(a, b));
+  if (!r) { box.innerHTML = ''; return; }
+
+  const rad = (nazev, o) => {
+    const zmena = o.zmena, proc = o.a ? (zmena / o.a * 100) : 0;
+    const tr = zmena > 0 ? 'plus' : zmena < 0 ? 'minus' : '';
+    return `<tr><td class="adm-zvyraz">${nazev}</td><td>${cislo(Math.round(o.a))}</td><td>${cislo(Math.round(o.b))}</td>
+      <td class="sim-${tr}">${zmena >= 0 ? '+' : ''}${cislo(Math.round(zmena))}</td>
+      <td class="sim-${tr}">${zmena >= 0 ? '+' : ''}${proc.toFixed(1)} %</td></tr>`;
+  };
+  const nazvy = { uroven: 'Úroveň', zlato: 'Zlato', pocta: 'Pocta', statySoucet: 'Staty', winrate: 'Winrate' };
+  const radky = Object.entries(r.rozdilP50).map(([k, o]) => rad(nazvy[k] || k, o)).join('');
+  const verze = r.verze.stejne
+    ? '<div class="adm-poznamka">Balanční verze je shodná — pravidla se nezměnila, rozdíly jsou jen šumem semínek.</div>'
+    : `<div class="adm-poznamka sim-varovani">Změněná pravidla: ${r.verze.zmeny.map(z => `<b>${esc(z.pravidlo)}</b> ${esc(String(z.z))}→${esc(String(z.na))}`).join(', ')}</div>`;
+
+  box.innerHTML = `
+    <div class="adm-panel">
+      <div class="adm-slabe">${esc(a)} vs ${esc(b)}</div>
+      ${verze}
+      <div class="adm-tabulka-obal"><table class="adm-tabulka">
+        <thead><tr><th>Metrika (P50)</th><th>${esc(a)}</th><th>${esc(b)}</th><th>Rozdíl</th><th>%</th></tr></thead>
+        <tbody>${radky}</tbody>
+      </table></div>
+    </div>`;
 }
 
 // stažení přes fetch + blob, ať se přiloží token (prostý odkaz by ho neposlal)
@@ -611,7 +861,7 @@ function spravaHTML() {
       <a class="adm-polozka" data-sekce="hraci">Hráči</a>
       <a class="adm-polozka" data-sekce="paladin">Paladin</a>
       <a class="adm-polozka" data-sekce="arena">Aréna</a>
-      <a class="adm-polozka" data-sekce="simulator">Simulátor</a>
+      <a class="adm-polozka" data-sekce="simulator">Balanční simulátor</a>
       <a class="adm-polozka" data-sekce="logy">Historie zásahů</a>
     </nav>
     <div class="adm-obsah" id="admObsah">
