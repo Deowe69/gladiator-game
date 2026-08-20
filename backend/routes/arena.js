@@ -50,28 +50,36 @@ async function poradiVZebricku(characterId) {
  * nedávno bojoval, a ty, proti komu dnes už bojoval dost.
  */
 async function vyberSoupere(ja, n) {
+  // Rozsah Pocty a úrovně je jen PREFERENCE, ne tvrdá podmínka — jinak
+  // by při málo hráčích nebyl koho vyzvat a Aréna by byla mrtvá.
+  // Vylučujeme napevno jen sebe, zabanované, odvetu a denní strop;
+  // zbytek se řadí podle blízkosti Pocty a úrovně a vezme se prvních N.
   const { rows } = await pool.query(
     `SELECT c.id, c.name, c.level, c.pocta, c.class, c.gender
        FROM characters c
        JOIN users u ON u.id = c.user_id
       WHERE c.id <> $1
         AND (u.banned_until IS NULL OR u.banned_until < NOW())
-        AND ABS(COALESCE(c.pocta, 0) - $2) <= $3
-        AND ABS(c.level - $4) <= $5
         AND NOT EXISTS (
           SELECT 1 FROM arena_fights f
            WHERE f.utocnik_id = $1 AND f.obranca_id = c.id
-             AND f.vytvoreno > NOW() - ($6 || ' minutes')::interval
+             AND f.vytvoreno > NOW() - ($5 || ' minutes')::interval
         )
         AND (
           SELECT COUNT(*) FROM arena_fights f2
            WHERE f2.utocnik_id = $1 AND f2.obranca_id = c.id
              AND f2.vytvoreno > NOW() - INTERVAL '1 day'
-        ) < $7
-      ORDER BY ABS(COALESCE(c.pocta, 0) - $2), random()
+        ) < $6
+      ORDER BY
+        -- blízcí Poctou i úrovní jdou první; vzdálení až potom.
+        -- ::float, aby to nebylo celočíselné dělení (jinak 0 u malých rozdílů)
+        (ABS(COALESCE(c.pocta, 0) - $2)::float / GREATEST($3, 1))
+          + (ABS(c.level - $4)::float / GREATEST($7, 1)),
+        random()
       LIMIT $8`,
-    [ja.id, ja.pocta || 0, n.arena_rozsah_pocty, ja.level, n.arena_rozsah_urovni,
-     n.arena_odveta_minut, n.arena_denni_limit_na_souepre, n.arena_pocet_souperu]
+    [ja.id, ja.pocta || 0, n.arena_rozsah_pocty, ja.level,
+     n.arena_odveta_minut, n.arena_denni_limit_na_souepre, n.arena_rozsah_urovni,
+     n.arena_pocet_souperu]
   );
 
   return rows.map(r => ({
