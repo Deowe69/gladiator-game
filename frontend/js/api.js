@@ -96,6 +96,16 @@ class API {
   static async arenaConfig()            { return this.request('/arena/config'); }
   static async arenaSaveConfig(config)  { return this.request('/arena/config', 'PUT', { config }); }
 
+  // --- balancni simulator (jen admin) ---
+  static async simMeta()               { return this.request('/sim/meta'); }
+  static async simBehy()               { return this.request('/sim/beh'); }
+  static async simSpust(nast)          { return this.request('/sim/beh', 'POST', nast); }
+  static async simDetail(id)           { return this.request('/sim/beh/' + id); }
+  static async simAnalyza(id)          { return this.request('/sim/beh/' + id + '/analyza'); }
+  static async simZrus(id)             { return this.request('/sim/beh/' + id + '/zrusit', 'POST'); }
+  static simExportJson(id)             { return API_URL + '/sim/beh/' + id + '/export.json'; }
+  static simExportCsv(id)              { return API_URL + '/sim/beh/' + id + '/export.csv'; }
+
   // --- sprava ---
   // Prava si server overuje u kazdeho volani znovu; tohle je jen
   // pohodlnejsi zapis, ne obchazeni kontroly.

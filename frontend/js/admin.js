@@ -408,9 +408,183 @@ async function sekceLogy() {
 }
 
 // ============================================================
+//  BALANČNÍ SIMULÁTOR
+//  Pouští běhy na serveru (v paměti, nikdy proti živým datům) a
+//  ukazuje percentily po archetypech, upozornění a poradní analýzu.
+// ============================================================
+let simPoll = null;
+
+function simStavStitek(s) {
+  const m = { ceka: 'čeká', bezi: 'běží', hotovo: 'hotovo', zruseno: 'zrušeno', chyba: 'chyba' };
+  return `<span class="sim-stav sim-${s}">${m[s] || s}</span>`;
+}
+
+async function sekceSimulator() {
+  obsah().innerHTML = '<div class="adm-nacitani">Načítám…</div>';
+  const meta = await zavolej(() => API.simMeta());
+  if (!meta) return;
+
+  const presety = meta.presety.map(p =>
+    `<button class="adm-btn sim-preset" data-preset="${esc(p.id)}">${esc(p.nazev)}<small>${esc(p.popis)}</small></button>`
+  ).join('');
+
+  const neexist = meta.archetypy.filter(a => !a.existuje);
+  const pozn = neexist.length ? `<div class="adm-poznamka sim-varovani">
+      Archetypy <b>${neexist.map(a => esc(a.nazev)).join(', ')}</b> míří na systémy, které hra
+      zatím nemá (${esc([...new Set(neexist.map(a => a.cilovySystem))].join(', '))}). Simulují se
+      nejbližším možným chováním a v reportu jsou tak označené — nic se nedomýšlí.
+    </div>` : '';
+
+  obsah().innerHTML = `
+    <h1 class="adm-nadpis">Balanční simulátor</h1>
+    <div class="adm-poznamka">
+      Simuluje spousty virtuálních hráčů stejnými vzorci jako ostrá hra (XP,
+      souboje, odměny, Pocta). Běží v paměti serveru — <b>nikdy nesahá na živá
+      data hráčů</b>. Balanční verze: <code>${esc(meta.balanc.podpis)}</code>.
+    </div>
+    ${pozn}
+    <div class="adm-panel">
+      <div class="sim-presety">${presety}</div>
+      <div class="sim-vlastni">
+        <label class="adm-pole"><span>Dní</span><input type="number" id="simDni" value="180" min="1" max="3650"></label>
+        <label class="adm-pole"><span>Historií (Monte Carlo)</span><input type="number" id="simHist" value="60" min="1" max="500"></label>
+        <label class="adm-pole"><span>Hráčů/archetyp</span><input type="number" id="simHrac" value="5" min="1" max="50"></label>
+        <label class="adm-pole"><span>Semínko</span><input type="number" id="simSem" value="12345"></label>
+        <button class="adm-btn hlavni" id="simSpustVlastni">Spustit vlastní</button>
+      </div>
+    </div>
+    <h2 class="adm-podnadpis">Běhy</h2>
+    <div id="simBehy"><div class="adm-nacitani">Načítám…</div></div>
+    <div id="simDetail"></div>`;
+
+  obsah().querySelectorAll('.sim-preset').forEach(b => b.addEventListener('click', async () => {
+    const r = await zavolej(() => API.simSpust({ preset: b.dataset.preset }));
+    if (r) { hlaska('Běh zařazen'); nactiSimBehy(); }
+  }));
+  document.getElementById('simSpustVlastni').addEventListener('click', async () => {
+    const nast = {
+      dni: +document.getElementById('simDni').value,
+      historie: +document.getElementById('simHist').value,
+      hracuNaArchetyp: +document.getElementById('simHrac').value,
+      zakladniSeminko: +document.getElementById('simSem').value,
+    };
+    const r = await zavolej(() => API.simSpust(nast));
+    if (r) { hlaska('Běh zařazen'); nactiSimBehy(); }
+  });
+
+  nactiSimBehy();
+}
+
+async function nactiSimBehy() {
+  const behy = await zavolej(() => API.simBehy());
+  const box = document.getElementById('simBehy');
+  if (!box) { if (simPoll) { clearInterval(simPoll); simPoll = null; } return; }
+  if (!behy) return;
+
+  box.innerHTML = behy.length ? `
+    <div class="adm-tabulka-obal"><table class="adm-tabulka">
+      <thead><tr><th>ID</th><th>Stav</th><th>Průběh</th><th>Nastavení</th><th>Upozornění</th><th></th></tr></thead>
+      <tbody>${behy.map(b => `
+        <tr>
+          <td class="adm-zvyraz">${esc(b.id)}</td>
+          <td>${simStavStitek(b.stav)}</td>
+          <td>${b.prubeh ? `${b.prubeh.hotovo}/${b.prubeh.celkem}` : '—'}</td>
+          <td class="adm-slabe">${b.nastaveni.dni}d · ${b.nastaveni.historie}× · ${b.nastaveni.hracuNaArchetyp}/arch</td>
+          <td>${b.pocetUpozorneni != null ? b.pocetUpozorneni : '—'}</td>
+          <td>
+            ${b.stav === 'hotovo' ? `<button class="adm-btn maly" data-vysledek="${esc(b.id)}">Výsledek</button>` : ''}
+            ${(b.stav === 'ceka' || b.stav === 'bezi') ? `<button class="adm-btn maly zrus" data-zrus="${esc(b.id)}">Zrušit</button>` : ''}
+          </td>
+        </tr>`).join('')}</tbody>
+    </table></div>` : '<div class="adm-prazdno">Zatím žádné běhy.</div>';
+
+  box.querySelectorAll('[data-vysledek]').forEach(b => b.addEventListener('click', () => zobrazSimVysledek(b.dataset.vysledek)));
+  box.querySelectorAll('[data-zrus]').forEach(b => b.addEventListener('click', async () => {
+    await zavolej(() => API.simZrus(b.dataset.zrus)); nactiSimBehy();
+  }));
+
+  // poll, dokud něco běží
+  const zive = behy.some(b => b.stav === 'ceka' || b.stav === 'bezi');
+  if (zive && !simPoll) simPoll = setInterval(nactiSimBehy, 1200);
+  if (!zive && simPoll) { clearInterval(simPoll); simPoll = null; }
+}
+
+async function zobrazSimVysledek(id) {
+  const box = document.getElementById('simDetail');
+  box.innerHTML = '<div class="adm-nacitani">Načítám výsledek…</div>';
+  const d = await zavolej(() => API.simDetail(id));
+  if (!d || !d.vysledek) { box.innerHTML = '<div class="adm-prazdno">Výsledek není hotový.</div>'; return; }
+  const v = d.vysledek;
+
+  const rada = (id2, a) => `<tr>
+    <td class="adm-zvyraz">${esc(id2)}</td>
+    <td>${a.uroven.p50.toFixed(0)}</td>
+    <td>${cislo(Math.round(a.zlato.p50))}</td>
+    <td>${cislo(Math.round(a.pocta.p50))}</td>
+    <td>${a.statySoucet.p50.toFixed(0)}</td>
+    <td>${(a.winrate.p50 * 100).toFixed(0)} %</td>
+    <td>${(a.pvpWin.p50 * 100).toFixed(0)} %</td>
+  </tr>`;
+  const telo = Object.entries(v.vysledek.archetypy).map(([k, a]) => rada(k, a)).join('');
+
+  const upoz = v.upozorneni.length
+    ? v.upozorneni.map(u => `<li class="sim-upoz sim-z-${esc(u.zavaznost)}"><b>${esc(u.zavaznost)}</b> — ${esc(u.zprava)}</li>`).join('')
+    : '<li class="adm-prazdno">žádná</li>';
+
+  const a = await zavolej(() => API.simAnalyza(id));
+  const seznamY = arr => (arr && arr.length) ? arr.map(x => `<li>${esc(x)}</li>`).join('') : '<li class="adm-slabe">—</li>';
+
+  const s = v.vysledek.stropy;
+  box.innerHTML = `
+    <div class="adm-panel sim-vysledek">
+      <div class="sim-vys-hlava">
+        <h2 class="adm-podnadpis">Výsledek ${esc(id)}</h2>
+        <div class="sim-export">
+          <button class="adm-btn maly" id="simJson">Stáhnout JSON</button>
+          <button class="adm-btn maly" id="simCsv">Stáhnout CSV</button>
+        </div>
+      </div>
+      <div class="adm-slabe">${esc(v.meta.hernidoba)} · ${cislo(v.meta.pocetPostavCelkem)} postav · verze ${esc(v.meta.balancVerze)} · semínko ${v.meta.zakladniSeminko}</div>
+
+      <div class="sim-stropy">Krit max <b>${(s.critMax * 100).toFixed(1)} %</b> · Blok max <b>${(s.blokMax * 100).toFixed(1)} %</b> · Dvojhmat max <b>${(s.dvojMax * 100).toFixed(1)} %</b></div>
+
+      <div class="adm-tabulka-obal"><table class="adm-tabulka">
+        <thead><tr><th>Archetyp</th><th>Úr. P50</th><th>Zlato P50</th><th>Pocta P50</th><th>Staty P50</th><th>Winrate</th><th>PvP</th></tr></thead>
+        <tbody>${telo}</tbody>
+      </table></div>
+
+      <h3 class="adm-podnadpis">Upozornění</h3>
+      <ul class="sim-upozy">${upoz}</ul>
+
+      <h3 class="adm-podnadpis">Analýza <small class="adm-slabe">(poradní — nemění konfiguraci)</small></h3>
+      <div class="sim-analyza">
+        <div><b>Pozorování</b><ul>${seznamY(a && a.pozorovani)}</ul></div>
+        <div><b>Úvahy</b><ul>${seznamY(a && a.uvahy)}</ul></div>
+        <div><b>Doporučení</b><ul>${seznamY(a && a.doporuceni)}</ul></div>
+      </div>
+    </div>`;
+
+  document.getElementById('simJson').addEventListener('click', () => stahni(API.simExportJson(id), id + '.json'));
+  document.getElementById('simCsv').addEventListener('click', () => stahni(API.simExportCsv(id), id + '.csv'));
+}
+
+// stažení přes fetch + blob, ať se přiloží token (prostý odkaz by ho neposlal)
+async function stahni(url, jmeno) {
+  try {
+    const r = await fetch(url, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
+    if (!r.ok) throw new Error('Export selhal');
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = jmeno;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch (e) { hlaska((e && e.message) || 'Export selhal', true); }
+}
+
+// ============================================================
 //  VYKRESLENÍ DO HRY
 // ============================================================
-const SEKCE = { prehled: sekcePrehled, hraci: sekceHraci, paladin: sekcePaladin, arena: sekceArena, logy: sekceLogy };
+const SEKCE = { prehled: sekcePrehled, hraci: sekceHraci, paladin: sekcePaladin, arena: sekceArena, simulator: sekceSimulator, logy: sekceLogy };
 
 // Kostra panelu. Vrací HTML, které si hra vloží do svého pohledu.
 function spravaHTML() {
@@ -421,6 +595,7 @@ function spravaHTML() {
       <a class="adm-polozka" data-sekce="hraci">Hráči</a>
       <a class="adm-polozka" data-sekce="paladin">Paladin</a>
       <a class="adm-polozka" data-sekce="arena">Aréna</a>
+      <a class="adm-polozka" data-sekce="simulator">Simulátor</a>
       <a class="adm-polozka" data-sekce="logy">Historie zásahů</a>
     </nav>
     <div class="adm-obsah" id="admObsah">

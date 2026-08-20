@@ -15,6 +15,7 @@ const adminRoutes = require('./routes/admin');
 const { PREDMETY, NEPRATELE } = require('./config/katalog');
 const katalogRoutes = require('./routes/katalog');
 const arenaRoutes = require('./routes/arena');
+const simRoutes = require('./routes/sim');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -32,6 +33,7 @@ app.use('/api/game', gameRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/katalog', katalogRoutes);
 app.use('/api/arena', arenaRoutes);
+app.use('/api/sim', simRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
