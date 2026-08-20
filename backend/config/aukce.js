@@ -43,11 +43,12 @@ const VYCHOZI = {
   smaragd_min: 2,
   smaragd_max: 60,
 
-  // --- generování ---
-  cil_aktivnich: 40,            // kolik aktivních aukcí držet
+  // --- generování (stav = počet aktivních aukcí, drží se v rozsahu) ---
+  auction_min_items: 15,        // nikdy méně aktivních (jen při chybě obsahu)
+  auction_max_items: 50,        // nikdy více aktivních
   generace_interval_s: 300,     // jak často doplňovat
-  generace_max_davka: 10,       // max nových aukcí za jedno doplnění
-  buynow_dostupnost: 1.0,       // podíl aukcí s možností Buy Now (1 = všechny)
+  generace_max_davka: 12,       // max nových aukcí za jedno doplnění
+  buynow_dostupnost: 1.0,       // KAŽDÁ aukce má Buy Now (1 = všechny)
   uroven_min: 1,                // rozsah úrovní generovaných předmětů
   uroven_max: predmety.MAX_UROVEN_PREDMETU,
 };

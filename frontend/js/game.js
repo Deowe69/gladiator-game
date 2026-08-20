@@ -3487,7 +3487,7 @@ const market  = () => lockedSoon('Tržiště');
 // peníze i vlastnictví. Prohlížeč jen ukazuje a posílá klíčované požadavky.
 
 let aukceStav = null, aukceChyba = null, aukceNacita = false, aukceBezi = false;
-let aukceFiltr = { razeni: 'konci', slot: '', buynow: '' };
+let aukceFiltr = { razeni: 'konci', slot: '', buynow: '', offset: 0, limit: 20 };
 let aukceTikTimer = null;
 
 function aukceKlic() {
@@ -3508,7 +3508,16 @@ async function nactiAukce() {
   if (posledniPohled === 'auction') openView('auction');
 }
 
-function aukceNastavFiltr(klic, hodnota) { aukceFiltr[klic] = hodnota; nactiAukce(); }
+function aukceNastavFiltr(klic, hodnota) { aukceFiltr[klic] = hodnota; aukceFiltr.offset = 0; nactiAukce(); }
+function aukceStrana(dir) {
+  const cel = (aukceStav && aukceStav.celkem) || 0;
+  const novy = Math.max(0, Math.min(aukceFiltr.offset + dir * aukceFiltr.limit, Math.max(0, cel - 1)));
+  aukceFiltr.offset = Math.floor(novy / aukceFiltr.limit) * aukceFiltr.limit;
+  nactiAukce();
+}
+// ikona podle slotu (generované předměty nemají vlastní artwork — nový
+// statový generátor je bez šablon/assetů; vizuál nese slot)
+const AUK_IKONA = { weapon: '⚔️', helmet: '🪖', chest: '🛡️', shield: '🛡️', gloves: '🧤', boots: '🥾', belt: '🎗️', amulet: '📿', ring: '💍' };
 
 async function aukcePrihoz(id, castka) {
   if (aukceBezi) return;
@@ -3579,61 +3588,94 @@ function auction() {
   if (!aukceStav) return '<div class="panel"><div class="panel-header">Aukční síň</div><div class="panel-body"><p class="hall-note">Načítám…</p></div></div>';
 
   const ja = aukceStav.ja;
+  const cel = aukceStav.celkem || 0;
+  const od = aukceStav.offset || 0, lim = aukceStav.limit || 20;
 
   const doruceni = (aukceStav.cekaDoruceni > 0)
-    ? `<div class="auk-doruceni-lista" id="aukDoruceni"><button class="btn-green" onclick="aukceZobrazDoruceni()">Vyzvednout výhry (${aukceStav.cekaDoruceni})</button></div>`
+    ? `<button class="btn-green auk-doruc-btn" onclick="aukceZobrazDoruceni()">Vyzvednout výhry (${aukceStav.cekaDoruceni})</button>`
     : '';
 
   const slotVolby = ['', ...Object.keys(AUK_SLOTY)].map(k =>
-    `<option value="${k}" ${aukceFiltr.slot === k ? 'selected' : ''}>${k ? AUK_SLOTY[k] : 'Všechny sloty'}</option>`).join('');
+    `<option value="${k}" ${aukceFiltr.slot === k ? 'selected' : ''}>${k ? AUK_SLOTY[k] : 'Všechny kategorie'}</option>`).join('');
 
-  const karty = (aukceStav.aukce || []).map(a => {
+  const radky = (aukceStav.aukce || []).map(a => {
     const cena = a.soucasnyPrihoz != null ? a.soucasnyPrihoz : a.startZlato;
-    const stav = a.soucasnyPrihoz != null ? 'Nejvyšší přihoz' : 'Vyvolávací cena';
-    return `<div class="auk-karta ${a.jaVedu ? 'vedu' : ''}">
-      <div class="auk-hlava"><b>${AUK_SLOTY[a.slot] || a.slot}</b><span class="auk-uroven">Úroveň ${a.uroven}</span></div>
-      <div class="auk-staty">${aukceStatyHTML(a.predmet)}</div>
-      <div class="auk-cena"><span>${stav}</span><b>${cena.toLocaleString('cs-CZ')} zlata</b></div>
-      <div class="auk-cas" data-konec="${Date.now() + a.zbyvaS * 1000}">${aukceCas(a.zbyvaS)}</div>
-      <div class="auk-akce">
-        <button class="btn-green" ${aukceBezi || a.jaVedu ? 'disabled' : ''} onclick="aukcePrihoz(${a.id},${a.minPrihoz})">
-          Přihodit ${a.minPrihoz.toLocaleString('cs-CZ')}</button>
+    const stav = a.soucasnyPrihoz != null ? `${a.prihozu || 0} příhozů` : 'vyvolávací';
+    return `<tr class="auk-row ${a.jaVedu ? 'vedu' : ''}">
+      <td class="auk-c-predmet">
+        <span class="auk-ikona">${AUK_IKONA[a.slot] || '📦'}</span>
+        <span class="auk-nazev"><b>${AUK_SLOTY[a.slot] || a.slot}</b>${a.jaVedu ? '<span class="auk-vedu-tag">vedeš</span>' : ''}
+          <small>${AUK_SLOTY[a.slot] || a.slot}</small></span>
+      </td>
+      <td class="auk-c-uroven">${a.uroven}</td>
+      <td class="auk-c-staty">${aukceStatyHTML(a.predmet)}</td>
+      <td class="auk-c-prihoz"><b>${cena.toLocaleString('cs-CZ')}</b> <img class="mena-ico" src="img/ui/gold.png" alt="zlata"><div class="auk-prihoz-stav">${stav}</div></td>
+      <td class="auk-c-cas" data-konec="${Date.now() + a.zbyvaS * 1000}">${aukceCas(a.zbyvaS)}</td>
+      <td class="auk-c-bid">
+        <button class="btn-green auk-bid" ${aukceBezi || a.jaVedu ? 'disabled' : ''} onclick="aukcePrihoz(${a.id},${a.minPrihoz})">
+          Přihodit<br><small>${a.minPrihoz.toLocaleString('cs-CZ')}</small></button>
+      </td>
+      <td class="auk-c-buy">
         ${a.buynowSmaragdy != null
-          ? `<button class="btn-gem" ${aukceBezi ? 'disabled' : ''} onclick="aukceKup(${a.id})">Koupit hned · ${a.buynowSmaragdy} <img class="mena-ico" src="img/ui/safir.png" alt="safír"></button>`
-          : ''}
-      </div>
-      ${a.jaVedu ? '<div class="auk-vedu-znak">Vedeš tuto aukci</div>' : ''}
-    </div>`;
-  }).join('') || '<p class="hall-note">Teď tu není žádná aukce v dosahu tvé úrovně. Nové přibývají průběžně.</p>';
+          ? `<button class="btn-gem auk-buy" ${aukceBezi ? 'disabled' : ''} onclick="aukceKup(${a.id})">Kup teď<br><small>${a.buynowSmaragdy} <img class="mena-ico" src="img/ui/safir.png" alt="safír"></small></button>`
+          : '—'}
+      </td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="7" class="auk-prazdno">Teď tu není žádná aukce v dosahu tvé úrovně. Nové přibývají průběžně.</td></tr>`;
 
-  return `<div class="panel"><div class="panel-header">Aukční síň</div><div class="panel-body">
-    <div class="auk-lista">
-      <div class="auk-info">
-        <span>Zlato: <b>${ja.zlato.toLocaleString('cs-CZ')}</b></span>
-        <span>Safíry: <b>${ja.smaragdy} <img class="mena-ico" src="img/ui/safir.png" alt="safír"></b></span>
-        <span title="Zlato vázané v tvých vedoucích přihozech">Rezervováno: <b>${aukceStav.rezervovanoZlato.toLocaleString('cs-CZ')}</b></span>
-        <span title="Vidíš předměty do úrovně ${ja.viditelnyStrop}">Vidíš do úr. <b>${ja.viditelnyStrop}</b></span>
+  const strankovani = cel > lim ? `
+    <div class="auk-strany">
+      <button class="btn-green maly" ${od <= 0 ? 'disabled' : ''} onclick="aukceStrana(-1)">‹ Předchozí</button>
+      <span>${cel ? (od + 1) : 0}–${Math.min(od + lim, cel)} z ${cel}</span>
+      <button class="btn-green maly" ${od + lim >= cel ? 'disabled' : ''} onclick="aukceStrana(1)">Další ›</button>
+    </div>` : '';
+
+  return `<div class="panel panel-gold auk2">
+    <div class="panel-header">🏛 AUKČNÍ SÍŇ</div>
+    <div class="panel-body">
+
+      <div class="auk-head">
+        <div class="auk-zdroje">
+          <span><img class="mena-ico" src="img/ui/gold.png" alt="zlato"> <b>${ja.zlato.toLocaleString('cs-CZ')}</b></span>
+          <span><img class="mena-ico" src="img/ui/safir.png" alt="safír"> <b>${ja.smaragdy}</b></span>
+          <span title="Zlato vázané v tvých vedoucích přihozech">Rezervováno <b>${aukceStav.rezervovanoZlato.toLocaleString('cs-CZ')}</b></span>
+          <span title="Vidíš předměty do své úrovně +5">Vidíš do úr. <b>${ja.viditelnyStrop}</b></span>
+        </div>
+        ${doruceni}
       </div>
-      ${doruceni}
-    </div>
-    <p class="hall-note">Předměty generuje aréna bohů sama. Přihazuješ zlatem, nebo koupíš hned za safíry.
-      Přihoz v posledních 60 s aukci prodlouží. Vidíš předměty do své úrovně +5.</p>
-    <div class="auk-filtry">
-      <select onchange="aukceNastavFiltr('slot',this.value)">${slotVolby}</select>
-      <select onchange="aukceNastavFiltr('razeni',this.value)">
-        <option value="konci" ${aukceFiltr.razeni === 'konci' ? 'selected' : ''}>Končí brzy</option>
-        <option value="nove" ${aukceFiltr.razeni === 'nove' ? 'selected' : ''}>Nejnovější</option>
-        <option value="zlato_nizke" ${aukceFiltr.razeni === 'zlato_nizke' ? 'selected' : ''}>Nejnižší cena</option>
-        <option value="zlato_vysoke" ${aukceFiltr.razeni === 'zlato_vysoke' ? 'selected' : ''}>Nejvyšší cena</option>
-        <option value="uroven_nizka" ${aukceFiltr.razeni === 'uroven_nizka' ? 'selected' : ''}>Nejnižší úroveň</option>
-        <option value="uroven_vysoka" ${aukceFiltr.razeni === 'uroven_vysoka' ? 'selected' : ''}>Nejvyšší úroveň</option>
-      </select>
-      <label class="auk-check"><input type="checkbox" ${aukceFiltr.buynow === '1' ? 'checked' : ''}
-        onchange="aukceNastavFiltr('buynow',this.checked?'1':'')"> Jen s Koupit hned</label>
-      <button class="btn-green" onclick="nactiAukce()">Obnovit</button>
-    </div>
-    <div class="auk-mrizka">${karty}</div>
-  </div></div>`;
+
+      <details class="auk-jak">
+        <summary>Jak aukce funguje?</summary>
+        <p>Předměty generuje <b>sama Aukční síň</b> (žádný prodejce). Přihazuješ <b>zlatem</b>; kdo vede při vypršení, vyhrává.
+        Každý předmět jde koupit <b>hned za safíry</b> (Kup teď). Aukce trvá 1 hodinu; přihoz v posledních 60 s ji prodlouží.
+        Vyhrané předměty si vyzvedneš tlačítkem „Vyzvednout výhry".</p>
+      </details>
+
+      <div class="auk-filtry">
+        <select onchange="aukceNastavFiltr('slot',this.value)" title="Kategorie">${slotVolby}</select>
+        <select onchange="aukceNastavFiltr('razeni',this.value)" title="Řazení">
+          <option value="konci" ${aukceFiltr.razeni === 'konci' ? 'selected' : ''}>Končí brzy</option>
+          <option value="nove" ${aukceFiltr.razeni === 'nove' ? 'selected' : ''}>Nejnovější</option>
+          <option value="zlato_vysoke" ${aukceFiltr.razeni === 'zlato_vysoke' ? 'selected' : ''}>Nejvyšší příhoz</option>
+          <option value="zlato_nizke" ${aukceFiltr.razeni === 'zlato_nizke' ? 'selected' : ''}>Nejnižší příhoz</option>
+          <option value="uroven_vysoka" ${aukceFiltr.razeni === 'uroven_vysoka' ? 'selected' : ''}>Nejvyšší úroveň</option>
+          <option value="uroven_nizka" ${aukceFiltr.razeni === 'uroven_nizka' ? 'selected' : ''}>Nejnižší úroveň</option>
+          <option value="buynow" ${aukceFiltr.razeni === 'buynow' ? 'selected' : ''}>Cena Kup teď</option>
+        </select>
+        <label class="auk-check"><input type="checkbox" ${aukceFiltr.buynow === '1' ? 'checked' : ''}
+          onchange="aukceNastavFiltr('buynow',this.checked?'1':'')"> Jen s Kup teď</label>
+        <button class="btn-green" onclick="nactiAukce()" title="Načíst z serveru (nepřegeneruje aukce)">Obnovit</button>
+      </div>
+
+      <div class="auk-tab-obal"><table class="auk-tab">
+        <thead><tr>
+          <th>Předmět</th><th>Úroveň</th><th>Staty</th><th>Aktuální příhoz</th>
+          <th>Konec aukce</th><th>Přihodit</th><th>Kup teď</th>
+        </tr></thead>
+        <tbody>${radky}</tbody>
+      </table></div>
+      ${strankovani}
+    </div></div>`;
 }
 
 function aukceCas(s) {

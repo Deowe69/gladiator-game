@@ -417,7 +417,8 @@ const AUK_POPISKY = {
   zlato_za_hodnotu: 'Startovní zlato = hodnota ×', zlato_start_min: 'Min. startovní zlato',
   prihoz_procento: 'Min. přihoz (podíl)', prihoz_min_abs: 'Min. přihoz (absolutně)',
   smaragd_delitel: 'Buy Now safíry = hodnota ÷', smaragd_min: 'Min. safíry', smaragd_max: 'Max. safíry',
-  cil_aktivnich: 'Cíl aktivních aukcí', generace_interval_s: 'Interval generace (s)', generace_max_davka: 'Max. dávka generace',
+  auction_min_items: 'Min. aktivních aukcí', auction_max_items: 'Max. aktivních aukcí',
+  generace_interval_s: 'Interval generace (s)', generace_max_davka: 'Max. dávka generace',
   buynow_dostupnost: 'Podíl aukcí s Buy Now', uroven_min: 'Min. úroveň předmětu', uroven_max: 'Max. úroveň předmětu',
 };
 async function sekceAukce() {
@@ -440,13 +441,42 @@ async function sekceAukce() {
     <div class="adm-panel">
       <div class="adm-mrizka-poli siroka">${pole}</div>
       <div class="adm-akce"><button class="adm-btn hlavni" id="admUlozAukce">Uložit nastavení</button></div>
-    </div>`;
+    </div>
+    <h2 class="adm-podnadpis">Diagnostika</h2>
+    <div id="aukDiag" class="adm-panel"><button class="adm-btn" id="aukDiagBtn">Načíst diagnostiku</button></div>`;
   document.getElementById('admUlozAukce').addEventListener('click', async () => {
     const config = {};
     obsah().querySelectorAll('[data-klic]').forEach(i => { config[i.dataset.klic] = Number(i.value); });
     const r = await zavolej(() => API.aukceSaveConfig(config));
     if (r) { hlaska(`Uloženo (${Object.keys(r.ulozene || {}).length} hodnot)`); sekceAukce(); }
   });
+  document.getElementById('aukDiagBtn').addEventListener('click', aukceDiagnostika);
+}
+
+async function aukceDiagnostika() {
+  const box = document.getElementById('aukDiag');
+  box.innerHTML = '<div class="adm-nacitani">Načítám…</div>';
+  const d = await zavolej(() => API.aukceDiagnostika());
+  if (!d) { box.innerHTML = ''; return; }
+  const dl = (n, v) => `<div class="adm-dlazdice"><div class="adm-dl-nazev">${esc(n)}</div><div class="adm-dl-hod">${esc(cislo(v))}</div></div>`;
+  const kat = Object.entries(d.kategorie || {}).map(([k, v]) => `${esc(k)}: ${v}`).join(' · ') || '—';
+  const varovani = (d.varovani || []).length
+    ? d.varovani.map(x => `<li class="sim-upoz sim-z-stredni">${esc(x)}</li>`).join('')
+    : '<li class="vyp-ok">✓ vše v pořádku</li>';
+  box.innerHTML = `
+    <div class="adm-dlazdice-mrizka">
+      ${dl('Aktivních aukcí', d.aktivnich)}${dl(`Rozsah min–max`, d.min + '–' + d.max)}
+      ${dl('Unikátních vizuálů', d.unikatnichAssetu)}${dl('Šablon v poolu', d.sablonPoolu)}
+      ${dl('Ø úroveň', d.prumerUroven)}${dl('Ø stat budget', d.prumerBudget)}
+      ${dl('Ø startovní zlato', d.prumerStartZlato)}${dl('Ø aktuální příhoz', d.prumerAktualniPrihoz)}
+      ${dl('Ø Buy Now (safíry)', d.prumerBuyNow)}${dl('Bez Buy Now', d.bezBuyNow)}
+      ${dl('S prodejcem (chyba)', d.sProdejcem)}
+      ${dl('Vyhráno příhozem', d.dokoncenoPrihozem)}${dl('Koupeno hned', d.koupeno)}
+      ${dl('Expirovalo bez příhozu', d.expirovane)}${dl('Doručeno', d.doruceno)}
+    </div>
+    <div class="adm-poznamka">Kategorie: ${kat}</div>
+    <h3 class="adm-podnadpis">Varování</h3>
+    <ul class="sim-upozy">${varovani}</ul>`;
 }
 
 // ============================================================

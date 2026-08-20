@@ -109,6 +109,7 @@ class API {
   static async aukceVyzvednout(doruceniId) { return this.request('/aukce/vyzvednout', 'POST', { doruceniId }); }
   static async aukceConfig()            { return this.request('/aukce/config'); }
   static async aukceSaveConfig(config)  { return this.request('/aukce/config', 'PUT', { config }); }
+  static async aukceDiagnostika()       { return this.request('/aukce/diagnostika'); }
 
   // --- staj ---
   static async stajState()              { return this.request('/staj/state'); }

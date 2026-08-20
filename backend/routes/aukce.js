@@ -60,15 +60,23 @@ router.get('/state', authenticateToken, async (req, res) => {
       zlato_vysoke: 'COALESCE(soucasny_prihoz, start_zlato) DESC',
       uroven_nizka: 'uroven ASC',
       uroven_vysoka: 'uroven DESC',
+      buynow: 'buynow_smaragdy ASC NULLS LAST',
     }[q.razeni] || 'konci ASC';
 
-    const limit = Math.min(60, Math.max(1, +q.limit || 30));
+    // celkový počet (pro stránkování) se stejnými filtry
+    const { rows: cnt } = await pool.query(
+      `SELECT COUNT(*)::int AS c FROM aukce WHERE ${kde.join(' AND ')}`, p
+    );
+    const celkem = cnt[0].c;
+
+    const limit = Math.min(60, Math.max(1, +q.limit || 20));
     const offset = Math.max(0, +q.offset || 0);
     p.push(limit, offset);
 
     const { rows } = await pool.query(
       `SELECT id, predmet, uroven, slot, start_zlato, soucasny_prihoz, vitez_id, buynow_smaragdy,
-              EXTRACT(EPOCH FROM (konci - NOW()))::int AS zbyva_s
+              EXTRACT(EPOCH FROM (konci - NOW()))::int AS zbyva_s,
+              (SELECT COUNT(*)::int FROM aukce_udalosti u WHERE u.aukce_id = aukce.id AND u.typ = 'bid') AS prihozu
          FROM aukce
         WHERE ${kde.join(' AND ')}
         ORDER BY ${razeni}
@@ -80,7 +88,7 @@ router.get('/state', authenticateToken, async (req, res) => {
       startZlato: a.start_zlato, soucasnyPrihoz: a.soucasny_prihoz,
       minPrihoz: minPrihoz(a, n), buynowSmaragdy: a.buynow_smaragdy,
       zbyvaS: Math.max(0, a.zbyva_s), jaVedu: a.vitez_id === me.id,
-      popis: predmety.popisStatu(a.predmet),
+      prihozu: a.prihozu, popis: predmety.popisStatu(a.predmet),
     }));
 
     // moje rezervované zlato (informativně — z peněženky už je strženo)
@@ -96,6 +104,7 @@ router.get('/state', authenticateToken, async (req, res) => {
       ja: { uroven: me.level, zlato: me.gold, smaragdy: me.emeralds, viditelnyStrop: strop },
       rezervovanoZlato: Number(rez[0].r), veduAukci: rez[0].n,
       cekaDoruceni: dor[0].c,
+      celkem, limit, offset,
       aukce: seznam,
     });
   } catch (e) {
@@ -366,6 +375,70 @@ router.put('/config', authenticateToken, pouzeSpravce, async (req, res) => {
     res.json({ message: 'Uloženo', ulozene, config: await nactiNastaveni() });
   } catch (e) {
     console.error('aukce/config PUT', e);
+    res.status(500).json({ error: 'Chyba serveru' });
+  }
+});
+
+// ---------------------------------------------------------------- DIAGNOSTIKA (admin)
+// Vývojářský přehled + varování (málo aukcí, chybí Buy Now, prodejce u
+// serverové aukce, přetečení stropu, rozbité assety).
+router.get('/diagnostika', authenticateToken, pouzeSpravce, async (req, res) => {
+  try {
+    const n = await nactiNastaveni();
+    const { rows: akt } = await pool.query(
+      `SELECT slot, uroven, start_zlato, soucasny_prihoz, buynow_smaragdy, predmet, vitez_id
+         FROM aukce WHERE stav = 'ACTIVE' AND konci > NOW()`);
+    const { rows: stavy } = await pool.query(
+      `SELECT stav, COUNT(*)::int AS c FROM aukce GROUP BY stav`);
+
+    const pocet = akt.length;
+    const prumer = (pole) => pole.length ? pole.reduce((a, b) => a + b, 0) / pole.length : 0;
+    const kategorie = {};
+    const assety = new Set();
+    let bezBuyNow = 0, sProdejcem = 0, rozbityAsset = 0;
+    const budgety = [];
+    for (const a of akt) {
+      kategorie[a.slot] = (kategorie[a.slot] || 0) + 1;
+      const img = a.predmet && a.predmet.slot ? a.predmet.slot : a.slot;
+      assety.add(img);
+      if (a.buynow_smaragdy == null) bezBuyNow++;
+      if (a.predmet && a.predmet.totalBudget) budgety.push(a.predmet.totalBudget);
+      // serverová aukce nesmí mít „prodejce" — u nás neexistuje sloupec seller,
+      // takže je to strukturálně vyloučené; kontrola je pro jistotu.
+      if (a.predmet && a.predmet.seller) sProdejcem++;
+      if (a.predmet && a.predmet.slot && !predmety.SLOTY.includes(a.predmet.slot)) rozbityAsset++;
+    }
+    const stavMap = Object.fromEntries(stavy.map(s => [s.stav, s.c]));
+
+    const varovani = [];
+    if (pocet < n.auction_min_items) varovani.push(`Aktivních aukcí (${pocet}) je méně než minimum (${n.auction_min_items}).`);
+    if (pocet > n.auction_max_items) varovani.push(`Aktivních aukcí (${pocet}) je více než maximum (${n.auction_max_items}).`);
+    if (bezBuyNow > 0) varovani.push(`${bezBuyNow} aukcí nemá cenu Buy Now.`);
+    if (sProdejcem > 0) varovani.push(`${sProdejcem} serverových aukcí má neplatného prodejce!`);
+    if (rozbityAsset > 0) varovani.push(`${rozbityAsset} aukcí má neznámý slot/asset.`);
+    if (pocet > 0 && assety.size < Math.min(5, pocet)) varovani.push(`Málo unikátních vizuálů (${assety.size}) — vysoká duplikace.`);
+    if (predmety.SLOTY.length < 3) varovani.push('Pool šablon je příliš malý.');
+
+    res.json({
+      aktivnich: pocet,
+      min: n.auction_min_items, max: n.auction_max_items,
+      unikatnichAssetu: assety.size,
+      sablonPoolu: predmety.SLOTY.length,
+      kategorie,
+      prumerUroven: Math.round(prumer(akt.map(a => a.uroven))),
+      prumerBudget: Math.round(prumer(budgety)),
+      prumerStartZlato: Math.round(prumer(akt.map(a => a.start_zlato))),
+      prumerAktualniPrihoz: Math.round(prumer(akt.filter(a => a.soucasny_prihoz).map(a => a.soucasny_prihoz))),
+      prumerBuyNow: Math.round(prumer(akt.filter(a => a.buynow_smaragdy != null).map(a => a.buynow_smaragdy))),
+      bezBuyNow, sProdejcem,
+      expirovane: stavMap['EXPIRED_WITHOUT_BID'] || 0,
+      koupeno: stavMap['COMPLETED_BY_BUY_NOW'] || 0,
+      dokoncenoPrihozem: stavMap['COMPLETED_BY_BID'] || 0,
+      doruceno: stavMap['DELIVERED'] || 0,
+      varovani,
+    });
+  } catch (e) {
+    console.error('aukce/diagnostika', e);
     res.status(500).json({ error: 'Chyba serveru' });
   }
 });

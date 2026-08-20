@@ -39,10 +39,15 @@ async function generujJednu(n) {
 // Doplní aukce na cílový počet (po malých dávkách).
 async function doplnAukce() {
   const n = await nactiNastaveni();
+  const min = Math.max(0, n.auction_min_items | 0);
+  const max = Math.max(min, n.auction_max_items | 0);
   const { rows } = await pool.query(`SELECT COUNT(*)::int AS c FROM aukce WHERE stav = 'ACTIVE'`);
   const aktivnich = rows[0].c;
-  const chybi = Math.max(0, (n.cil_aktivnich | 0) - aktivnich);
-  const kolik = Math.min(chybi, n.generace_max_davka | 0 || 10);
+  if (aktivnich >= max) return 0;                 // nikdy víc než max
+  // cíl je náhodný počet v rozsahu, ale aspoň minimum — drží stav v [min,max]
+  const cil = min + Math.floor(Math.random() * (max - min + 1));
+  const chybi = Math.max(min - aktivnich, cil - aktivnich, 0);
+  const kolik = Math.min(chybi, max - aktivnich, n.generace_max_davka | 0 || 12);
   for (let i = 0; i < kolik; i++) {
     try { await generujJednu(n); } catch (e) { console.error('Generace aukce:', e.message); }
   }
