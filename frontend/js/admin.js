@@ -51,7 +51,7 @@ async function sekcePrehled() {
     ['Nejvyšší úroveň',      cislo(d.ekonomika.nejvyssi_uroven)],
     ['Maximální úroveň',     cislo(d.maxUroven)],
     ['Zlata v oběhu',        cislo(d.ekonomika.zlato)],
-    ['Smaragdů v oběhu',     cislo(d.ekonomika.smaragdy)],
+    ['Safírů v oběhu',     cislo(d.ekonomika.smaragdy)],
     ['Průměrné zlato',       cislo(d.ekonomika.prumer_zlato)],
     ['Výprav celkem',        cislo(d.udalosti && d.udalosti.vypravy)],
     ['Soubojů v bludišti',   cislo(d.udalosti && d.udalosti.bludiste)],
@@ -105,7 +105,7 @@ async function sekceHraci() {
 
   const hlavicka = [
     ['username', 'Účet'], ['name', 'Postava'], ['level', 'Úr.'],
-    ['experience', 'XP'], ['gold', 'Zlato'], ['emeralds', 'Smaragdy'],
+    ['experience', 'XP'], ['gold', 'Zlato'], ['emeralds', 'Safíry'],
     ['updated', 'Naposledy'],
   ].map(([k, n]) => `
     <th class="adm-radit ${hraciStav.sort === k ? 'aktivni' : ''}" data-sort="${k}">
@@ -179,7 +179,7 @@ async function sekceHraci() {
 // ---- detail hráče ----
 const POLE_POSTAVY = [
   ['level', 'Úroveň'], ['experience', 'Zkušenosti'], ['gold', 'Zlato'],
-  ['emeralds', 'Smaragdy'], ['health', 'Životy'], ['max_health', 'Základ životů'],
+  ['emeralds', 'Safíry'], ['health', 'Životy'], ['max_health', 'Základ životů'],
   ['strength', 'Síla'], ['skill', 'Dovednost'], ['agility', 'Obratnost'],
   ['defense', 'Odolnost'], ['intelligence', 'Inteligence'], ['pocta', 'Pocta'],
 ];
@@ -416,7 +416,7 @@ const AUK_POPISKY = {
   viditelnost_nad: 'Viditelnost nad úroveň (+)', strop_urovne: 'Strop úrovně předmětu',
   zlato_za_hodnotu: 'Startovní zlato = hodnota ×', zlato_start_min: 'Min. startovní zlato',
   prihoz_procento: 'Min. přihoz (podíl)', prihoz_min_abs: 'Min. přihoz (absolutně)',
-  smaragd_delitel: 'Buy Now smaragdy = hodnota ÷', smaragd_min: 'Min. smaragdy', smaragd_max: 'Max. smaragdy',
+  smaragd_delitel: 'Buy Now safíry = hodnota ÷', smaragd_min: 'Min. safíry', smaragd_max: 'Max. safíry',
   cil_aktivnich: 'Cíl aktivních aukcí', generace_interval_s: 'Interval generace (s)', generace_max_davka: 'Max. dávka generace',
   buynow_dostupnost: 'Podíl aukcí s Buy Now', uroven_min: 'Min. úroveň předmětu', uroven_max: 'Max. úroveň předmětu',
 };
@@ -434,7 +434,7 @@ async function sekceAukce() {
     <h1 class="adm-nadpis">Nastavení Aukční síně</h1>
     <div class="adm-poznamka">
       Systémová dražba — hráči si nic nevystavují. Předměty generuje server
-      (bez vzácností, bez předpon). Přihoz = zlato, Koupit hned = smaragdy.
+      (bez vzácností, bez předpon). Přihoz = zlato, Koupit hned = safíry.
       Server bere hodnoty z databáze, po uložení platí hned.
     </div>
     <div class="adm-panel">
@@ -523,7 +523,7 @@ const STAJ_POPISKY = {
   prase_cena: 'Prase — cena (zlato)', prase_procenta: 'Prase — bonus (%)',
   kun_cena: 'Kůň — cena (zlato)', kun_procenta: 'Kůň — bonus (%)',
   ohnivy_kun_cena: 'Ohnivý kůň — cena (zlato)', ohnivy_kun_procenta: 'Ohnivý kůň — bonus (%)',
-  drak_cena_smaragdy: 'Drak — cena (smaragdy)', drak_dny: 'Drak — dní', drak_procenta: 'Drak — bonus (%)',
+  drak_cena_smaragdy: 'Drak — cena (safíry)', drak_dny: 'Drak — dní', drak_procenta: 'Drak — bonus (%)',
 };
 async function sekceStaj() {
   obsah().innerHTML = '<div class="adm-nacitani">Načítám…</div>';
@@ -539,7 +539,7 @@ async function sekceStaj() {
     <h1 class="adm-nadpis">Nastavení Stáje</h1>
     <div class="adm-poznamka">
       Zvířata dávají procentní bonus ke statům (aktivní jen jedno). Drak je
-      pronájem za smaragdy na daný počet dní. Bonus je procento (2 = +2 %).
+      pronájem za safíry na daný počet dní. Bonus je procento (2 = +2 %).
       Server bere hodnoty z databáze, po uložení platí hned.
     </div>
     <div class="adm-panel">
@@ -856,7 +856,7 @@ async function zobrazSimVysledek(id) {
     metrikaKarta('Práce', '', false, 'panel zamčen, 0 XP'),
     metrikaKarta('Aukční síň', '', false, 'systém neexistuje'),
     metrikaKarta('Tržiště', '', false, 'systém neexistuje'),
-    metrikaKarta('Smaragdy (ekonomika)', '', false, 'z hraní neplynou'),
+    metrikaKarta('Safíry (ekonomika)', '', false, 'z hraní neplynou'),
     metrikaKarta('Zkouška božstva', '', false, 'systém neexistuje'),
     metrikaKarta('Item-budget', '', false, 'systém předmětů 1–5 statů neexistuje'),
   ].join('');
@@ -920,7 +920,7 @@ async function zobrazSimVysledek(id) {
         ${grafBlok('Součet statů podle úrovně', graf5)}
         ${grafBlok('Zlato získané vs utracené (podle archetypu)', graf6)}
       </div>
-      <div class="adm-poznamka">Grafy pro Dodge, Item-budget, Pomocníky a Smaragdy tu nejsou — ty systémy hra zatím nemá, tak si je simulátor nevymýšlí.</div>
+      <div class="adm-poznamka">Grafy pro Dodge, Item-budget, Pomocníky a Safíry tu nejsou — ty systémy hra zatím nemá, tak si je simulátor nevymýšlí.</div>
 
       <h3 class="adm-podnadpis">Upozornění (${v.upozorneni.length})</h3>
       <ul class="sim-upozy">${upoz}</ul>

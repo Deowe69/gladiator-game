@@ -2387,7 +2387,7 @@ const expedCdLeft     = () => cdLeft('exped');
 async function kupPaladina() {
   const cena = palNastaveni('paladin_price_emeralds');
   const dni  = palNastaveni('paladin_duration_days');
-  if (!confirm('Stát se Paladinem na ' + dni + ' dní za ' + cena + ' smaragdů?')) return;
+  if (!confirm('Stát se Paladinem na ' + dni + ' dní za ' + cena + ' safírů?')) return;
 
   try {
     const odpoved = await API.paladinBuy();
@@ -2397,7 +2397,7 @@ async function kupPaladina() {
     toast('Jsi Paladin na dalších ' + (odpoved.dni || dni) + ' dní.');
   } catch (e) {
     const z = (e && e.message) || '';
-    toast(/smaragd/i.test(z) ? ('Na Paladina potřebuješ ' + cena + ' smaragdů.')
+    toast(/smaragd/i.test(z) ? ('Na Paladina potřebuješ ' + cena + ' safírů.')
                              : 'Nákup se nepovedl, zkus to znovu.');
   }
 }
@@ -2852,7 +2852,7 @@ function lockedSoon(nazev) {
 }
 const work    = () => lockedSoon('Práce');
 // ========== PRÉMIUM: PALADIN ==========
-// Paladin je casove predplatne za smaragdy. Vyhody zatim nejsou
+// Paladin je casove predplatne za safíry. Vyhody zatim nejsou
 // domluvene, takze je panel necha otevrene misto toho, aby sliboval
 // neco, co hra nedela.
 // Výhody Paladina. Čísla se berou z nastavení, ne z textu —
@@ -2899,14 +2899,14 @@ function premium() {
           <div class="pal-popis">
             ${aktivni
               ? `Zbývá ti <b>${paladinZbyva()}</b>. Další nákup se přičte k tomu, co ti zůstalo.`
-              : `<b>${dni} dní</b> za <b>${cena} smaragdů</b>.`}
+              : `<b>${dni} dní</b> za <b>${cena} safírů</b>.`}
           </div>
         </div>
 
         <div class="pal-akce">
           <div class="pal-stav">
             Máš <b>${mam}</b>
-            <img class="res-ico" src="img/ui/gem.png" alt="smaragdů">
+            <img class="res-ico" src="img/ui/safir.png" alt="safírů">
           </div>
           <button class="btn-green" ${mam >= cena ? '' : 'disabled'} onclick="kupPaladina()">
             ${aktivni ? 'Prodloužit' : 'Stát se Paladinem'}
@@ -3530,7 +3530,7 @@ async function aukceKup(id) {
   try {
     const v = await API.aukceBuyNow(id, aukceKlic());
     if (v.opakovane) toast('Nákup už proběhl.');
-    else if (v.ok) toast('Koupeno za ' + v.smaragduUbylo + ' smaragdů! Vyzvedni si předmět níže.');
+    else if (v.ok) toast('Koupeno za ' + v.smaragduUbylo + ' safírů! Vyzvedni si předmět níže.');
     await nactiAukce();
   } catch (e) {
     toast((e && e.message) || 'Nákup se nepovedl.');
@@ -3599,7 +3599,7 @@ function auction() {
         <button class="btn-green" ${aukceBezi || a.jaVedu ? 'disabled' : ''} onclick="aukcePrihoz(${a.id},${a.minPrihoz})">
           Přihodit ${a.minPrihoz.toLocaleString('cs-CZ')}</button>
         ${a.buynowSmaragdy != null
-          ? `<button class="btn-gem" ${aukceBezi ? 'disabled' : ''} onclick="aukceKup(${a.id})">Koupit hned · ${a.buynowSmaragdy} 💠</button>`
+          ? `<button class="btn-gem" ${aukceBezi ? 'disabled' : ''} onclick="aukceKup(${a.id})">Koupit hned · ${a.buynowSmaragdy} <img class="mena-ico" src="img/ui/safir.png" alt="safír"></button>`
           : ''}
       </div>
       ${a.jaVedu ? '<div class="auk-vedu-znak">Vedeš tuto aukci</div>' : ''}
@@ -3610,13 +3610,13 @@ function auction() {
     <div class="auk-lista">
       <div class="auk-info">
         <span>Zlato: <b>${ja.zlato.toLocaleString('cs-CZ')}</b></span>
-        <span>Smaragdy: <b>${ja.smaragdy} 💠</b></span>
+        <span>Safíry: <b>${ja.smaragdy} <img class="mena-ico" src="img/ui/safir.png" alt="safír"></b></span>
         <span title="Zlato vázané v tvých vedoucích přihozech">Rezervováno: <b>${aukceStav.rezervovanoZlato.toLocaleString('cs-CZ')}</b></span>
         <span title="Vidíš předměty do úrovně ${ja.viditelnyStrop}">Vidíš do úr. <b>${ja.viditelnyStrop}</b></span>
       </div>
       ${doruceni}
     </div>
-    <p class="hall-note">Předměty generuje aréna bohů sama. Přihazuješ zlatem, nebo koupíš hned za smaragdy.
+    <p class="hall-note">Předměty generuje aréna bohů sama. Přihazuješ zlatem, nebo koupíš hned za safíry.
       Přihoz v posledních 60 s aukci prodlouží. Vidíš předměty do své úrovně +5.</p>
     <div class="auk-filtry">
       <select onchange="aukceNastavFiltr('slot',this.value)">${slotVolby}</select>
@@ -3671,7 +3671,7 @@ if (!aukceTikTimer) aukceTikTimer = setInterval(() => {
 
 // ========== STÁJ: zvířata s pasivními bonusy ke statům ==========
 // Zvířata NEsnižují čas výprav. Dávají procentní bonus ke statům (jen jedno
-// aktivní). Drak = 20 smaragdů / 10 dní / +2 % ke všem. Server rozhoduje o
+// aktivní). Drak = 20 safírů / 10 dní / +2 % ke všem. Server rozhoduje o
 // ceně, době i expiraci; prohlížeč jen ukazuje a posílá klíčované požadavky.
 
 let stajBezi = false;
@@ -3723,19 +3723,19 @@ function staj() {
   const ja = stajStav.ja;
 
   const karty = stajStav.zvirata.map(z => {
-    const mena = z.mena === 'smaragdy' ? `${z.cena} 💠` : `${z.cena.toLocaleString('cs-CZ')} zlata`;
+    const mena = z.mena === 'smaragdy' ? `${z.cena} <img class="mena-ico" src="img/ui/safir.png" alt="safír">` : `${z.cena.toLocaleString('cs-CZ')} zlata`;
     const doba = z.dny ? `${z.dny} dní` : 'trvale';
     let stavHtml = '', akce = '';
     if (z.aktivni) {
       stavHtml = `<div class="staj-aktivni-znak">Aktivní${z.id === 'drak' && stajStav.drakDo ? ' · ' + stajCasDo(stajStav.drakDo) : ''}</div>`;
       if (z.id !== 'drak') akce = `<button class="btn-back" ${stajBezi ? 'disabled' : ''} onclick="stajAktivuj('zadne')">Vypnout</button>`;
-      else akce = `<button class="btn-gem" ${stajBezi ? 'disabled' : ''} onclick="stajKup('drak')">Prodloužit · ${z.cena} 💠</button>`;
+      else akce = `<button class="btn-gem" ${stajBezi ? 'disabled' : ''} onclick="stajKup('drak')">Prodloužit · ${z.cena} <img class="mena-ico" src="img/ui/safir.png" alt="safír"></button>`;
     } else if (z.vlastneno) {
       stavHtml = z.id === 'drak' && stajStav.drakDo ? `<div class="staj-vlastneno">Máš do: ${stajCasDo(stajStav.drakDo)}</div>` : `<div class="staj-vlastneno">Vlastníš</div>`;
       akce = `<button class="btn-green" ${stajBezi ? 'disabled' : ''} onclick="stajAktivuj('${z.id}')">Aktivovat</button>`;
     } else {
       akce = z.mena === 'smaragdy'
-        ? `<button class="btn-gem" ${stajBezi ? 'disabled' : ''} onclick="stajKup('${z.id}')">Pronajmout · ${z.cena} 💠</button>`
+        ? `<button class="btn-gem" ${stajBezi ? 'disabled' : ''} onclick="stajKup('${z.id}')">Pronajmout · ${z.cena} <img class="mena-ico" src="img/ui/safir.png" alt="safír"></button>`
         : `<button class="btn-green" ${stajBezi ? 'disabled' : ''} onclick="stajKup('${z.id}')">Koupit</button>`;
     }
     return `<div class="staj-karta ${z.aktivni ? 'akt' : ''} ${z.id === 'drak' ? 'drak' : ''}">
@@ -3752,7 +3752,7 @@ function staj() {
   return `<div class="panel"><div class="panel-header">Stáj</div><div class="panel-body">
     <div class="staj-info">
       <span>Zlato: <b>${ja.zlato.toLocaleString('cs-CZ')}</b></span>
-      <span>Smaragdy: <b>${ja.smaragdy} 💠</b></span>
+      <span>Safíry: <b>${ja.smaragdy} <img class="mena-ico" src="img/ui/safir.png" alt="safír"></b></span>
       <span>Aktivní zvíře: <b>${stajStav.aktivni ? (stajStav.zvirata.find(z => z.id === stajStav.aktivni) || {}).nazev : 'žádné'}</b></span>
     </div>
     <p class="hall-note">Zvíře dává pasivní procentní bonus ke všem statistikám (aktivní je vždy jen jedno).
