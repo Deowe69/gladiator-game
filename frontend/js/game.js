@@ -113,7 +113,6 @@ const QUESTS_DEF = [
 
 
 
-const RARITY_LABELS = { common:'Běžný', uncommon:'Neobvyklý', rare:'Vzácný', epic:'Epický' };
 
 // ========== INIT ==========
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1250,16 +1249,29 @@ const STAT_DEFS = {
 };
 const STAT_KEYS = Object.keys(STAT_DEFS);
 
-// čím vzácnější předmět, tím víc statů a vyšší objem
-const QUALITY_ROLL = {
-  common:    { count:1, mult:1.00, label:'Běžný',      color:'#6b6b6b' },
-  uncommon:  { count:2, mult:1.25, label:'Neobvyklý',  color:'#2d8020' },
-  rare:      { count:3, mult:1.55, label:'Vzácný',     color:'#1a4a8b' },
-  epic:      { count:4, mult:1.90, label:'Epický',     color:'#6b2fa0' },
-  legendary: { count:4, mult:2.30, label:'Legendární', color:'#b8860b' },
-};
+// ---- BEZ VZÁCNOSTÍ (rarity odstraněna) ----
+// Síla předmětu = úroveň (základ) × PLYNULÝ roll kolem 1.0. Žádné třídy
+// Common/Rare/Epic ani jejich náhrada. Roll je spojitá kvalita kusu:
+// průměrné hody časté, extrémy vzácné (Batesovo rozdělení). Vše laditelné.
+const ITEM_ROLL = { min: 0.85, max: 1.20, k: 3 };   // rozsah + „ostrost" zvonu
+const STAT_COUNT_VAHY = [0.45, 0.35, 0.15, 0.05];    // váhy pro 1..4 aktivní staty
 
-const qualityOf = it => QUALITY_ROLL[(it && it.quality) || 'common'] || QUALITY_ROLL.common;
+function itemRollFaktor() {
+  let s = 0; for (let i = 0; i < ITEM_ROLL.k; i++) s += Math.random();
+  const t = s / ITEM_ROLL.k;                          // [0,1) se zvonem u 0.5
+  return ITEM_ROLL.min + t * (ITEM_ROLL.max - ITEM_ROLL.min);
+}
+function pocetStatuRoll() {
+  let x = Math.random();
+  for (let i = 0; i < STAT_COUNT_VAHY.length; i++) { x -= STAT_COUNT_VAHY[i]; if (x < 0) return i + 1; }
+  return 1;
+}
+
+// Zpětně bezpečné: rarity už neexistuje. Staré předměty i šablony mají pole
+// `quality`, ale nic ho pro sílu/cenu/barvu nečte — vracíme neutrální hodnoty
+// (zlatá barva, žádná třída), aby se nikde nerozbilo zobrazení.
+const NEUTRAL_Q = { mult: 1, count: 1, label: '', color: '#c9a24a' };
+const qualityOf = () => NEUTRAL_Q;
 
 // sloty, které se počítají jako výstroj (nesou zbroj)
 const ARMOR_SLOTS = ['helmet', 'chest', 'shield', 'gloves', 'boots', 'belt'];
@@ -1276,18 +1288,19 @@ function totalArmor() {
 // zbylé se losují, takže dva stejné meče nejsou nikdy stejné.
 function rollItem(tpl) {
   const it = { ...tpl, uid: 'i' + Math.random().toString(36).slice(2, 10) };
+  delete it.quality;                     // vzácnost neexistuje — pole zahodíme
   // Úroveň kusu se losuje kolem úrovně hráče: od tří pod ni po pět nad ni.
   const hracLvl = character ? character.level : 1;
   it.lvl = Math.max(1, hracLvl + Math.floor(Math.random() * 9) - 3);
 
-  // Sílu určuje úroveň a kvalita, ne cena šablony. Kdyby se škálovalo
-  // podle ceny, vyšlo by dřevěné rezátko na 15. úrovni stejně jako
-  // Meč Achillea — třídy by se slely dohromady.
-  const kval = qualityOf(tpl);
-  const naUroven = (zaklad, naLvl) => Math.max(1, Math.round((zaklad + it.lvl * naLvl) * kval.mult));
+  // Sílu určuje ÚROVEŇ (základ) a PLYNULÝ roll kusu — ne vzácnost. Dva stejné
+  // meče na stejné úrovni se liší jen tím, jak si hodily (0.85–1.20).
+  const roll = itemRollFaktor();
+  it.roll = Math.round(roll * 100) / 100;                 // spojitá kvalita (ne třída)
+  const naUroven = (zaklad, naLvl) => Math.max(1, Math.round((zaklad + it.lvl * naLvl) * roll));
 
   tpl = { ...tpl, val: naUroven(3, 1.6) };                 // objem vlastností
-  it.price = Math.max(10, Math.round((14 + it.lvl * it.lvl * 1.1) * kval.mult));
+  it.price = Math.max(10, Math.round((14 + it.lvl * it.lvl * 1.1) * roll));
 
   if (Array.isArray(tpl.dmg)) {
     it.dmg = [naUroven(1, 1.5), naUroven(3, 2.4)];
@@ -1300,17 +1313,18 @@ function rollItem(tpl) {
 
   // všechno nositelné se opotřebovává
   if (slotForItem(tpl)) {
-    it.durMax = Math.round(150 + it.price * 1.5 * qualityOf(tpl).mult);
+    it.durMax = Math.round(150 + it.price * 1.5);
     it.dur    = it.durMax;
   }
   if (tpl.key === 'health') return it;          // lektvary se nerolují
 
-  const q = qualityOf(tpl);
+  // počet aktivních statů = nezávislý vážený roll (ne podle vzácnosti)
+  const pocet = pocetStatuRoll();
   const main = STAT_DEFS[tpl.key] ? tpl.key : STAT_KEYS[Math.floor(Math.random() * STAT_KEYS.length)];
   const rest = STAT_KEYS.filter(k => k !== main).sort(() => Math.random() - 0.5);
-  const keys = [main, ...rest.slice(0, Math.max(0, q.count - 1))];
+  const keys = [main, ...rest.slice(0, Math.max(0, pocet - 1))];
 
-  let left = Math.max(keys.length, Math.round((tpl.val || 4) * q.mult));
+  let left = Math.max(keys.length, tpl.val || 4);
   const stats = {};
   keys.forEach((k, i) => {
     const zbyva = keys.length - 1 - i;           // kolik statů ještě přijde
@@ -1391,7 +1405,7 @@ function migrateItem(it) {
   }
   // dřív předměty životnost neměly – dostanou plnou
   if (!it.durMax && slotForItem(it)) {
-    it.durMax = Math.round(150 + (it.price || 50) * 1.5 * qualityOf(it).mult);
+    it.durMax = Math.round(150 + (it.price || 50) * 1.5);
     it.dur = it.durMax;
   }
   return it;
@@ -1444,9 +1458,9 @@ function itemTipHTML(it) {
   const nadUrovni = it.lvl && character && character.level < it.lvl; // nad ním, ale unese
 
   return `
-    <div class="tip-head" style="background:linear-gradient(180deg,${q.color},#1a1409)">
-      <div class="tip-name">${it.name}</div>
-      <div class="tip-q">${q.label}</div>
+    <div class="tip-head" style="background:linear-gradient(180deg,#7a5a12,#1a1409)">
+      <div class="tip-name">${it.name}${it.predpona ? ' <span class="tip-prefix">' + it.predpona + '</span>' : ''}</div>
+      <div class="tip-q">Úroveň ${it.lvl || 1}</div>
     </div>
     <div class="tip-body">
       ${rows.join('') || '<div class="tip-row"><span>Bez bonusů</span><b>—</b></div>'}
