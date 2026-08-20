@@ -85,6 +85,17 @@ class API {
   static async gameReward(data)     { return this.request('/game/reward', 'POST', data); }
   static async merchantRefresh()    { return this.request('/game/merchant-refresh', 'POST'); }
 
+  // --- Arena (PvP podle Pocty) ---
+  static async arenaState()             { return this.request('/arena/state'); }
+  static async arenaFight(obrancaId, klic) { return this.request('/arena/fight', 'POST', { obrancaId, klic }); }
+  static async arenaLeaderboard(q = {}) {
+    const p = new URLSearchParams();
+    Object.entries(q).forEach(([k, v]) => { if (v !== '' && v != null) p.set(k, v); });
+    return this.request('/arena/leaderboard' + (p.toString() ? '?' + p : ''));
+  }
+  static async arenaConfig()            { return this.request('/arena/config'); }
+  static async arenaSaveConfig(config)  { return this.request('/arena/config', 'PUT', { config }); }
+
   // --- sprava ---
   // Prava si server overuje u kazdeho volani znovu; tohle je jen
   // pohodlnejsi zapis, ne obchazeni kontroly.

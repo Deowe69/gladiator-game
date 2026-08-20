@@ -3759,3 +3759,44 @@ select.adm-input{width:190px}
   box-shadow:0 6px 18px rgba(0,0,0,.55), inset 0 0 0 2px rgba(216,177,58,.5);
 }
 .npc-portret img{width:100%;height:auto;display:block}
+
+/* =========================================================
+   ARÉNA — PvP podle Pocty
+   ========================================================= */
+.ar-hlava{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;
+}
+.ar-stat{
+  padding:11px 14px;border-radius:4px;text-align:center;
+  background:linear-gradient(180deg, rgba(46,35,20,.9), rgba(28,21,12,.94));
+  border:1px solid rgba(198,160,84,.4);
+}
+.ar-stat span{display:block;font-size:11px;color:#a8987a;letter-spacing:.3px;text-transform:uppercase}
+.ar-stat b{display:block;margin-top:4px;font-size:22px;color:#f0d886;font-variant-numeric:tabular-nums}
+
+.arv-zmena{font-weight:bold;font-variant-numeric:tabular-nums}
+.arv-zmena.plus{color:#8fd44a}
+.arv-zmena.minus{color:#e07070}
+
+.ar-vysledek{
+  padding:14px;margin-bottom:14px;border-radius:5px;text-align:center;
+  border:2px solid;
+}
+.ar-vysledek.vyhra{background:rgba(90,140,60,.18);border-color:rgba(143,212,74,.55)}
+.ar-vysledek.prohra{background:rgba(160,50,50,.16);border-color:rgba(224,112,112,.5)}
+.arv-nadpis{font:bold 18px Georgia,serif;color:#f0d886;letter-spacing:.5px}
+.arv-pocta{margin:7px 0 11px;color:#e0d0aa;font-size:14px}
+.arv-pocta b{color:#f8e6ae;font-size:17px}
+
+.ar-nadpis{margin:18px 0 9px;color:#e8c860;font-size:13px;letter-spacing:.5px;text-transform:uppercase}
+.ar-posledni{display:flex;flex-direction:column;gap:5px}
+.ar-radek{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 12px;border-radius:3px;font-size:12.5px;
+  background:linear-gradient(180deg, rgba(46,35,20,.7), rgba(28,21,12,.8));
+  border:1px solid rgba(140,115,80,.28);
+  color:#d9c9a4;
+}
+.ar-radek.win{border-left:3px solid #8fd44a}
+.ar-radek.lose{border-left:3px solid #e07070}
+.ar-foot{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}

@@ -341,97 +341,161 @@ function city() {
 }
 
 // ===== ARENA =====
-// ========== ARÉNA: SOUBOJ S HRÁČI ==========
-// Bojuje se proti otisku soupeřovy postavy ze žebříčku, ne živě —
-// server neumí dva hráče spojit v jednom souboji. Soupeř o zápase
-// neví a jeho výsledek se mu nikam nezapíše.
-
-let souperi = null;        // nactene ze serveru
-let souperiChyba = null;
-
-async function nactiSoupere() {
-  try {
-    const data = await API.getLeaderboard();
-    const vsichni = (data && data.leaderboard) || [];
-    // sebe ze seznamu vyhodíme
-    souperi = vsichni.filter(h => h.name !== character.name);
-    souperiChyba = null;
-  } catch (e) {
-    souperi = [];
-    souperiChyba = 'Server neodpovídá, soupeře teď nenačtu.';
-  }
-  if (posledniPohled === 'arena') openView('arena');
-}
-
-// Z otisku postavy udelame soupere, se kterym umi pracovat souboj.
-function souperZHrace(h) {
-  const lvl = h.level || 1;
-  return {
-    name: h.name,
-    level: lvl,
-    // dovednost v databazi neni, dopocitame ji z urovne stejne jako u priser
-    hp:    (h.max_health || 100) + (h.defense || 0) * HP_ZA_ODOLNOST,
-    maxHp: (h.max_health || 100) + (h.defense || 0) * HP_ZA_ODOLNOST,
-    str:   h.strength || 5,
-    def:   h.defense || 0,
-    gold:  Math.round(20 + lvl * 12),
-    exp:   Math.round(15 + lvl * 9),
-    hrac:  true,
-  };
-}
-
-function bojujSHracem(i) {
-  const h = souperi && souperi[i];
-  if (!h) return;
-  beginFight(souperZHrace(h), 'arena');
-}
-
-function arena() {
-  if (souperi === null) { nactiSoupere(); }
-
-  const radky = (souperi || []).map((h, i) => `
-    <div class="opponent-row">
-      <span class="opp-rank">${i + 1}.</span>
-      <div class="opp-avatar">${avatarProUroven(h.level, 'opp-img')}</div>
-      <div class="opp-info">
-        <div class="opp-name">${h.name}</div>
-        <div class="opp-details">
-          Úroveň ${h.level} · Síla ${h.strength || 0} · Odolnost ${h.defense || 0}
-          · Obratnost ${h.agility || 0}
-        </div>
-      </div>
-      <button class="opp-btn" onclick="bojujSHracem(${i})">Vyzvat</button>
-    </div>`).join('');
-
-  const obsah =
-      souperi === null ? '<p class="hall-note">Načítám soupeře…</p>'
-    : souperiChyba     ? `<p class="hall-note">${souperiChyba}</p>`
-    : !souperi.length  ? '<p class="hall-note">Zatím tu nikdo jiný není. Aréna ožije, až přibudou další hráči.</p>'
-    : `<div class="opponent-list">${radky}</div>`;
-
-  return `
-  <div class="panel">
-    <div class="panel-header">Aréna Olympu</div>
-    <div class="panel-body">
-      <p class="hall-note">
-        Vyzýváš skutečné gladiátory podle jejich vlastností ze žebříčku.
-        Soupeř se souboje neúčastní živě — bojuješ proti otisku jeho postavy
-        a jemu se zápas nikam nezapíše.
-      </p>
-      ${obsah}
-      <div class="ar-foot">
-        <button class="btn-green" onclick="souperi=null; openView('arena')">Načíst soupeře znovu</button>
-      </div>
-    </div>
-  </div>
-
-  ${combatPanelHTML()}`;
-}
-
 function quests() {
   // Mise jeste nejsou hotove.
   return lockedSoon('Mise');
 }
+
+// ========== ARÉNA: PvP PODLE POCTY ==========
+// Celosvětový žebříček. Souboj i změnu Pocty počítá server; hra si
+// jen vyžádá stav, ukáže soupeře a po kliknutí nechá server rozhodnout.
+// Prohlížeč do výsledku ani do Pocty nemá jak sáhnout.
+
+let arenaStav = null;
+let arenaChyba = null;
+let arenaNacita = false;
+
+async function nactiArenu() {
+  arenaNacita = true;
+  try {
+    arenaStav = await API.arenaState();
+    arenaChyba = null;
+  } catch (e) {
+    arenaStav = null;
+    arenaChyba = (e && e.message) || 'Server neodpovídá';
+  }
+  arenaNacita = false;
+  if (posledniPohled === 'arena') openView('arena');
+}
+
+// Jednorázový klíč požadavku — server podle něj pozná dvojklik,
+// obnovení stránky i druhou záložku a nevyvolá druhý souboj.
+function arenaKlic() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g, '');
+  return 'k' + Date.now() + Math.random().toString(36).slice(2, 12);
+}
+
+let arenaBojiSe = false;
+
+async function arenaVyzvi(obrancaId) {
+  if (arenaBojiSe) return;           // druhý klik během čekání ignorujeme
+  arenaBojiSe = true;
+  const klic = arenaKlic();
+  try {
+    const v = await API.arenaFight(obrancaId, klic);
+    if (typeof v.pocta?.po === 'number') character.pocta = v.pocta.po;
+    updateUI();
+    arenaVysledek = v;
+    await nactiArenu();              // překreslí soupeře, odpočet i Poctu
+    openView('arena');
+  } catch (e) {
+    const z = (e && e.message) || '';
+    if (/odpo/i.test(z))        toast('Ještě si odpočiň.');
+    else if (/nedávno/i.test(z)) toast('S tímhle soupeřem jsi nedávno bojoval.');
+    else if (/dost/i.test(z))   toast('Dnes už jsi proti němu bojoval dost.');
+    else                        toast(z || 'Souboj se nepovedl.');
+    await nactiArenu();
+    openView('arena');
+  } finally {
+    arenaBojiSe = false;
+  }
+}
+
+let arenaVysledek = null;   // poslední odehraný souboj, ukáže se nad seznamem
+
+function arenaVysledekHTML() {
+  if (!arenaVysledek) return '';
+  const v = arenaVysledek;
+  const zmena = v.pocta.zmena;
+  return `
+    <div class="ar-vysledek ${v.vyhral ? 'vyhra' : 'prohra'}">
+      <div class="arv-nadpis">${v.vyhral ? 'Vítězství!' : 'Porážka'}</div>
+      <div class="arv-pocta">
+        Pocta ${v.pocta.pred} → <b>${v.pocta.po}</b>
+        <span class="arv-zmena ${zmena >= 0 ? 'plus' : 'minus'}">
+          ${zmena >= 0 ? '+' : ''}${zmena}
+        </span>
+      </div>
+      <button class="btn-back" onclick="arenaVysledek=null; openView('arena')">Zavřít</button>
+    </div>`;
+}
+
+function arena() {
+  if (arenaStav === null && !arenaNacita && !arenaChyba) nactiArenu();
+
+  if (arenaChyba) {
+    return `
+    <div class="panel">
+      <div class="panel-header">Aréna</div>
+      <div class="panel-body"><p class="hall-note">${arenaChyba}</p>
+        <div class="ar-foot"><button class="btn-green" onclick="arenaChyba=null; nactiArenu()">Zkusit znovu</button></div>
+      </div>
+    </div>`;
+  }
+  if (!arenaStav) {
+    return '<div class="panel"><div class="panel-header">Aréna</div><div class="panel-body"><p class="hall-note">Načítám…</p></div></div>';
+  }
+
+  const ja = arenaStav.ja;
+  const odpocet = arenaStav.odpocet > 0;
+
+  const souperi = (arenaStav.souperi || []).map(s => `
+    <div class="opponent-row">
+      <div class="opp-avatar">${avatarProUroven(s.uroven, 'opp-img')}</div>
+      <div class="opp-info">
+        <div class="opp-name">${s.jmeno}</div>
+        <div class="opp-details">
+          Úroveň ${s.uroven} · Pocta ${s.pocta.toLocaleString('cs-CZ')}
+          · <span class="arv-zmena plus">+${s.ziskam}</span> /
+            <span class="arv-zmena minus">−${s.ztratim}</span>
+        </div>
+      </div>
+      <button class="opp-btn" ${odpocet || arenaBojiSe ? 'disabled' : ''}
+              onclick="arenaVyzvi(${s.id})">Vyzvat</button>
+    </div>`).join('') ||
+    '<p class="hall-note">Teď tu není vhodný soupeř. Zkus to za chvíli — aréna je celosvětová a soupeři se mění.</p>';
+
+  const posledni = (arenaStav.posledni || []).slice(0, 6).map(z => `
+    <div class="ar-radek ${z.vyhral ? 'win' : 'lose'}">
+      <span>${z.utocil ? 'Útok na' : 'Obrana proti'} ${z.souper || '—'}</span>
+      <span class="arv-zmena ${z.zmenaPocty >= 0 ? 'plus' : 'minus'}">
+        ${z.zmenaPocty >= 0 ? '+' : ''}${z.zmenaPocty}
+      </span>
+    </div>`).join('') || '<p class="hall-note">Zatím žádné souboje.</p>';
+
+  return `
+  <div class="panel">
+    <div class="panel-header">Aréna</div>
+    <div class="panel-body">
+
+      <div class="ar-hlava">
+        <div class="ar-stat"><span>Tvoje Pocta</span><b>${ja.pocta.toLocaleString('cs-CZ')}</b></div>
+        <div class="ar-stat"><span>Pořadí</span><b>${ja.poradi ? '#' + ja.poradi : '—'}</b></div>
+        <div class="ar-stat"><span>Odpočinek</span><b id="arOdpocet">${odpocet ? fmtSec(arenaStav.odpocet) : '—'}</b></div>
+      </div>
+
+      ${arenaVysledekHTML()}
+
+      <p class="hall-note">
+        Vyzýváš skutečné gladiátory z celého světa. Pocta se přesouvá podle
+        toho, jak jste na tom oba — porazit silnějšího vynese víc, porazit
+        slabšího málo. Souboj i Poctu počítá server.
+      </p>
+
+      <div class="opponent-list">${souperi}</div>
+
+      <div class="ar-foot">
+        <button class="btn-green" onclick="nactiArenu()">Načíst soupeře znovu</button>
+        <button class="btn-green" onclick="openView('hall')">Žebříček</button>
+      </div>
+
+      <h3 class="ar-nadpis">Tvoje poslední souboje</h3>
+      <div class="ar-posledni">${posledni}</div>
+
+    </div>
+  </div>`;
+}
+
 // ===== SHOPS =====
 let currentShop = null;
 let shopPage = 0;      // 0 nebo 1 - ram maluje dve zalozky
@@ -1838,10 +1902,6 @@ function endCombat(won) {
   }
   // po výpravě si gladiátor musí odpočinout
   // odpočinek nastavil server, když se utratil bod
-  if (won && lastFight && lastFight.view === 'arena') {
-    character.pocta = (character.pocta || 0) + POCTA_ARENA;
-    addLog(`Získáváš <strong>${POCTA_ARENA}</strong> pocty`, 'log-w');
-  }
   // odpočinek bludiště nastavil server při vstupu do místnosti
   if (won && lastFight && lastFight.view === 'dungeon') bludisteVyhra();
   wearEquipment();
@@ -3690,9 +3750,14 @@ MISTA.forEach(m => {
 let zebricek = null, zebricekChyba = null;
 
 async function nactiZebricek() {
+  // Sin slavy = celosvetovy zebricek Areny podle Pocty. Bere se ze
+  // serveru, ktery poradi pocita dotazem, ne z ulozeneho cisla.
   try {
-    const data = await API.getLeaderboard();
-    zebricek = (data && data.leaderboard) || [];
+    const data = await API.arenaLeaderboard({ limit: 50 });
+    zebricek = (data && data.zebricek || []).map(r => ({
+      name: r.jmeno, level: r.uroven, pocta: r.pocta, poradi: r.poradi,
+    }));
+    zebricekJa = data && data.ja || null;
     zebricekChyba = null;
   } catch (e) {
     zebricek = [];
@@ -3700,6 +3765,7 @@ async function nactiZebricek() {
   }
   if (posledniPohled === 'hall') openView('hall');
 }
+let zebricekJa = null;
 
 // ========== DENNÍ ODMĚNA ==========
 // Den se pocita podle mistni pulnoci, takze se odmena obnovi
@@ -3752,12 +3818,8 @@ function hallHledej(text) {
   if (s) s.innerHTML = hallRadky();
 }
 
-// Pocta se ziskava vitezstvim v Arene a Circus Turma.
-// V databazi pro ni zatim neni sloupec, takze u ostatnich hracu
-// vychazi 0 - u sebe se bere ze sve postavy.
-const POCTA_ARENA = 12;
-const POCTA_TURMA = 20;
-
+// Pocta se ziskava vitezstvim v Arene - o vysi rozhoduje server
+// podle rozdilu Pocty obou hracu. Tady uz jen zobrazujeme.
 function hallPocta(h) {
   if (h.name === character.name) return character.pocta || 0;
   return h.pocta || 0;

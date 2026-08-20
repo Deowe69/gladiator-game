@@ -6,6 +6,7 @@ require('dotenv').config();
 const pool = require('./config/db');
 const { MAX_UROVEN, XP_DO_DALSI } = require('./config/xp');
 const { VYCHOZI: PALADIN_VYCHOZI } = require('./config/paladin');
+const { VYCHOZI: ARENA_VYCHOZI } = require('./config/arena');
 const authRoutes = require('./routes/auth');
 const characterRoutes = require('./routes/character');
 const paladinRoutes = require('./routes/paladin');
@@ -13,6 +14,7 @@ const gameRoutes = require('./routes/game');
 const adminRoutes = require('./routes/admin');
 const { PREDMETY, NEPRATELE } = require('./config/katalog');
 const katalogRoutes = require('./routes/katalog');
+const arenaRoutes = require('./routes/arena');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,6 +31,7 @@ app.use('/api/paladin', paladinRoutes);
 app.use('/api/game', gameRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/katalog', katalogRoutes);
+app.use('/api/arena', arenaRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -263,6 +266,44 @@ async function initDB() {
               (SELECT COUNT(*)::int FROM enemies) AS nepratel`
     );
     console.log(`✅ Katalog: ${pocty[0].predmetu} předmětů, ${pocty[0].nepratel} nepřátel`);
+
+    // Souboje v Areně. klic je jednorazovy klic od hrace - UNIQUE
+    // brani dvojimu zapisu pri dvojkliku, obnoveni nebo druhe zalozce.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS arena_fights (
+        id                  BIGSERIAL PRIMARY KEY,
+        klic                TEXT UNIQUE NOT NULL,
+        utocnik_id          INTEGER REFERENCES characters(id) ON DELETE CASCADE,
+        obranca_id          INTEGER REFERENCES characters(id) ON DELETE CASCADE,
+        vyhral_utocnik      BOOLEAN NOT NULL,
+        pocta_utocnik_pred  INTEGER NOT NULL,
+        pocta_utocnik_po    INTEGER NOT NULL,
+        zmena_utocnik       INTEGER NOT NULL,
+        pocta_obranca_pred  INTEGER NOT NULL,
+        pocta_obranca_po    INTEGER NOT NULL,
+        zmena_obranca       INTEGER NOT NULL,
+        seminko             BIGINT,
+        prubeh              JSONB,
+        vytvoreno           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS arena_fights_utocnik ON arena_fights (utocnik_id, vytvoreno DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS arena_fights_obranca ON arena_fights (obranca_id, vytvoreno DESC);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS characters_pocta ON characters (pocta DESC, level DESC, id ASC);`);
+
+    // Nastaveni Areny - meni se ze spravy.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS arena_config (
+        klic    TEXT PRIMARY KEY,
+        hodnota NUMERIC NOT NULL
+      );
+    `);
+    for (const [klic, hodnota] of Object.entries(ARENA_VYCHOZI)) {
+      await pool.query(
+        'INSERT INTO arena_config (klic, hodnota) VALUES ($1, $2) ON CONFLICT (klic) DO NOTHING',
+        [klic, hodnota]
+      );
+    }
 
     console.log('✅ Database tables ready!');
   } catch (err) {

@@ -337,6 +337,42 @@ async function sekcePaladin() {
 }
 
 // ============================================================
+//  ARÉNA
+// ============================================================
+async function sekceArena() {
+  obsah().innerHTML = '<div class="adm-nacitani">Načítám…</div>';
+  const d = await zavolej(() => API.arenaConfig());
+  if (!d) return;
+
+  const pole = Object.entries(d.config).map(([k, v]) => `
+    <label class="adm-pole">
+      <span>${esc(d.popisky[k] || k)}</span>
+      <input type="number" step="0.01" min="0" data-klic="${esc(k)}" value="${v}">
+      <small class="adm-slabe">${esc(k)} · výchozí ${d.vychozi[k]}</small>
+    </label>`).join('');
+
+  obsah().innerHTML = `
+    <h1 class="adm-nadpis">Nastavení Arény</h1>
+    <div class="adm-poznamka">
+      Sazba je Pocta ve hře při vyrovnaném souboji. Dělitel řídí, jak
+      moc rozdíl Pocty mění zisk. Server bere tyhle hodnoty z databáze —
+      po uložení platí hned.
+    </div>
+
+    <div class="adm-panel">
+      <div class="adm-mrizka-poli siroka">${pole}</div>
+      <div class="adm-akce"><button class="adm-btn hlavni" id="admUlozArena">Uložit nastavení</button></div>
+    </div>`;
+
+  document.getElementById('admUlozArena').addEventListener('click', async () => {
+    const config = {};
+    obsah().querySelectorAll('[data-klic]').forEach(i => { config[i.dataset.klic] = Number(i.value); });
+    const r = await zavolej(() => API.arenaSaveConfig(config));
+    if (r) { hlaska(`Uloženo (${Object.keys(r.ulozene || {}).length} hodnot)`); sekceArena(); }
+  });
+}
+
+// ============================================================
 //  HISTORIE ZÁSAHŮ
 // ============================================================
 async function sekceLogy() {
@@ -374,7 +410,7 @@ async function sekceLogy() {
 // ============================================================
 //  VYKRESLENÍ DO HRY
 // ============================================================
-const SEKCE = { prehled: sekcePrehled, hraci: sekceHraci, paladin: sekcePaladin, logy: sekceLogy };
+const SEKCE = { prehled: sekcePrehled, hraci: sekceHraci, paladin: sekcePaladin, arena: sekceArena, logy: sekceLogy };
 
 // Kostra panelu. Vrací HTML, které si hra vloží do svého pohledu.
 function spravaHTML() {
@@ -384,6 +420,7 @@ function spravaHTML() {
       <a class="adm-polozka active" data-sekce="prehled">Přehled</a>
       <a class="adm-polozka" data-sekce="hraci">Hráči</a>
       <a class="adm-polozka" data-sekce="paladin">Paladin</a>
+      <a class="adm-polozka" data-sekce="arena">Aréna</a>
       <a class="adm-polozka" data-sekce="logy">Historie zásahů</a>
     </nav>
     <div class="adm-obsah" id="admObsah">
