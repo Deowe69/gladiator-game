@@ -457,19 +457,35 @@ async function sekceSimulator() {
     <div id="simBehy"><div class="adm-nacitani">Načítám…</div></div>
     <div id="simDetail"></div>`;
 
-  obsah().querySelectorAll('.sim-preset').forEach(b => b.addEventListener('click', async () => {
-    const r = await zavolej(() => API.simSpust({ preset: b.dataset.preset }));
-    if (r) { hlaska('Běh zařazen'); nactiSimBehy(); }
-  }));
-  document.getElementById('simSpustVlastni').addEventListener('click', async () => {
-    const nast = {
+  // Společné spuštění: hned dá vědět, že se něco děje, zamkne tlačítka a
+  // vypíše chybu, kdyby server neodpověděl (třeba když Render po nečinnosti
+  // spí a první požadavek trvá i 40 s — jinak to vypadá, že „klik nic neudělá").
+  async function spust(tlacitko, nast) {
+    const puvodni = tlacitko.textContent;
+    tlacitko.disabled = true;
+    obsah().querySelectorAll('.sim-preset, #simSpustVlastni').forEach(x => x.disabled = true);
+    hlaska('Spouštím běh… (první běh po nečinnosti může chvíli trvat)');
+    try {
+      const r = await API.simSpust(nast);
+      if (r && r.id) { hlaska('Běh zařazen: ' + r.id); await nactiSimBehy(); }
+      else hlaska('Server nevrátil úlohu.', true);
+    } catch (e) {
+      hlaska((e && e.message) || 'Server neodpověděl — zkus to prosím znovu.', true);
+    } finally {
+      obsah().querySelectorAll('.sim-preset, #simSpustVlastni').forEach(x => x.disabled = false);
+      tlacitko.textContent = puvodni;
+    }
+  }
+
+  obsah().querySelectorAll('.sim-preset').forEach(b =>
+    b.addEventListener('click', () => spust(b, { preset: b.dataset.preset })));
+  document.getElementById('simSpustVlastni').addEventListener('click', function () {
+    spust(this, {
       dni: +document.getElementById('simDni').value,
       historie: +document.getElementById('simHist').value,
       hracuNaArchetyp: +document.getElementById('simHrac').value,
       zakladniSeminko: +document.getElementById('simSem').value,
-    };
-    const r = await zavolej(() => API.simSpust(nast));
-    if (r) { hlaska('Běh zařazen'); nactiSimBehy(); }
+    });
   });
 
   nactiSimBehy();
