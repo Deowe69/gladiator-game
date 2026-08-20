@@ -16,7 +16,7 @@ const VYCHOZI = {
   arena_pocta_delitel: 300,
 
   // Meze jednoho souboje, aby ani krajní rozdíl nedal nulu nebo moc.
-  arena_pocta_min: 1,
+  arena_pocta_min: 4,     // vyhra vzdy da aspon tolik, at bojovat stoji za to
   arena_pocta_max: 40,
 
   // Kolik z hráčovy změny se propíše obránci. 1 = plná (součet nula),
