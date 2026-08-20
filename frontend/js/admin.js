@@ -408,6 +408,47 @@ async function sekceLogy() {
 }
 
 // ============================================================
+//  AUKČNÍ SÍŇ
+// ============================================================
+const AUK_POPISKY = {
+  trvani_s: 'Trvání aukce (s)', antisnipe_okno_s: 'Anti-snipe okno (s)', antisnipe_prodlouzeni_s: 'Anti-snipe prodloužení (s)',
+  viditelnost_nad: 'Viditelnost nad úroveň (+)', strop_urovne: 'Strop úrovně předmětu',
+  zlato_za_hodnotu: 'Startovní zlato = hodnota ×', zlato_start_min: 'Min. startovní zlato',
+  prihoz_procento: 'Min. přihoz (podíl)', prihoz_min_abs: 'Min. přihoz (absolutně)',
+  smaragd_delitel: 'Buy Now smaragdy = hodnota ÷', smaragd_min: 'Min. smaragdy', smaragd_max: 'Max. smaragdy',
+  cil_aktivnich: 'Cíl aktivních aukcí', generace_interval_s: 'Interval generace (s)', generace_max_davka: 'Max. dávka generace',
+  buynow_dostupnost: 'Podíl aukcí s Buy Now', uroven_min: 'Min. úroveň předmětu', uroven_max: 'Max. úroveň předmětu',
+};
+async function sekceAukce() {
+  obsah().innerHTML = '<div class="adm-nacitani">Načítám…</div>';
+  const d = await zavolej(() => API.aukceConfig());
+  if (!d) return;
+  const pole = Object.entries(d.config).map(([k, v]) => `
+    <label class="adm-pole">
+      <span>${esc(AUK_POPISKY[k] || k)}</span>
+      <input type="number" step="0.01" min="0" data-klic="${esc(k)}" value="${v}">
+      <small class="adm-slabe">${esc(k)} · výchozí ${d.vychozi[k]}</small>
+    </label>`).join('');
+  obsah().innerHTML = `
+    <h1 class="adm-nadpis">Nastavení Aukční síně</h1>
+    <div class="adm-poznamka">
+      Systémová dražba — hráči si nic nevystavují. Předměty generuje server
+      (bez vzácností, bez předpon). Přihoz = zlato, Koupit hned = smaragdy.
+      Server bere hodnoty z databáze, po uložení platí hned.
+    </div>
+    <div class="adm-panel">
+      <div class="adm-mrizka-poli siroka">${pole}</div>
+      <div class="adm-akce"><button class="adm-btn hlavni" id="admUlozAukce">Uložit nastavení</button></div>
+    </div>`;
+  document.getElementById('admUlozAukce').addEventListener('click', async () => {
+    const config = {};
+    obsah().querySelectorAll('[data-klic]').forEach(i => { config[i.dataset.klic] = Number(i.value); });
+    const r = await zavolej(() => API.aukceSaveConfig(config));
+    if (r) { hlaska(`Uloženo (${Object.keys(r.ulozene || {}).length} hodnot)`); sekceAukce(); }
+  });
+}
+
+// ============================================================
 //  BALANČNÍ SIMULÁTOR
 //  Pouští běhy na serveru (v paměti, nikdy proti živým datům) a
 //  ukazuje percentily po archetypech, upozornění a poradní analýzu.
@@ -850,7 +891,7 @@ async function stahni(url, jmeno) {
 // ============================================================
 //  VYKRESLENÍ DO HRY
 // ============================================================
-const SEKCE = { prehled: sekcePrehled, hraci: sekceHraci, paladin: sekcePaladin, arena: sekceArena, simulator: sekceSimulator, logy: sekceLogy };
+const SEKCE = { prehled: sekcePrehled, hraci: sekceHraci, paladin: sekcePaladin, arena: sekceArena, aukce: sekceAukce, simulator: sekceSimulator, logy: sekceLogy };
 
 // Kostra panelu. Vrací HTML, které si hra vloží do svého pohledu.
 function spravaHTML() {
@@ -861,6 +902,7 @@ function spravaHTML() {
       <a class="adm-polozka" data-sekce="hraci">Hráči</a>
       <a class="adm-polozka" data-sekce="paladin">Paladin</a>
       <a class="adm-polozka" data-sekce="arena">Aréna</a>
+      <a class="adm-polozka" data-sekce="aukce">Aukční síň</a>
       <a class="adm-polozka" data-sekce="simulator">Balanční simulátor</a>
       <a class="adm-polozka" data-sekce="logy">Historie zásahů</a>
     </nav>

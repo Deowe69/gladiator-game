@@ -96,6 +96,20 @@ class API {
   static async arenaConfig()            { return this.request('/arena/config'); }
   static async arenaSaveConfig(config)  { return this.request('/arena/config', 'PUT', { config }); }
 
+  // --- aukcni sin ---
+  static async aukceState(q = {}) {
+    const p = new URLSearchParams();
+    Object.entries(q).forEach(([k, v]) => { if (v !== '' && v != null) p.set(k, v); });
+    return this.request('/aukce/state' + (p.toString() ? '?' + p : ''));
+  }
+  static async aukceDetail(id)          { return this.request('/aukce/detail/' + id); }
+  static async aukceBid(aukceId, castka, klic) { return this.request('/aukce/bid', 'POST', { aukceId, castka, klic }); }
+  static async aukceBuyNow(aukceId, klic) { return this.request('/aukce/buynow', 'POST', { aukceId, klic }); }
+  static async aukceDoruceni()          { return this.request('/aukce/doruceni'); }
+  static async aukceVyzvednout(doruceniId) { return this.request('/aukce/vyzvednout', 'POST', { doruceniId }); }
+  static async aukceConfig()            { return this.request('/aukce/config'); }
+  static async aukceSaveConfig(config)  { return this.request('/aukce/config', 'PUT', { config }); }
+
   // --- balancni simulator (jen admin) ---
   static async simMeta()               { return this.request('/sim/meta'); }
   static async simBehy()               { return this.request('/sim/beh'); }

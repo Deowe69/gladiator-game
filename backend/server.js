@@ -7,6 +7,7 @@ const pool = require('./config/db');
 const { MAX_UROVEN, XP_DO_DALSI } = require('./config/xp');
 const { VYCHOZI: PALADIN_VYCHOZI } = require('./config/paladin');
 const { VYCHOZI: ARENA_VYCHOZI } = require('./config/arena');
+const { VYCHOZI: AUKCE_VYCHOZI } = require('./config/aukce');
 const authRoutes = require('./routes/auth');
 const characterRoutes = require('./routes/character');
 const paladinRoutes = require('./routes/paladin');
@@ -16,6 +17,8 @@ const { PREDMETY, NEPRATELE } = require('./config/katalog');
 const katalogRoutes = require('./routes/katalog');
 const arenaRoutes = require('./routes/arena');
 const simRoutes = require('./routes/sim');
+const aukceRoutes = require('./routes/aukce');
+const { spustAukcniSluzbu } = require('./aukce/sluzba');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,6 +37,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/katalog', katalogRoutes);
 app.use('/api/arena', arenaRoutes);
 app.use('/api/sim', simRoutes);
+app.use('/api/aukce', aukceRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -307,6 +311,76 @@ async function initDB() {
       );
     }
 
+    // ---------- AUKČNÍ SÍŇ ----------
+    // Jedna aukce = jedna systémová dražba jedné konkrétní instance předmětu.
+    // Předmět (staty) se generuje JEDNOU a leží v JSONB — nikdy se nepřegeneruje.
+    // Čas konce je autoritativní (TIMESTAMPTZ), platí i offline a po restartu.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS aukce (
+        id                BIGSERIAL PRIMARY KEY,
+        predmet           JSONB NOT NULL,
+        uroven            INTEGER NOT NULL,
+        slot              TEXT,
+        stav              TEXT NOT NULL DEFAULT 'ACTIVE',
+        start_zlato       INTEGER NOT NULL,
+        soucasny_prihoz   INTEGER,
+        vitez_id          INTEGER REFERENCES characters(id) ON DELETE SET NULL,
+        buynow_smaragdy   INTEGER,
+        zdroj             TEXT NOT NULL DEFAULT 'aukce',
+        vytvoreno         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        konci             TIMESTAMPTZ NOT NULL,
+        dokonceno         TIMESTAMPTZ
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS aukce_aktivni ON aukce (stav, konci);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS aukce_uroven ON aukce (uroven, konci);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS aukce_vitez ON aukce (vitez_id) WHERE stav = 'ACTIVE';`);
+
+    // Události (přihoz / koupě hned) — UNIQUE klíč zajišťuje idempotenci
+    // proti dvojkliku, obnovení, druhé záložce i síťovému opakování.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS aukce_udalosti (
+        id            BIGSERIAL PRIMARY KEY,
+        klic          TEXT UNIQUE NOT NULL,
+        aukce_id      BIGINT REFERENCES aukce(id) ON DELETE CASCADE,
+        character_id  INTEGER REFERENCES characters(id) ON DELETE CASCADE,
+        typ           TEXT NOT NULL,
+        castka        INTEGER NOT NULL,
+        vytvoreno     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS aukce_udalosti_aukce ON aukce_udalosti (aukce_id, vytvoreno DESC);`);
+
+    // Doručení (bezpečný claim). Hra nemá poštu/přetok inventáře, tak vyhraná
+    // věc čeká tady, dokud si ji hráč nevyzvedne. UNIQUE(aukce_id) = doručí se
+    // právě jednou, žádná duplikace předmětu.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS aukce_doruceni (
+        id            BIGSERIAL PRIMARY KEY,
+        aukce_id      BIGINT UNIQUE REFERENCES aukce(id) ON DELETE CASCADE,
+        character_id  INTEGER REFERENCES characters(id) ON DELETE CASCADE,
+        predmet       JSONB NOT NULL,
+        zpusob        TEXT NOT NULL,
+        vyzvednuto    BOOLEAN NOT NULL DEFAULT FALSE,
+        vytvoreno     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS aukce_doruceni_hrac ON aukce_doruceni (character_id, vyzvednuto);`);
+
+    // Nastavení Aukční síně — mění se ze správy (jako arena_config).
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS aukce_config (
+        klic    TEXT PRIMARY KEY,
+        hodnota NUMERIC NOT NULL
+      );
+    `);
+    for (const [klic, hodnota] of Object.entries(AUKCE_VYCHOZI)) {
+      await pool.query(
+        'INSERT INTO aukce_config (klic, hodnota) VALUES ($1, $2) ON CONFLICT (klic) DO NOTHING',
+        [klic, hodnota]
+      );
+    }
+
     console.log('✅ Database tables ready!');
   } catch (err) {
     console.error('❌ DB init error:', err);
@@ -322,4 +396,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, async () => {
   console.log(`🎮 Gladiator Game Server running on port ${PORT}`);
   await initDB();
+  // Po startu: dofinalizovat prošlé aukce (obnova po restartu) a rozjet
+  // pravidelné generování + zametání expirací. Nespadne server, když selže.
+  spustAukcniSluzbu().catch(e => console.error('Aukční služba:', e));
 });

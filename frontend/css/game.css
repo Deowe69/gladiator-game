@@ -3800,3 +3800,34 @@ select.adm-input{width:190px}
 .ar-radek.win{border-left:3px solid #8fd44a}
 .ar-radek.lose{border-left:3px solid #e07070}
 .ar-foot{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+
+/* ===== AUKČNÍ SÍŇ ===== */
+.auk-lista{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center;margin-bottom:10px}
+.auk-info{display:flex;flex-wrap:wrap;gap:16px;font-size:13.5px;color:#d8c9a0}
+.auk-info b{color:#f0d886}
+.auk-doruceni-lista{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.auk-dorucenka{display:flex;gap:10px;align-items:center;background:rgba(0,0,0,.25);padding:6px 10px;border-radius:5px;font-size:12.5px;color:#e0d3a8}
+.auk-filtry{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0}
+.auk-filtry select{background:rgba(0,0,0,.3);border:1px solid rgba(216,177,58,.35);color:#e6d5a8;padding:7px 10px;border-radius:4px;font-size:13px}
+.auk-check{display:flex;align-items:center;gap:6px;color:#cdbb8e;font-size:13px}
+.auk-mrizka{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.auk-karta{background:linear-gradient(180deg,rgba(40,31,18,.9),rgba(26,19,10,.95));border:1px solid rgba(216,177,58,.28);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.auk-karta.vedu{border-color:rgba(120,190,130,.6);box-shadow:0 0 0 1px rgba(120,190,130,.3) inset}
+.auk-hlava{display:flex;justify-content:space-between;align-items:baseline}
+.auk-hlava b{color:#f0d886;font-size:15px}
+.auk-uroven{font-size:11.5px;color:#a89968}
+.auk-staty{display:flex;flex-wrap:wrap;gap:5px;min-height:24px}
+.auk-stat{font-size:11.5px;padding:2px 7px;border-radius:10px;border:1px solid transparent}
+.auk-stat.kla{background:rgba(70,140,80,.18);color:#9ee0a4;border-color:rgba(90,180,100,.35)}
+.auk-stat.zap{background:rgba(160,60,60,.18);color:#f0a0a0;border-color:rgba(200,70,70,.35)}
+.auk-cena{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:#b6a074;border-top:1px solid rgba(216,177,58,.15);padding-top:7px}
+.auk-cena b{color:#f0d886;font-size:14px}
+.auk-cas{font-size:12px;color:#cbb98c;text-align:center}
+.auk-cas.konec{color:#e0908a}
+.auk-akce{display:flex;flex-direction:column;gap:6px}
+.auk-akce .btn-green,.auk-akce .btn-gem{width:100%;padding:8px;font-size:12.5px}
+.btn-gem{background:linear-gradient(180deg,#5a7ea8,#3a5a80);border:1px solid rgba(140,180,220,.5);color:#eaf3ff;border-radius:5px;cursor:pointer;font-family:inherit}
+.btn-gem:hover{filter:brightness(1.1)}
+.btn-gem:disabled{opacity:.5;cursor:default}
+.auk-vedu-znak{text-align:center;font-size:11px;color:#9ee0a4}
+@media(max-width:640px){.auk-mrizka{grid-template-columns:1fr 1fr}.auk-info{gap:10px;font-size:12px}}
