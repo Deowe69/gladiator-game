@@ -8,6 +8,7 @@ const { MAX_UROVEN, XP_DO_DALSI } = require('./config/xp');
 const { VYCHOZI: PALADIN_VYCHOZI } = require('./config/paladin');
 const { VYCHOZI: ARENA_VYCHOZI } = require('./config/arena');
 const { VYCHOZI: AUKCE_VYCHOZI } = require('./config/aukce');
+const { VYCHOZI: STAJ_VYCHOZI } = require('./config/staj');
 const authRoutes = require('./routes/auth');
 const characterRoutes = require('./routes/character');
 const paladinRoutes = require('./routes/paladin');
@@ -19,6 +20,7 @@ const arenaRoutes = require('./routes/arena');
 const simRoutes = require('./routes/sim');
 const aukceRoutes = require('./routes/aukce');
 const { spustAukcniSluzbu } = require('./aukce/sluzba');
+const stajRoutes = require('./routes/staj');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -38,6 +40,7 @@ app.use('/api/katalog', katalogRoutes);
 app.use('/api/arena', arenaRoutes);
 app.use('/api/sim', simRoutes);
 app.use('/api/aukce', aukceRoutes);
+app.use('/api/staj', stajRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -91,6 +94,11 @@ async function initDB() {
     // Clenstvi Paladina u postavy a priznak spravce u uctu.
     await pool.query(`ALTER TABLE characters ADD COLUMN IF NOT EXISTS paladin_until TIMESTAMPTZ;`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;`);
+
+    // Staj: aktivni zvire, vlastnena zvirata (gold, natrvalo) a expirace Draka.
+    await pool.query(`ALTER TABLE characters ADD COLUMN IF NOT EXISTS staj_aktivni TEXT;`);
+    await pool.query(`ALTER TABLE characters ADD COLUMN IF NOT EXISTS staj_vlastni JSONB DEFAULT '[]'::jsonb;`);
+    await pool.query(`ALTER TABLE characters ADD COLUMN IF NOT EXISTS staj_drak_do TIMESTAMPTZ;`);
 
     // Nastaveni Paladina. Drzi se v databazi, aby slo menit z adminu
     // bez zasahu do kodu.
@@ -377,6 +385,33 @@ async function initDB() {
     for (const [klic, hodnota] of Object.entries(AUKCE_VYCHOZI)) {
       await pool.query(
         'INSERT INTO aukce_config (klic, hodnota) VALUES ($1, $2) ON CONFLICT (klic) DO NOTHING',
+        [klic, hodnota]
+      );
+    }
+
+    // ---------- STÁJ ----------
+    // Idempotence nákupů (dvojklik / obnovení / druhá záložka / retry).
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS staj_nakupy (
+        id            BIGSERIAL PRIMARY KEY,
+        klic          TEXT UNIQUE NOT NULL,
+        character_id  INTEGER REFERENCES characters(id) ON DELETE CASCADE,
+        zvire         TEXT NOT NULL,
+        mena          TEXT NOT NULL,
+        castka        INTEGER NOT NULL,
+        vytvoreno     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    // Nastaveni Staje — meni se ze spravy.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS staj_config (
+        klic    TEXT PRIMARY KEY,
+        hodnota NUMERIC NOT NULL
+      );
+    `);
+    for (const [klic, hodnota] of Object.entries(STAJ_VYCHOZI)) {
+      await pool.query(
+        'INSERT INTO staj_config (klic, hodnota) VALUES ($1, $2) ON CONFLICT (klic) DO NOTHING',
         [klic, hodnota]
       );
     }

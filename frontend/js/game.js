@@ -139,6 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     startQuestTimer();
     loadLeaderboard();
     await nactiServerStav();
+    nactiStaj();                    // bonus ze Stáje do statTotal
     refreshExpedUI();
     nabidniDenniOdmenu();
   } catch (err) {
@@ -1335,8 +1336,24 @@ function equipBonus(k) {
 
 // V postavě je uložený POUZE základ. Bonusy z vybavení se nikam nezapisují,
 // připočítávají se až tady — jinak by se počítaly dvakrát.
+//
+// Pořadí: (základ + vybavení) → × (1 + procento ze Stáje). Procento zvířete
+// se přičítá AŽ nakonec, takže smí přerůst případný strop statů a nikdy se
+// nezapisuje do základu. Aktivní je jen jedno zvíře; server drží expiraci
+// Draka, takže po vypršení je stajBonus 0.
 function statTotal(k) {
-  return (character[k] || 0) + equipBonus(k);
+  const zaklad = (character[k] || 0) + equipBonus(k);
+  return Math.round(zaklad * (1 + stajBonus(k)));
+}
+
+// Stav Stáje ze serveru (aktivní zvíře + procentní bonusy). Server je
+// autoritativní pro cenu, dobu i bonus i pro to, jestli Drak nevypršel.
+let stajStav = null;
+function stajBonus(k) { return (stajStav && stajStav.bonus && stajStav.bonus[k]) || 0; }
+async function nactiStaj() {
+  try { stajStav = await API.stajState(); } catch { stajStav = null; }
+  if (typeof updateUI === 'function') updateUI();
+  if (posledniPohled === 'staj') openView('staj');
 }
 
 // Starší uložené postavy měly bonusy zapsané rovnou v sobě.
@@ -3499,6 +3516,99 @@ if (!aukceTikTimer) aukceTikTimer = setInterval(() => {
   if (posledniPohled === 'auction') aukceTik();
 }, 1000);
 
+// ========== STÁJ: zvířata s pasivními bonusy ke statům ==========
+// Zvířata NEsnižují čas výprav. Dávají procentní bonus ke statům (jen jedno
+// aktivní). Drak = 20 smaragdů / 10 dní / +2 % ke všem. Server rozhoduje o
+// ceně, době i expiraci; prohlížeč jen ukazuje a posílá klíčované požadavky.
+
+let stajBezi = false;
+function stajKlic() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g, '');
+  return 's' + Date.now() + Math.random().toString(36).slice(2, 12);
+}
+
+async function stajKup(id) {
+  if (stajBezi) return; stajBezi = true;
+  try {
+    const v = await API.stajKoupit(id, stajKlic());
+    if (v.opakovane) toast('Nákup už proběhl.');
+    else if (v.jizVlastneno) toast('Aktivováno.');
+    else if (v.ok) toast('Hotovo!');
+    if (character) { // sraz zobrazené peníze hned, přesné číslo dorovná server
+      await nactiServerStavHard();
+    }
+    await nactiStaj();
+    openView('staj');
+  } catch (e) { toast((e && e.message) || 'Nákup se nepovedl.'); await nactiStaj(); openView('staj'); }
+  finally { stajBezi = false; }
+}
+
+async function stajAktivuj(id) {
+  if (stajBezi) return; stajBezi = true;
+  try {
+    await API.stajAktivovat(id);
+    await nactiStaj();
+    openView('staj');
+  } catch (e) { toast((e && e.message) || 'Nepovedlo se.'); }
+  finally { stajBezi = false; }
+}
+
+async function nactiServerStavHard() {
+  try { const s = await API.stajState(); if (s && s.ja && character) { character.gold = s.ja.zlato; character.emeralds = s.ja.smaragdy; updateUI(); } } catch {}
+}
+
+function stajCasDo(iso) {
+  if (!iso) return '';
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return 'vypršelo';
+  const d = Math.floor(ms / 86400000), h = Math.floor((ms % 86400000) / 3600000);
+  return d > 0 ? `${d} dní ${h} h` : `${h} h`;
+}
+
+function staj() {
+  if (!stajStav) { nactiStaj(); return '<div class="panel"><div class="panel-header">Stáj</div><div class="panel-body"><p class="hall-note">Načítám…</p></div></div>'; }
+  const ja = stajStav.ja;
+
+  const karty = stajStav.zvirata.map(z => {
+    const mena = z.mena === 'smaragdy' ? `${z.cena} 💠` : `${z.cena.toLocaleString('cs-CZ')} zlata`;
+    const doba = z.dny ? `${z.dny} dní` : 'trvale';
+    let stavHtml = '', akce = '';
+    if (z.aktivni) {
+      stavHtml = `<div class="staj-aktivni-znak">Aktivní${z.id === 'drak' && stajStav.drakDo ? ' · ' + stajCasDo(stajStav.drakDo) : ''}</div>`;
+      if (z.id !== 'drak') akce = `<button class="btn-back" ${stajBezi ? 'disabled' : ''} onclick="stajAktivuj('zadne')">Vypnout</button>`;
+      else akce = `<button class="btn-gem" ${stajBezi ? 'disabled' : ''} onclick="stajKup('drak')">Prodloužit · ${z.cena} 💠</button>`;
+    } else if (z.vlastneno) {
+      stavHtml = z.id === 'drak' && stajStav.drakDo ? `<div class="staj-vlastneno">Máš do: ${stajCasDo(stajStav.drakDo)}</div>` : `<div class="staj-vlastneno">Vlastníš</div>`;
+      akce = `<button class="btn-green" ${stajBezi ? 'disabled' : ''} onclick="stajAktivuj('${z.id}')">Aktivovat</button>`;
+    } else {
+      akce = z.mena === 'smaragdy'
+        ? `<button class="btn-gem" ${stajBezi ? 'disabled' : ''} onclick="stajKup('${z.id}')">Pronajmout · ${z.cena} 💠</button>`
+        : `<button class="btn-green" ${stajBezi ? 'disabled' : ''} onclick="stajKup('${z.id}')">Koupit</button>`;
+    }
+    return `<div class="staj-karta ${z.aktivni ? 'akt' : ''} ${z.id === 'drak' ? 'drak' : ''}">
+      <div class="staj-ikona">${STAJ_IKONY[z.id] || '🐾'}</div>
+      <div class="staj-nazev">${z.nazev}</div>
+      <div class="staj-efekt">+${z.procenta} % ke všem statistikám</div>
+      <div class="staj-cena">${mena}${z.dny ? ' · ' + doba : ''}</div>
+      ${stavHtml}
+      <div class="staj-akce">${akce}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="panel"><div class="panel-header">Stáj</div><div class="panel-body">
+    <div class="staj-info">
+      <span>Zlato: <b>${ja.zlato.toLocaleString('cs-CZ')}</b></span>
+      <span>Smaragdy: <b>${ja.smaragdy} 💠</b></span>
+      <span>Aktivní zvíře: <b>${stajStav.aktivni ? (stajStav.zvirata.find(z => z.id === stajStav.aktivni) || {}).nazev : 'žádné'}</b></span>
+    </div>
+    <p class="hall-note">Zvíře dává pasivní procentní bonus ke všem statistikám (aktivní je vždy jen jedno).
+      Drak je prémiový pronájem na 10 dní. Zvířata nezkracují čas výprav.</p>
+    <div class="staj-mrizka">${karty}</div>
+  </div></div>`;
+}
+
+const STAJ_IKONY = { prase: '🐖', kun: '🐎', ohnivy_kun: '🔥', drak: '🐉' };
+
 
 // ========== ADMIN PANEL ==========
 // POZOR: tohle je nástroj pro vývoj, ne ochrana.
@@ -3908,7 +4018,7 @@ function prodejVsePrekupnikovi() {
 
 // Zatím jen zamčené panely - až budou hotová, nahradí se obsahem.
 MISTA.forEach(m => {
-  if (m.klic === 'prekupnik') return;      // ten už je hotový
+  if (m.klic === 'prekupnik' || m.klic === 'staj') return;   // ty už jsou hotové
   window[m.klic] = () => {
     const uroven = (character && character.level) || 1;
     const zamceno = m.od && uroven < m.od;

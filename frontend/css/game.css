@@ -3831,3 +3831,21 @@ select.adm-input{width:190px}
 .btn-gem:disabled{opacity:.5;cursor:default}
 .auk-vedu-znak{text-align:center;font-size:11px;color:#9ee0a4}
 @media(max-width:640px){.auk-mrizka{grid-template-columns:1fr 1fr}.auk-info{gap:10px;font-size:12px}}
+
+/* ===== STÁJ ===== */
+.staj-info{display:flex;flex-wrap:wrap;gap:18px;font-size:13.5px;color:#d8c9a0;margin-bottom:10px}
+.staj-info b{color:#f0d886}
+.staj-mrizka{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+.staj-karta{background:linear-gradient(180deg,rgba(40,31,18,.9),rgba(26,19,10,.95));border:1px solid rgba(216,177,58,.28);border-radius:10px;padding:16px 12px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center}
+.staj-karta.akt{border-color:rgba(120,190,130,.6);box-shadow:0 0 0 1px rgba(120,190,130,.3) inset}
+.staj-karta.drak{border-color:rgba(180,120,220,.5)}
+.staj-karta.drak.akt{border-color:rgba(180,120,220,.8);box-shadow:0 0 14px rgba(150,90,200,.35)}
+.staj-ikona{font-size:44px;line-height:1}
+.staj-nazev{font-size:16px;color:#f0d886;font-weight:700}
+.staj-efekt{font-size:12.5px;color:#9ee0a4}
+.staj-cena{font-size:12.5px;color:#cbb98c}
+.staj-aktivni-znak{font-size:11.5px;color:#9ee0a4;background:rgba(70,140,80,.18);padding:3px 9px;border-radius:10px}
+.staj-vlastneno{font-size:11.5px;color:#cbb98c}
+.staj-akce{margin-top:4px;width:100%}
+.staj-akce .btn-green,.staj-akce .btn-gem,.staj-akce .btn-back{width:100%;padding:8px;font-size:12.5px}
+@media(max-width:640px){.staj-mrizka{grid-template-columns:1fr 1fr}}

@@ -110,6 +110,13 @@ class API {
   static async aukceConfig()            { return this.request('/aukce/config'); }
   static async aukceSaveConfig(config)  { return this.request('/aukce/config', 'PUT', { config }); }
 
+  // --- staj ---
+  static async stajState()              { return this.request('/staj/state'); }
+  static async stajKoupit(zvire, klic)  { return this.request('/staj/koupit', 'POST', { zvire, klic }); }
+  static async stajAktivovat(zvire)     { return this.request('/staj/aktivovat', 'POST', { zvire }); }
+  static async stajConfig()             { return this.request('/staj/config'); }
+  static async stajSaveConfig(config)   { return this.request('/staj/config', 'PUT', { config }); }
+
   // --- balancni simulator (jen admin) ---
   static async simMeta()               { return this.request('/sim/meta'); }
   static async simBehy()               { return this.request('/sim/beh'); }

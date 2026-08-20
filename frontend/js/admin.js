@@ -449,6 +449,44 @@ async function sekceAukce() {
 }
 
 // ============================================================
+//  STÁJ
+// ============================================================
+const STAJ_POPISKY = {
+  prase_cena: 'Prase — cena (zlato)', prase_procenta: 'Prase — bonus (%)',
+  kun_cena: 'Kůň — cena (zlato)', kun_procenta: 'Kůň — bonus (%)',
+  ohnivy_kun_cena: 'Ohnivý kůň — cena (zlato)', ohnivy_kun_procenta: 'Ohnivý kůň — bonus (%)',
+  drak_cena_smaragdy: 'Drak — cena (smaragdy)', drak_dny: 'Drak — dní', drak_procenta: 'Drak — bonus (%)',
+};
+async function sekceStaj() {
+  obsah().innerHTML = '<div class="adm-nacitani">Načítám…</div>';
+  const d = await zavolej(() => API.stajConfig());
+  if (!d) return;
+  const pole = Object.entries(d.config).map(([k, v]) => `
+    <label class="adm-pole">
+      <span>${esc(STAJ_POPISKY[k] || k)}</span>
+      <input type="number" step="0.1" min="0" data-klic="${esc(k)}" value="${v}">
+      <small class="adm-slabe">${esc(k)} · výchozí ${d.vychozi[k]}</small>
+    </label>`).join('');
+  obsah().innerHTML = `
+    <h1 class="adm-nadpis">Nastavení Stáje</h1>
+    <div class="adm-poznamka">
+      Zvířata dávají procentní bonus ke statům (aktivní jen jedno). Drak je
+      pronájem za smaragdy na daný počet dní. Bonus je procento (2 = +2 %).
+      Server bere hodnoty z databáze, po uložení platí hned.
+    </div>
+    <div class="adm-panel">
+      <div class="adm-mrizka-poli siroka">${pole}</div>
+      <div class="adm-akce"><button class="adm-btn hlavni" id="admUlozStaj">Uložit nastavení</button></div>
+    </div>`;
+  document.getElementById('admUlozStaj').addEventListener('click', async () => {
+    const config = {};
+    obsah().querySelectorAll('[data-klic]').forEach(i => { config[i.dataset.klic] = Number(i.value); });
+    const r = await zavolej(() => API.stajSaveConfig(config));
+    if (r) { hlaska(`Uloženo (${Object.keys(r.ulozene || {}).length} hodnot)`); sekceStaj(); }
+  });
+}
+
+// ============================================================
 //  BALANČNÍ SIMULÁTOR
 //  Pouští běhy na serveru (v paměti, nikdy proti živým datům) a
 //  ukazuje percentily po archetypech, upozornění a poradní analýzu.
@@ -891,7 +929,7 @@ async function stahni(url, jmeno) {
 // ============================================================
 //  VYKRESLENÍ DO HRY
 // ============================================================
-const SEKCE = { prehled: sekcePrehled, hraci: sekceHraci, paladin: sekcePaladin, arena: sekceArena, aukce: sekceAukce, simulator: sekceSimulator, logy: sekceLogy };
+const SEKCE = { prehled: sekcePrehled, hraci: sekceHraci, paladin: sekcePaladin, arena: sekceArena, aukce: sekceAukce, staj: sekceStaj, simulator: sekceSimulator, logy: sekceLogy };
 
 // Kostra panelu. Vrací HTML, které si hra vloží do svého pohledu.
 function spravaHTML() {
@@ -903,6 +941,7 @@ function spravaHTML() {
       <a class="adm-polozka" data-sekce="paladin">Paladin</a>
       <a class="adm-polozka" data-sekce="arena">Aréna</a>
       <a class="adm-polozka" data-sekce="aukce">Aukční síň</a>
+      <a class="adm-polozka" data-sekce="staj">Stáj</a>
       <a class="adm-polozka" data-sekce="simulator">Balanční simulátor</a>
       <a class="adm-polozka" data-sekce="logy">Historie zásahů</a>
     </nav>
