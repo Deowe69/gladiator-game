@@ -275,7 +275,7 @@ function openView(view, highlight) {
   const views = { city, arena, dungeon, quests, shop, inventory: profileView, profile: profileView,
                   guild, forge, expedition, hall, stats, training, work, premium,
                   report: fightReport, news, fights, messages, loot,
-                  settings, market, auction, admin, combat, cestovatel, zaHranici,
+                  settings, market, auction, admin, combat, cestovatel, zaHranici, zkouska,
                   ...Object.fromEntries(MISTA.map(m => [m.klic, window[m.klic]])) };
   const viewFn = views[view] || (() => `
     <div class="coming-soon">
@@ -1233,6 +1233,7 @@ function tavernTab(el, boardId) {
 
 // ===== GUILD =====
 function guild() { return lockedSoon('Gilda'); }
+function zkouska() { return lockedSoon('Zkouška božstev'); }
 
 // ========== COMBAT ==========
 function startCombat(idx) {
