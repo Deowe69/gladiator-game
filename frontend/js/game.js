@@ -3586,7 +3586,8 @@ function staj() {
         : `<button class="btn-green" ${stajBezi ? 'disabled' : ''} onclick="stajKup('${z.id}')">Koupit</button>`;
     }
     return `<div class="staj-karta ${z.aktivni ? 'akt' : ''} ${z.id === 'drak' ? 'drak' : ''}">
-      <div class="staj-ikona">${STAJ_IKONY[z.id] || '🐾'}</div>
+      <div class="staj-ikona"><img src="img/staj/${z.id}.jpg?v=1" alt="${z.nazev}"
+           onerror="this.parentNode.textContent='${STAJ_IKONY[z.id] || '🐾'}'"></div>
       <div class="staj-nazev">${z.nazev}</div>
       <div class="staj-efekt">+${z.procenta} % ke všem statistikám</div>
       <div class="staj-cena">${mena}${z.dny ? ' · ' + doba : ''}</div>
