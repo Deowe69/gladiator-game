@@ -140,6 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadLeaderboard();
     await nactiServerStav();
     nactiStaj();                    // bonus ze Stáje do statTotal
+    nactiRegion();                  // aktivní region (Cestovatel)
     refreshExpedUI();
     nabidniDenniOdmenu();
   } catch (err) {
@@ -274,7 +275,7 @@ function openView(view, highlight) {
   const views = { city, arena, dungeon, quests, shop, inventory: profileView, profile: profileView,
                   guild, forge, expedition, hall, stats, training, work, premium,
                   report: fightReport, news, fights, messages, loot,
-                  settings, market, auction, admin, combat,
+                  settings, market, auction, admin, combat, cestovatel, zaHranici,
                   ...Object.fromEntries(MISTA.map(m => [m.klic, window[m.klic]])) };
   const viewFn = views[view] || (() => `
     <div class="coming-soon">
@@ -2610,6 +2611,91 @@ const EXPEDITIONS = EXPED_DEFS.map(d => ({
 
 let currentExped = 'chram';
 
+// ========== CESTOVATEL: cestování mezi regiony ==========
+// Není to obchod. Aktivní region určuje, jaký obsah se ukazuje (výpravy…).
+// Cestování je obousměrné a nic nemaže — server je autoritativní.
+let regionStav = null;
+async function nactiRegion() {
+  try { regionStav = await API.regionState(); } catch { regionStav = null; }
+  if (posledniPohled === 'cestovatel') openView('cestovatel');
+}
+const regionAktivni = () => (regionStav && regionStav.aktivniRegion) || 'recko';
+
+let cestujeSe = false;
+async function cestujDo(id) {
+  if (cestujeSe) return; cestujeSe = true;
+  try {
+    const v = await API.regionTravel(id);
+    if (v.ok) {
+      regionStav = null; await nactiRegion();
+      if (v.mode === 'zaHranici') { toast('Překračuješ hranici…'); openView('zaHranici'); }
+      else { toast('Cestuješ do nového regionu.'); openView('cestovatel'); }
+    }
+  } catch (e) { toast((e && e.message) || 'Sem se teď cestovat nedá.'); }
+  finally { cestujeSe = false; }
+}
+
+function cestovatel() {
+  if (!regionStav) { nactiRegion(); return '<div class="panel"><div class="panel-header">Cestovatel</div><div class="panel-body"><p class="hall-note">Načítám mapu světa…</p></div></div>'; }
+  const akt = regionAktivni();
+
+  const karty = regionStav.regiony.map(r => {
+    const jeAkt = r.id === akt;
+    let odznak, akce;
+    if (jeAkt) { odznak = '<span class="cest-tady">Právě zde</span>'; akce = ''; }
+    else if (r.odemceno) {
+      odznak = r.hotovo ? '<span class="cest-open">Odemčeno</span>' : '<span class="cest-wip">Odemčeno · staví se</span>';
+      akce = `<button class="btn-green" ${cestujeSe ? 'disabled' : ''} onclick="cestujDo('${r.id}')">Cestovat sem</button>`;
+    } else {
+      odznak = `<span class="cest-lock">🔒 od úrovně ${r.odUrovne}</span>`;
+      akce = `<button class="btn-green" disabled>Zamčeno</button>`;
+    }
+    return `<div class="cest-karta ${jeAkt ? 'akt' : ''} ${r.odemceno ? '' : 'zamk'} ${r.mode === 'zaHranici' ? 'zahranici' : ''}"
+         style="--tema:${r.tema}">
+      <div class="cest-pas"></div>
+      <div class="cest-telo">
+        <div class="cest-hlava"><b>${r.nazev}</b>${odznak}</div>
+        <p class="cest-popis">${r.popis}</p>
+        <div class="cest-akce">${akce}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="panel panel-gold">
+    <div class="panel-header">🧭 Cestovatel — svět Thelyonu</div>
+    <div class="panel-body">
+      <p class="hall-note">
+        Cestovatel tě přenese mezi civilizacemi. Region určuje, kde bojuješ a co potkáváš —
+        cestovat můžeš tam i zpět a nic tím neztrácíš. Nové regiony se odemykají úrovní.
+      </p>
+      <div class="cest-mrizka">${karty}</div>
+    </div>
+  </div>`;
+}
+
+// „Za hranicí" — záměrně JINÝ layout než běžný svět (žádné běžné obchody /
+// navigace). Zatím jen brána: level 500 zůstává, za ním začne nový postup
+// „500 (…)". Post-500 obsah se staví až po schválení.
+function zaHranici() {
+  const lvl = character ? character.level : 500;
+  return `
+  <div class="zah-obal">
+    <div class="zah-ram">
+      <div class="zah-nadpis">ZA HRANICÍ</div>
+      <div class="zah-level">${lvl} <span class="zah-postup">(0)</span></div>
+      <p class="zah-text">
+        Dosáhl jsi stropu běžného světa — a zjišťuješ, že to není konec. Za hranicí
+        platí jiná pravidla: jiný postup, jiné výpravy, jiné podzemí a <b>božské itemy</b>,
+        které se neřídí běžnou vzácností. Tvoje úroveň 500 zůstává; číslo v závorce je
+        nový, teprve začínající postup.
+      </p>
+      <p class="zah-pozn">Tato část Thelyonu se připravuje. Peklo, Říše Titánů, Válka bohů a Olympus přijdou později.</p>
+      <button class="btn-green" onclick="openView('cestovatel')">Zpět k Cestovateli</button>
+    </div>
+  </div>`;
+}
+
 // slovní hodnocení statu vůči hráči (jako v Gladiatus)
 const RANK_WORDS = ['Bezcenný','Velmi slabý','Slabý','Neduživý','Normální','Silný','Velmi silný'];
 function rankWord(val, ref) {
@@ -4322,7 +4408,6 @@ function stats() {
 
 // ---- Výběr příšery a filtr (drží se mezi překresleními) ----
 let expedVybrany = 0;
-let expedFiltr = 'vse';   // 'vse' | 'boss'
 
 // Rozsah úrovní oblasti = od nejslabší po boss (poslední příšera).
 function expedRozsahUrovni(loc) {
@@ -4333,32 +4418,29 @@ function expedRozsahUrovni(loc) {
 
 function expedition() {
   setTimeout(refreshExpedUI, 0);
+
+  // Výpravy patří k aktivnímu regionu. Zatím má obsah jen Řecko; jiný region
+  // = poctivé „staví se", ať se nic nevymýšlí.
+  if (regionAktivni() !== 'recko') {
+    const r = (regionStav && regionStav.regiony.find(x => x.id === regionAktivni())) || {};
+    return `<div class="panel panel-gold"><div class="panel-header">Výpravy — ${r.nazev || 'Region'}</div>
+      <div class="panel-body"><p class="hall-note">Region <b>${r.nazev || ''}</b> se teprve staví — výpravy tu zatím nejsou.
+      Přes Cestovatele se můžeš vrátit do Řecka.</p>
+      <div class="ar-foot"><button class="btn-green" onclick="openView('cestovatel')">Cestovatel</button></div></div></div>`;
+  }
+
   const loc = EXPEDITIONS.find(e => e.id === currentExped && !e.zamceno) || EXPEDITIONS.find(e => !e.zamceno);
   currentExped = loc.id;
   const locked = character.level < loc.minLevel;
   if (expedVybrany >= loc.monsters.length) expedVybrany = 0;
 
-  const bojove = EXPEDITIONS.filter(e => !e.zamceno);
   const [uOd, uDo] = expedRozsahUrovni(loc);
   const heroImg = loc.monsters[loc.monsters.length - 1].img;   // boss = tvář oblasti
+  // (Přepínač lokací i box bodů jsou schválně pryč — lokace jsou v levém
+  //  menu a body v horním panelu; nedublujeme je.)
 
-  // přepínač lokací (zamčené ztlumené s požadovanou úrovní)
-  const prepinac = bojove.map(e => {
-    const zl = character.level < e.minLevel;
-    return `<button class="exp-loc ${e.id === loc.id ? 'akt' : ''} ${zl ? 'zamk' : ''}"
-      onclick="openExped('${e.id}')"
-      title="${zl ? 'Otevře se na úrovni ' + e.minLevel + ' — náhled' : e.name}">
-      <span class="exp-loc-n">${e.name}</span>
-      <span class="exp-loc-l">${zl ? '🔒 ' + e.minLevel : 'Úr. ' + e.minLevel}</span>
-    </button>`;
-  }).join('');
-
-  // karty příšer
-  const viditelne = loc.monsters
-    .map((m, i) => ({ m, i }))
-    .filter(({ m }) => expedFiltr === 'vse' || (expedFiltr === 'boss' && m.boss));
-
-  const karty = viditelne.map(({ m, i }) => {
+  // karty příšer — vždy všechny (5 běžných + boss)
+  const karty = loc.monsters.map((m, i) => {
     const diff = rankWord(m.str, statTotal('strength'));
     return `<div class="expm-card ${m.boss ? 'boss' : ''} ${i === expedVybrany ? 'vybrano' : ''} ${locked ? 'zamk' : ''}"
          onclick="${locked ? '' : `selectExpedMonster(${i})`}">
@@ -4373,7 +4455,7 @@ function expedition() {
         </div>
       </div>
     </div>`;
-  }).join('') || '<div class="exped-lock">Žádná příšera neodpovídá filtru.</div>';
+  }).join('');
 
   return `
   <div class="exped2">
@@ -4382,16 +4464,7 @@ function expedition() {
         <h1>VÝPRAVY</h1>
         <div class="exped-region">${loc.region} · ${loc.name}</div>
       </div>
-      <div class="exped-body-pts">
-        <div class="exped-pts-box">
-          <span class="exped-pts-lbl">Body výpravy</span>
-          <span class="exped-pts-val" id="expedPts">– / –</span>
-        </div>
-        ${jePaladin() ? '<div class="exped-paladin">✦ Paladin — odpočinek −50 %</div>' : ''}
-      </div>
     </div>
-
-    <div class="exped-prepinac">${prepinac}</div>
 
     <div class="exped-mist" style="--hero:url('img/${heroImg}')">
       <div class="exped-mist-vrstva">
@@ -4400,11 +4473,6 @@ function expedition() {
         <p class="exped-mist-popis">${loc.desc}</p>
         ${locked ? `<div class="exped-lock">🔒 Tato oblast se otevře na úrovni ${loc.minLevel}. Jsi na ${character.level}.</div>` : ''}
       </div>
-    </div>
-
-    <div class="exped-filtry">
-      <button class="exp-filtr ${expedFiltr === 'vse' ? 'akt' : ''}" onclick="expedNastavFiltr('vse')">Vše</button>
-      <button class="exp-filtr ${expedFiltr === 'boss' ? 'akt' : ''}" onclick="expedNastavFiltr('boss')">Bossové</button>
     </div>
 
     <div class="exped-grid">
@@ -4457,7 +4525,6 @@ function selectExpedMonster(i) {
   if (cil) cil.classList.add('vybrano');
 }
 
-function expedNastavFiltr(f) { expedFiltr = f; if (posledniPohled === 'expedition') openView('expedition'); }
 
 function openExped(id) {
   const e = EXPEDITIONS.find(x => x.id === id);

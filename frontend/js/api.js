@@ -117,6 +117,12 @@ class API {
   static async stajConfig()             { return this.request('/staj/config'); }
   static async stajSaveConfig(config)   { return this.request('/staj/config', 'PUT', { config }); }
 
+  // --- cestovatel / regiony ---
+  static async regionState()            { return this.request('/region/state'); }
+  static async regionTravel(region)     { return this.request('/region/travel', 'POST', { region }); }
+  static async regionConfig()           { return this.request('/region/config'); }
+  static async regionSaveConfig(config) { return this.request('/region/config', 'PUT', { config }); }
+
   // --- balancni simulator (jen admin) ---
   static async simMeta()               { return this.request('/sim/meta'); }
   static async simBehy()               { return this.request('/sim/beh'); }

@@ -9,6 +9,7 @@ const { VYCHOZI: PALADIN_VYCHOZI } = require('./config/paladin');
 const { VYCHOZI: ARENA_VYCHOZI } = require('./config/arena');
 const { VYCHOZI: AUKCE_VYCHOZI } = require('./config/aukce');
 const { VYCHOZI: STAJ_VYCHOZI } = require('./config/staj');
+const { VYCHOZI: REGION_VYCHOZI, VYCHOZI_REGION } = require('./config/regiony');
 const authRoutes = require('./routes/auth');
 const characterRoutes = require('./routes/character');
 const paladinRoutes = require('./routes/paladin');
@@ -21,6 +22,7 @@ const simRoutes = require('./routes/sim');
 const aukceRoutes = require('./routes/aukce');
 const { spustAukcniSluzbu } = require('./aukce/sluzba');
 const stajRoutes = require('./routes/staj');
+const regionRoutes = require('./routes/region');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -41,6 +43,7 @@ app.use('/api/arena', arenaRoutes);
 app.use('/api/sim', simRoutes);
 app.use('/api/aukce', aukceRoutes);
 app.use('/api/staj', stajRoutes);
+app.use('/api/region', regionRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -99,6 +102,9 @@ async function initDB() {
     await pool.query(`ALTER TABLE characters ADD COLUMN IF NOT EXISTS staj_aktivni TEXT;`);
     await pool.query(`ALTER TABLE characters ADD COLUMN IF NOT EXISTS staj_vlastni JSONB DEFAULT '[]'::jsonb;`);
     await pool.query(`ALTER TABLE characters ADD COLUMN IF NOT EXISTS staj_drak_do TIMESTAMPTZ;`);
+
+    // Cestovatel: aktivní region (civilizace). Cestování nic jiného nemaže.
+    await pool.query(`ALTER TABLE characters ADD COLUMN IF NOT EXISTS aktivni_region TEXT DEFAULT '${VYCHOZI_REGION}';`);
 
     // Nastaveni Paladina. Drzi se v databazi, aby slo menit z adminu
     // bez zasahu do kodu.
@@ -412,6 +418,20 @@ async function initDB() {
     for (const [klic, hodnota] of Object.entries(STAJ_VYCHOZI)) {
       await pool.query(
         'INSERT INTO staj_config (klic, hodnota) VALUES ($1, $2) ON CONFLICT (klic) DO NOTHING',
+        [klic, hodnota]
+      );
+    }
+
+    // Nastaveni regionu (urovnove brany) — meni se ze spravy.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS region_config (
+        klic    TEXT PRIMARY KEY,
+        hodnota NUMERIC NOT NULL
+      );
+    `);
+    for (const [klic, hodnota] of Object.entries(REGION_VYCHOZI)) {
+      await pool.query(
+        'INSERT INTO region_config (klic, hodnota) VALUES ($1, $2) ON CONFLICT (klic) DO NOTHING',
         [klic, hodnota]
       );
     }
