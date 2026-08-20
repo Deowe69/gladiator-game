@@ -2457,6 +2457,18 @@ function refreshExpedUI() {
     else if (b.dataset.locked !== '1') { b.disabled = false; b.textContent = 'Útok'; }
   });
 
+  // nový detail výpravy: odpočet na tlačítku „Začít výpravu" tiká a po
+  // doběhnutí se panel překreslí (tlačítko se zase povolí).
+  const expCd = document.getElementById('expedCd');
+  if (expCd && posledniPohled === 'expedition') {
+    if (cd > 0) expCd.textContent = fmtSec(cd);
+    else {
+      const loc = EXPEDITIONS.find(e => e.id === currentExped);
+      const det = document.getElementById('expedDetail');
+      if (loc && det) det.innerHTML = expedDetailHTML(loc, character.level < loc.minLevel);
+    }
+  }
+
   const info = document.getElementById('expedInfo');
   if (info) {
     const regen = regenLeft('exped');
@@ -2473,96 +2485,119 @@ setInterval(refreshExpedUI, 1000);
 // Lokace se odemykají podle úrovně. Staty příšer se dopočítají
 // z úrovně lokace, takže je balanc konzistentní napříč celou mapou.
 const EXPED_DEFS = [
-  // Cestovatel nahradi Poustevnika - bude jim jit prechazet mezi
-  // lokacemi na vyssi urovni. Zatim jen zamceny panel.
-  { id:'cestovatel', name:'Cestovatel', lvl:1, zamceno:true,
-    desc:'', mobs:[] },
+  // Cestovatel: přechod mezi regiony na vyšší úrovni. Zatím zamčený panel.
+  { id:'cestovatel', name:'Cestovatel', lvl:1, zamceno:true, desc:'', mobs:[] },
 
-  { id:'chram', name:'Orčí Les',  lvl:1,
-    desc:'Za městskými poli začíná les, kde se usadily orčí tlupy. Mezi kmeny visí kouř z ohnišť ' +
-         'a na kůře jsou vyryté značky, kterým nikdo z Atén nerozumí. Kdo zajde příliš hluboko, ' +
-         'potká nejdřív poskoky — a nakonec jejich velitele.',
-    mobs:[['Orčí poskok','monsters/ork-poskok.jpg'],
-          ['Naštvaný ork','monsters/ork-nastvany.jpg'],
-          ['Orčí šamanka','monsters/ork-samanka.jpg'],
-          ['Orčí velitel','monsters/ork-velitel.jpg']] },
+  // ŘECKO — 9 bojových lokací, každá 6 příšer (5 běžných + boss). Obrázky
+  // jsou v img/vypravy/<lokace>/. V artworku není žádný herní text; jména,
+  // úrovně a odměny vykresluje UI. mob = [jméno, cesta_k_obrázku, boss?].
+  { id:'chram', name:'Orčí les', lvl:1, region:'Řecko',
+    desc:'Za městskými poli začíná les, kde se usadily orčí tlupy. Kdo zajde příliš hluboko, potká nejdřív poskoky — a nakonec jejich náčelníka.',
+    mobs:[['Orčí poskok','vypravy/orci_les/orci_poskok.jpg'],
+          ['Orčí lovec','vypravy/orci_les/orci_lovec.jpg'],
+          ['Orčí válečník','vypravy/orci_les/orci_valecnik.jpg'],
+          ['Orčí šaman','vypravy/orci_les/orci_saman.jpg'],
+          ['Orčí berserker','vypravy/orci_les/orci_berserker.jpg'],
+          ['Orčí náčelník','vypravy/orci_les/orci_nacelnik_boss.jpg',true]] },
 
-  { id:'les', name:'Zelený les',       lvl:8,
-    desc:'Kdo má rád zeleň a vůni bylin, brzy zjistí, že Zelený les je pro něj jako stvořený. ' +
-         'Jenže z hloubi lesa se line hrůza. Vlci a medvědi tu začali chodit vzpřímeně a zabíjet ' +
-         'poutníky. Kdo se odváží dovnitř v noci, obvykle najde magické přísady — hrozba smrti ' +
-         'je ale pro průměrného občana příliš riskantní.',
-    mobs:[['Lesní Vlk','wolf'],['Masožravka','plant'],['Zelený Had','snake'],['Starý Treant','treant']] },
+  { id:'les', name:'Zelený les', lvl:8, region:'Řecko',
+    desc:'Vůně bylin láká poutníky dovnitř, ale z hloubi lesa se line hrůza. Zvěř tu chodí vzpřímeně a zabíjí.',
+    mobs:[['Divoký vlk','vypravy/zeleny_les/divoky_vlk.jpg'],
+          ['Jedovatý had','vypravy/zeleny_les/jedovaty_had.jpg'],
+          ['Lesní satyr','vypravy/zeleny_les/lesni_satyr.jpg'],
+          ['Obří kanec','vypravy/zeleny_les/obri_kanec.jpg'],
+          ['Divoký kentaur','vypravy/zeleny_les/divoky_kentaur.jpg'],
+          ['Prastarý lesní strážce','vypravy/zeleny_les/prastary_lesni_strazce_boss.jpg',true]] },
 
-  { id:'vesnice', name:'Zakletá vesnice', lvl:12,
-    desc:'Vesnice, kterou proklely bohové. Domy stojí, ohně hoří, ale nikdo tu už roky nedýchá. ' +
-         'Mrtví si pamatují své řemeslo — a své zbraně. Kdo sem vstoupí za soumraku, ' +
-         'málokdy vyjde stejnou cestou.',
-    mobs:[['Kostlivec Šermíř','skeleton-swordfighter'],['Kostlivec Lučištník','skeleton-archer'],
-          ['Kostlivec Zloděj','skeleton-rogue'],['Kostlivec Mág','skeleton-mage']] },
+  { id:'vesnice', name:'Zakletá vesnice', lvl:12, region:'Řecko',
+    desc:'Vesnice, kterou prokleli bohové. Domy stojí, ohně hoří, ale nikdo tu už roky nedýchá. Mrtví si pamatují své řemeslo — a své zbraně.',
+    mobs:[['Prokletý vesničan','vypravy/zakleta_vesnice/proklety_vesnican.jpg'],
+          ['Nemrtvý voják','vypravy/zakleta_vesnice/nemrtvy_vojak.jpg'],
+          ['Přízračný pes','vypravy/zakleta_vesnice/prizracny_pes.jpg'],
+          ['Prokletý hoplíta','vypravy/zakleta_vesnice/proklety_hoplit.jpg'],
+          ['Krvavá čarodějnice','vypravy/zakleta_vesnice/krvava_carodejnice.jpg'],
+          ['Démon zakleté vesnice','vypravy/zakleta_vesnice/demon_zaklete_vesnice_boss.jpg',true]] },
 
-  { id:'pahorek', name:'Pahorek Smrti',  lvl:16,
-    desc:'Kopec, na kterém se pohřbívali ti, které nikdo nechtěl. Vzduch je tu studený i v poledne ' +
-         'a stíny se hýbou samy od sebe. Říká se, že kdo dojde až na vrchol, uslyší své vlastní ' +
-         'jméno vyslovené nahlas.',
-    mobs:[['Stín','shadow'],['Přízrak','spirit'],['Bánší','banshee'],['Oživlá Zbroj','armor']] },
+  { id:'pahorek', name:'Pahorek smrti', lvl:16, region:'Řecko',
+    desc:'Kopec, kam se pohřbívali ti, které nikdo nechtěl. Vzduch je studený i v poledne a stíny se hýbou samy od sebe.',
+    mobs:[['Kostlivec','vypravy/pahorek_smrti/kostlivec.jpg'],
+          ['Kostlivý lučištník','vypravy/pahorek_smrti/kostlivy_lucistnik.jpg'],
+          ['Nemrtvý hoplíta','vypravy/pahorek_smrti/nemrtvy_hoplit.jpg'],
+          ['Přízračný šampion','vypravy/pahorek_smrti/prizracny_sampion.jpg'],
+          ['Keres, démon smrti','vypravy/pahorek_smrti/keres_demon_smrti.jpg'],
+          ['Pán mrtvých','vypravy/pahorek_smrti/pan_mrtvych_boss.jpg',true]] },
 
-  { id:'vandalove', name:'Vesnice Vandalů', lvl:20,
-    desc:'Tábor nájezdníků, kteří si z drancování udělali řemeslo. Kouř z ohňů je vidět na míle ' +
-         'daleko a v ohradách stojí ukradený dobytek. Vandalové neberou zajatce — a ty berou ' +
-         'jako obchodní příležitost.',
-    mobs:[['Rudý Skřítek','red-imp'],['Černý Skřítek','black-imp'],['Vandalský Troll','troll'],
-          ['Náčelník Skřetů','goblin']] },
+  { id:'vandalove', name:'Vesnice Vandalů', lvl:20, region:'Řecko',
+    desc:'Tábor nájezdníků, kteří si z drancování udělali řemeslo. Vandalové neberou zajatce — a tebe berou jako obchodní příležitost.',
+    mobs:[['Vandalský lupič','vypravy/vesnice_vandalu/vandalsky_lupic.jpg'],
+          ['Vandalský lučištník','vypravy/vesnice_vandalu/vandalsky_lucistnik.jpg'],
+          ['Vandalský válečník','vypravy/vesnice_vandalu/vandalsky_valecnik.jpg'],
+          ['Vandalský šaman','vypravy/vesnice_vandalu/vandalsky_saman.jpg'],
+          ['Vandalský berserker','vypravy/vesnice_vandalu/vandalsky_berserker.jpg'],
+          ['Vandalský náčelník','vypravy/vesnice_vandalu/vandalsky_nacelnik_boss.jpg',true]] },
 
-  { id:'dul', name:'Důl',           lvl:24,
-    desc:'Opuštěné šachty, kde se kdysi těžilo stříbro. Horníci zmizeli přes noc a zůstaly po nich ' +
-         'jen krumpáče u vchodu. Z hloubky se ozývá klepání — pravidelné, jako by někdo ' +
-         'stále pracoval.',
-    mobs:[['Důlní Pavouk','spider'],['Slizoun Hlubin','slime'],['Kamenný Golem','golem'],
-          ['Horský Troll','troll']] },
+  { id:'dul', name:'Důl', lvl:24, region:'Řecko',
+    desc:'Opuštěné šachty, kde se kdysi těžilo stříbro. Z hloubky se ozývá klepání — pravidelné, jako by někdo stále pracoval.',
+    mobs:[['Jeskynní krysa','vypravy/dul/jeskynni_krysa.jpg'],
+          ['Důlní pavouk','vypravy/dul/dulni_pavouk.jpg'],
+          ['Krystalový škorpion','vypravy/dul/krystalovy_skorpion.jpg'],
+          ['Temný horník','vypravy/dul/temny_hornik.jpg'],
+          ['Kamenný golem','vypravy/dul/kamenny_golem.jpg'],
+          ['Strážce hlubinného dolu','vypravy/dul/strazce_hlubinneho_dolu_boss.jpg',true]] },
 
-  { id:'teutoni', name:'Tábor Teutonů', lvl:28,
-    desc:'Severní žoldáci, kteří se do Řecka dostali za zlatem a zůstali kvůli krvi. Jejich tábor ' +
-         'je opevněný lépe než leckterá pevnost a jejich mrtví bojují dál — prý za ' +
-         'nezaplacený žold.',
-    mobs:[['Teutonský Válečník','skeleton-swordfighter'],['Železná Zbroj','armor'],
-          ['Bojový Gryf','griffin'],['Stín Velitele','shadow']] },
+  { id:'teutoni', name:'Tábor Teutonů', lvl:28, region:'Řecko',
+    desc:'Severní žoldáci, kteří se do Řecka dostali za zlatem a zůstali kvůli krvi. Jejich mrtví bojují dál — prý za nezaplacený žold.',
+    mobs:[['Teutonský pěšák','vypravy/tabor_teutonu/teutonsky_pesak.jpg'],
+          ['Teutonský lučištník','vypravy/tabor_teutonu/teutonsky_lucistnik.jpg'],
+          ['Teutonský rytíř','vypravy/tabor_teutonu/teutonsky_rytir.jpg'],
+          ['Teutonský válečný kněz','vypravy/tabor_teutonu/teutonsky_valecny_knez.jpg'],
+          ['Teutonský elitní strážce','vypravy/tabor_teutonu/teutonsky_elitni_strazce.jpg'],
+          ['Teutonský velmistr','vypravy/tabor_teutonu/teutonsky_velmistr_boss.jpg',true]] },
 
-  { id:'koman', name:'Hora Koman',    lvl:32,
-    desc:'Nejvyšší štít v kraji. Vzduch je řídký, cesta zledovatělá a bouře přicházejí bez varování. ' +
-         'Nahoře hnízdí gryfové a mezi skalami se pohybuje něco, co tam podle map být nemá.',
-    mobs:[['Skalní Gryf','griffin'],['Přízrak Vrcholu','spirit'],['Ledový Troll','troll'],
-          ['Skalní Golem','golem']] },
+  { id:'koman', name:'Hora Koman', lvl:32, region:'Řecko',
+    desc:'Nejvyšší štít v kraji. Vzduch je řídký, cesta zledovatělá a bouře přicházejí bez varování. Mezi skalami se pohybuje něco, co tam podle map být nemá.',
+    mobs:[['Horský vlk','vypravy/hora_koman/horsky_vlk.jpg'],
+          ['Horský šaman','vypravy/hora_koman/horsky_saman.jpg'],
+          ['Horský obr','vypravy/hora_koman/horsky_obr.jpg'],
+          ['Ledový troll','vypravy/hora_koman/ledovy_troll.jpg'],
+          ['Kamenný gryf','vypravy/hora_koman/kamenny_gryf.jpg'],
+          ['Pán hory Koman','vypravy/hora_koman/pan_hory_koman_boss.jpg',true]] },
 
-  { id:'draci', name:'Dračí ostatky', lvl:36,
-    desc:'Kostra tvora tak velkého, že jeho žebra tvoří údolí. Mezi kostmi se usadili ti, ' +
-         'kdo se živí zbytky jeho moci. Kdo přežije až sem, nebojuje o zlato — ' +
-         'bojuje o jméno, které přežije jeho samotného.',
-    mobs:[['Drakonid','snake'],['Mladý Drak','dragon'],['Kostěný Šaman','skeleton-mage'],
-          ['Prastarý Drak','dragon']] },
+  { id:'draci', name:'Dračí ostatky', lvl:40, region:'Řecko',
+    desc:'Kostra tvora tak velkého, že jeho žebra tvoří údolí. Kdo přežije až sem, nebojuje o zlato — bojuje o jméno, které přežije jeho samotného.',
+    mobs:[['Dračí kultista','vypravy/draci_ostatky/draci_kultista.jpg'],
+          ['Dračí mládě','vypravy/draci_ostatky/draci_mlade.jpg'],
+          ['Dračí strážce','vypravy/draci_ostatky/draci_strazce.jpg'],
+          ['Lávový drak','vypravy/draci_ostatky/lavovy_drak.jpg'],
+          ['Kostěný drak','vypravy/draci_ostatky/kosteny_drak.jpg'],
+          ['Prastarý dračí vládce','vypravy/draci_ostatky/prastary_draci_vladce_boss.jpg',true]] },
 ];
 
-// z definice udělá plnou lokaci i se staty příšer
+// Z definice udělá plnou lokaci i se staty a odměnami příšer. Boss (poslední
+// v lokaci) je výrazně tužší a platí líp. Odměny drží STEJNÝ vzorec jako
+// server (config/odmeny.js: 18·T^0.9·(1+0.18·i)), takže náhled sedí s tím,
+// co server po boji reálně vyplatí; boss má navíc bonus.
 const EXPEDITIONS = EXPED_DEFS.map(d => ({
-  id: d.id, name: d.name, minLevel: d.lvl, desc: d.desc, zamceno: !!d.zamceno,
-  monsters: d.mobs.map(([name, img], i) => {
-    // Staty vycházejí z toho, co hráč na dané úrovni reálně uveze:
-    //   životy   ≈ 8 kol, než ho hráč sundá
-    //   síla     ≈ hráč vydrží ~15 kol
-    const T = d.lvl;                 // úroveň lokace
-    const k  = 1 + i * 0.18;         // výdrž pozdějších příšer roste znatelně
-    const ks = 1 + i * 0.06;         // …ale jejich úder jen mírně, ať jsou porazitelné
+  id: d.id, name: d.name, minLevel: d.lvl, desc: d.desc, region: d.region || 'Řecko',
+  zamceno: !!d.zamceno,
+  monsters: d.mobs.map(([name, img, boss], i) => {
+    const T = d.lvl;
+    const k  = 1 + i * 0.18;
+    const ks = 1 + i * 0.06;
     const r  = (v) => Math.max(1, Math.round(v));
+    const bossHp   = boss ? 1.7 : 1;    // boss vydrží víc
+    const bossLoot = boss ? 1.6 : 1;    // …a platí líp
 
-    const hp   = 24 * T * k;              // 24 HP na úroveň lokace
-    const str  = (9 + 1.2 * T) * ks;      // aby hráč neumíral, ale cítil to
-    const def  = 2 * T * k;               // tlumí zásah o def/4
-    const loot = 18 * Math.pow(T, 0.9) * k;
+    const hp   = 24 * T * k * bossHp;
+    const str  = (9 + 1.2 * T) * ks * (boss ? 1.15 : 1);
+    const def  = 2 * T * k;
+    const loot = 18 * Math.pow(T, 0.9) * k * bossLoot;
 
     return {
-      name, // Kdyz uz je v definici hotova cesta i s priponou, bereme ji tak,
-    // jak je - jinak by z toho vyslo monsters/monsters/....jpg.png
-    img: /[\/.]/.test(img) ? img : `monsters/${img}.png`,
+      name,
+      // cesty s '/' nebo '.' bereme tak, jak jsou; holé jméno = starý formát
+      img: /[\/.]/.test(img) ? img : `monsters/${img}.png`,
+      boss: !!boss,
       lvl:  [d.lvl + i, d.lvl + i + 2],
       hp:   [r(hp * 0.85), r(hp * 1.15)],
       str:  r(str),
@@ -4285,55 +4320,152 @@ function stats() {
 }
 
 
+// ---- Výběr příšery a filtr (drží se mezi překresleními) ----
+let expedVybrany = 0;
+let expedFiltr = 'vse';   // 'vse' | 'boss'
+
+// Rozsah úrovní oblasti = od nejslabší po boss (poslední příšera).
+function expedRozsahUrovni(loc) {
+  const prvni = loc.monsters[0].lvl[0];
+  const posl = loc.monsters[loc.monsters.length - 1].lvl[1];
+  return [prvni, posl];
+}
+
 function expedition() {
-  setTimeout(refreshExpedUI, 0);   // ať ukazatel nečeká na další tik
-  const loc = EXPEDITIONS.find(e => e.id === currentExped) || EXPEDITIONS[0];
+  setTimeout(refreshExpedUI, 0);
+  const loc = EXPEDITIONS.find(e => e.id === currentExped && !e.zamceno) || EXPEDITIONS.find(e => !e.zamceno);
   currentExped = loc.id;
-
-  // Cestovatel jeste neni hotovy, rikame to rovnou
-  if (loc.zamceno) return lockedSoon(loc.name);
-
   const locked = character.level < loc.minLevel;
+  if (expedVybrany >= loc.monsters.length) expedVybrany = 0;
 
-  const cards = loc.monsters.map((m, i) => `
-    <div class="mon-card" data-tip="mon:${i}">
-      <div class="mon-name">${m.name}</div>
-      <div class="mon-frame">${monsterPortrait(m, 'mon-img')}</div>
+  const bojove = EXPEDITIONS.filter(e => !e.zamceno);
+  const [uOd, uDo] = expedRozsahUrovni(loc);
+  const heroImg = loc.monsters[loc.monsters.length - 1].img;   // boss = tvář oblasti
 
-      <button class="btn-green mon-attack" ${locked ? 'disabled data-locked="1"' : ''}
-              onclick="attackMonster(${i})">Útok</button>
+  // přepínač lokací (zamčené ztlumené s požadovanou úrovní)
+  const prepinac = bojove.map(e => {
+    const zl = character.level < e.minLevel;
+    return `<button class="exp-loc ${e.id === loc.id ? 'akt' : ''} ${zl ? 'zamk' : ''}"
+      onclick="openExped('${e.id}')"
+      title="${zl ? 'Otevře se na úrovni ' + e.minLevel + ' — náhled' : e.name}">
+      <span class="exp-loc-n">${e.name}</span>
+      <span class="exp-loc-l">${zl ? '🔒 ' + e.minLevel : 'Úr. ' + e.minLevel}</span>
+    </button>`;
+  }).join('');
 
+  // karty příšer
+  const viditelne = loc.monsters
+    .map((m, i) => ({ m, i }))
+    .filter(({ m }) => expedFiltr === 'vse' || (expedFiltr === 'boss' && m.boss));
 
-    </div>`).join('');
+  const karty = viditelne.map(({ m, i }) => {
+    const diff = rankWord(m.str, statTotal('strength'));
+    return `<div class="expm-card ${m.boss ? 'boss' : ''} ${i === expedVybrany ? 'vybrano' : ''} ${locked ? 'zamk' : ''}"
+         onclick="${locked ? '' : `selectExpedMonster(${i})`}">
+      ${m.boss ? '<div class="expm-boss-znak">BOSS</div>' : ''}
+      <div class="expm-art">${monsterPortrait(m, 'expm-img')}${locked ? '<div class="expm-lock">🔒</div>' : ''}</div>
+      <div class="expm-info">
+        <div class="expm-name">${m.name}</div>
+        <div class="expm-meta"><span>Úroveň ${m.lvl[0]}–${m.lvl[1]}</span><span class="expm-diff">${diff}</span></div>
+        <div class="expm-reward">
+          <span title="Zlato">🪙 ${m.gold[0]}–${m.gold[1]}</span>
+          <span title="Zkušenosti">✨ ${m.exp[0]}–${m.exp[1]}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('') || '<div class="exped-lock">Žádná příšera neodpovídá filtru.</div>';
 
   return `
-  <div class="shop2">
-    <div class="s2tabs">
-      <div class="s2tab active">${loc.name}</div>
-      <div class="s2tab" onclick="openView('dungeon')">Bludiště</div>
-    </div>
-
-    <div class="exped-body">
-      ${locked ? `<div class="exped-lock">Tato oblast se otevře na úrovni ${loc.minLevel}.</div>` : ''}
-      <div class="exped-info" id="expedInfo"></div>
-
-      <div class="mon-row">${cards}</div>
-
-      <div class="exped-desc">
-        <div class="exped-desc-title">Popis</div>
-        <p>${loc.desc}</p>
+  <div class="exped2">
+    <div class="exped-hlava">
+      <div class="exped-titul">
+        <h1>VÝPRAVY</h1>
+        <div class="exped-region">${loc.region} · ${loc.name}</div>
       </div>
-
-      ${combatPanelHTML()}
+      <div class="exped-body-pts">
+        <div class="exped-pts-box">
+          <span class="exped-pts-lbl">Body výpravy</span>
+          <span class="exped-pts-val" id="expedPts">– / –</span>
+        </div>
+        ${jePaladin() ? '<div class="exped-paladin">✦ Paladin — odpočinek −50 %</div>' : ''}
+      </div>
     </div>
+
+    <div class="exped-prepinac">${prepinac}</div>
+
+    <div class="exped-mist" style="--hero:url('img/${heroImg}')">
+      <div class="exped-mist-vrstva">
+        <h2 class="exped-mist-nazev">${loc.name}</h2>
+        <div class="exped-mist-uroven">Úroveň oblasti: ${uOd}–${uDo}</div>
+        <p class="exped-mist-popis">${loc.desc}</p>
+        ${locked ? `<div class="exped-lock">🔒 Tato oblast se otevře na úrovni ${loc.minLevel}. Jsi na ${character.level}.</div>` : ''}
+      </div>
+    </div>
+
+    <div class="exped-filtry">
+      <button class="exp-filtr ${expedFiltr === 'vse' ? 'akt' : ''}" onclick="expedNastavFiltr('vse')">Vše</button>
+      <button class="exp-filtr ${expedFiltr === 'boss' ? 'akt' : ''}" onclick="expedNastavFiltr('boss')">Bossové</button>
+    </div>
+
+    <div class="exped-grid">
+      <div class="expm-mrizka">${karty}</div>
+      <div class="exped-detail" id="expedDetail">${expedDetailHTML(loc, locked)}</div>
+    </div>
+
+    ${combatPanelHTML()}
   </div>`;
 }
 
+// Detail vybrané příšery + tlačítko Začít výpravu.
+function expedDetailHTML(loc, locked) {
+  const m = loc.monsters[expedVybrany];
+  if (!m) return '';
+  const cd = expedCdLeft();
+  const dost = expedPoints() > 0;
+  let btn, stav = '';
+  if (locked) { btn = `<button class="btn-exped-start" disabled>Oblast zamčená</button>`; }
+  else if (cd > 0) { btn = `<button class="btn-exped-start" disabled>Odpočinek <span id="expedCd">${fmtSec(cd)}</span></button>`; stav = 'Po výpravě si gladiátor musí odpočinout. Server hlídá čas.'; }
+  else if (!dost) { btn = `<button class="btn-exped-start" disabled>Došly body výpravy</button>`; stav = 'Body se doplňují v čase (server).'; }
+  else { btn = `<button class="btn-exped-start" onclick="attackMonster(${expedVybrany})">ZAČÍT VÝPRAVU</button>`; }
+
+  return `
+    <div class="exped-detail-hlava">
+      <div class="exped-detail-nazev">${m.boss ? '<span class="exped-detail-boss">BOSS</span> ' : ''}${m.name}</div>
+      <div class="exped-detail-lok">${loc.name} · Úroveň ${m.lvl[0]}–${m.lvl[1]}</div>
+    </div>
+    <div class="exped-detail-art">${monsterPortrait(m, 'exped-detail-img')}</div>
+    <div class="exped-odmeny">
+      <div class="exped-odmena"><span>Zlato</span><b>${m.gold[0]}–${m.gold[1]}</b></div>
+      <div class="exped-odmena"><span>Zkušenosti</span><b>${m.exp[0]}–${m.exp[1]}</b></div>
+      <div class="exped-odmena"><span>Cena</span><b>1 bod výpravy</b></div>
+      <div class="exped-odmena"><span>Obtížnost</span><b>${rankWord(m.str, statTotal('strength'))}</b></div>
+    </div>
+    <div class="exped-odmena-pozn">Odměny počítá po boji server (tady je náhled rozsahu). Suroviny zatím Thelyon nemá.</div>
+    ${stav ? `<div class="exped-detail-stav">${stav}</div>` : ''}
+    ${btn}`;
+}
+
+function selectExpedMonster(i) {
+  expedVybrany = i;
+  document.querySelectorAll('.expm-card').forEach(c => c.classList.remove('vybrano'));
+  const loc = EXPEDITIONS.find(e => e.id === currentExped);
+  const det = document.getElementById('expedDetail');
+  if (det && loc) det.innerHTML = expedDetailHTML(loc, character.level < loc.minLevel);
+  // zvýrazni kliknutou kartu
+  const karty = [...document.querySelectorAll('.expm-card')];
+  const cil = karty.find(c => c.getAttribute('onclick') === `selectExpedMonster(${i})`);
+  if (cil) cil.classList.add('vybrano');
+}
+
+function expedNastavFiltr(f) { expedFiltr = f; if (posledniPohled === 'expedition') openView('expedition'); }
+
 function openExped(id) {
   const e = EXPEDITIONS.find(x => x.id === id);
-  if (!e) return;
-  if (character.level < e.minLevel) { toast(`${e.name} se odemkne na úrovni ${e.minLevel}.`); return; }
+  if (!e || e.zamceno) return;           // 'cestovatel' (jiný region) zatím ne
+  // Úrovní zamčenou oblast necháme OTEVŘÍT jako náhled — boj v ní je ale
+  // zablokovaný (viz `locked` v expedition()). Server je stejně autoritativní.
   currentExped = id;
+  expedVybrany = 0;
   openView('expedition');
 }
 

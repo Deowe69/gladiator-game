@@ -450,6 +450,73 @@ async function sekceAukce() {
 }
 
 // ============================================================
+//  VÝPRAVY — inspektor lokací a příšer
+//  Čte herní data (EXPEDITIONS) a ověří přiřazení + existenci obrázků.
+// ============================================================
+function overObrazek(src) {
+  return new Promise(res => {
+    const im = new Image();
+    im.onload = () => res(true);
+    im.onerror = () => res(false);
+    im.src = src;
+  });
+}
+async function sekceVypravy() {
+  obsah().innerHTML = '<div class="adm-nacitani">Načítám…</div>';
+  const LOK = (typeof EXPEDITIONS !== 'undefined') ? EXPEDITIONS.filter(e => !e.zamceno) : null;
+  if (!LOK) { obsah().innerHTML = '<div class="adm-prazdno">Data výprav nejsou k dispozici.</div>'; return; }
+
+  const bloky = LOK.map(loc => {
+    const bossu = loc.monsters.filter(m => m.boss).length;
+    const varovani = [];
+    if (!loc.monsters.length) varovani.push('žádné příšery');
+    if (bossu === 0) varovani.push('chybí boss');
+    if (bossu > 1) varovani.push(bossu + ' bossů (má být 1)');
+    const uOd = loc.monsters[0] && loc.monsters[0].lvl[0];
+    const uDo = loc.monsters.length && loc.monsters[loc.monsters.length - 1].lvl[1];
+
+    const radky = loc.monsters.map((m, i) => `
+      <tr data-img="${esc('img/' + m.img)}">
+        <td>${i + 1}${m.boss ? ' <span class="adm-znacka paladin">BOSS</span>' : ''}</td>
+        <td class="adm-zvyraz">${esc(m.name)}</td>
+        <td>${m.lvl[0]}–${m.lvl[1]}</td>
+        <td>🪙 ${m.gold[0]}–${m.gold[1]} · ✨ ${m.exp[0]}–${m.exp[1]}</td>
+        <td class="adm-slabe">${esc(m.img)}</td>
+        <td class="vyp-img-stav">…</td>
+      </tr>`).join('');
+
+    return `<div class="adm-panel vyp-lok">
+      <div class="vyp-lok-hlava">
+        <h2 class="adm-podnadpis">${esc(loc.name)} <small class="adm-slabe">${esc(loc.region || 'Řecko')} · úr. oblasti ${uOd}–${uDo} · odemkne se na ${loc.minLevel}</small></h2>
+        ${varovani.length ? `<span class="vyp-varovani">⚠ ${varovani.map(esc).join(', ')}</span>` : '<span class="vyp-ok">✓ v pořádku</span>'}
+      </div>
+      <div class="adm-tabulka-obal"><table class="adm-tabulka">
+        <thead><tr><th>#</th><th>Příšera</th><th>Úroveň</th><th>Odměna (náhled)</th><th>Asset</th><th>Obrázek</th></tr></thead>
+        <tbody>${radky}</tbody>
+      </table></div>
+    </div>`;
+  }).join('');
+
+  const celkemMob = LOK.reduce((a, l) => a + l.monsters.length, 0);
+  obsah().innerHTML = `
+    <h1 class="adm-nadpis">Výpravy — inspektor</h1>
+    <div class="adm-poznamka">
+      ${LOK.length} lokací · ${celkemMob} příšer. Data i odměny (náhled) jsou z herní
+      konfigurace; skutečné odměny počítá po boji server. Kontroluje se přiřazení
+      bossů a existence obrázků (v artworku nesmí být herní text).
+    </div>
+    ${bloky}`;
+
+  // asynchronně ověř obrázky a doplň stav
+  obsah().querySelectorAll('tr[data-img]').forEach(async tr => {
+    const ok = await overObrazek(tr.dataset.img);
+    const cell = tr.querySelector('.vyp-img-stav');
+    cell.textContent = ok ? '✓' : '✗ chybí';
+    cell.className = 'vyp-img-stav ' + (ok ? 'vyp-ok' : 'vyp-chyba');
+  });
+}
+
+// ============================================================
 //  STÁJ
 // ============================================================
 const STAJ_POPISKY = {
@@ -930,7 +997,7 @@ async function stahni(url, jmeno) {
 // ============================================================
 //  VYKRESLENÍ DO HRY
 // ============================================================
-const SEKCE = { prehled: sekcePrehled, hraci: sekceHraci, paladin: sekcePaladin, arena: sekceArena, aukce: sekceAukce, staj: sekceStaj, simulator: sekceSimulator, logy: sekceLogy };
+const SEKCE = { prehled: sekcePrehled, hraci: sekceHraci, paladin: sekcePaladin, arena: sekceArena, aukce: sekceAukce, staj: sekceStaj, vypravy: sekceVypravy, simulator: sekceSimulator, logy: sekceLogy };
 
 // Kostra panelu. Vrací HTML, které si hra vloží do svého pohledu.
 function spravaHTML() {
@@ -943,6 +1010,7 @@ function spravaHTML() {
       <a class="adm-polozka" data-sekce="arena">Aréna</a>
       <a class="adm-polozka" data-sekce="aukce">Aukční síň</a>
       <a class="adm-polozka" data-sekce="staj">Stáj</a>
+      <a class="adm-polozka" data-sekce="vypravy">Výpravy</a>
       <a class="adm-polozka" data-sekce="simulator">Balanční simulátor</a>
       <a class="adm-polozka" data-sekce="logy">Historie zásahů</a>
     </nav>
