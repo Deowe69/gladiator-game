@@ -2614,9 +2614,13 @@ let currentExped = 'chram';
 // ========== CESTOVATEL: cestování mezi regiony ==========
 // Není to obchod. Aktivní region určuje, jaký obsah se ukazuje (výpravy…).
 // Cestování je obousměrné a nic nemaže — server je autoritativní.
-let regionStav = null;
+let regionStav = null, regionChyba = null, regionNacita = false;
 async function nactiRegion() {
-  try { regionStav = await API.regionState(); } catch { regionStav = null; }
+  if (regionNacita) return;            // ať se nespustí několik dotazů naráz
+  regionNacita = true;
+  try { regionStav = await API.regionState(); regionChyba = null; }
+  catch (e) { regionStav = null; regionChyba = (e && e.message) || 'Server neodpovídá'; }
+  regionNacita = false;
   if (posledniPohled === 'cestovatel') openView('cestovatel');
 }
 const regionAktivni = () => (regionStav && regionStav.aktivniRegion) || 'recko';
@@ -2636,7 +2640,15 @@ async function cestujDo(id) {
 }
 
 function cestovatel() {
-  if (!regionStav) { nactiRegion(); return '<div class="panel"><div class="panel-header">Cestovatel</div><div class="panel-body"><p class="hall-note">Načítám mapu světa…</p></div></div>'; }
+  if (regionChyba) {
+    return `<div class="panel panel-gold"><div class="panel-header">🧭 Cestovatel</div>
+      <div class="panel-body"><p class="hall-note">${regionChyba}</p>
+      <div class="ar-foot"><button class="btn-green" onclick="regionChyba=null;nactiRegion()">Zkusit znovu</button></div></div></div>`;
+  }
+  if (!regionStav) {
+    if (!regionNacita) nactiRegion();     // spustí se jen jednou, žádná smyčka
+    return '<div class="panel panel-gold"><div class="panel-header">🧭 Cestovatel</div><div class="panel-body"><p class="hall-note">Načítám mapu světa…</p></div></div>';
+  }
   const akt = regionAktivni();
 
   const karty = regionStav.regiony.map(r => {
