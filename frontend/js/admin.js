@@ -517,6 +517,110 @@ async function sekceVypravy() {
 }
 
 // ============================================================
+//  MATERIÁLY (drop surovin)
+// ============================================================
+let matCfg = null;
+
+// Přibližné výběrové % (klient, živě) = váha / součet vah zapnutých materiálů.
+function materialyPrepocet() {
+  const rows = [...obsah().querySelectorAll('tr[data-mat]')];
+  const zap = rows.filter(r => r.querySelector('[data-k="enabled"]').checked);
+  const soucet = zap.reduce((s, r) => s + (Number(r.querySelector('[data-k="weight"]').value) || 0), 0) || 1;
+  const g = (Number(document.getElementById('matGlobal').value) || 0) / 100;
+  for (const r of rows) {
+    const on = r.querySelector('[data-k="enabled"]').checked;
+    const w = Number(r.querySelector('[data-k="weight"]').value) || 0;
+    const vyber = on ? w / soucet : 0;
+    r.querySelector('.mat-vyber').textContent = (vyber * 100).toFixed(2) + ' %';
+    r.querySelector('.mat-celkem').textContent = (vyber * g * 100).toFixed(3) + ' %';
+    r.classList.toggle('mat-vyp', !on);
+  }
+}
+
+async function sekceMaterialy() {
+  obsah().innerHTML = '<div class="adm-nacitani">Načítám…</div>';
+  const d = await zavolej(() => API.materialyConfig());
+  if (!d) return;
+  matCfg = d;
+
+  const radky = d.materialy.map(m => {
+    const drahy = ['gold', 'ruby', 'sapphire', 'emerald', 'diamond'].includes(m.id);
+    const chk = (k, v) => `<input type="checkbox" data-k="${k}" ${v ? 'checked' : ''}>`;
+    const num = (k, v, step = '1', min = '0') => `<input type="number" data-k="${k}" value="${v}" step="${step}" min="${min}" class="mat-in">`;
+    return `<tr data-mat="${esc(m.id)}" class="${drahy ? 'mat-vzacny' : ''}">
+      <td class="adm-zvyraz">${esc(m.nazev)} <small class="adm-slabe">${esc(m.en)}</small></td>
+      <td>${chk('enabled', m.enabled)}</td>
+      <td>${num('weight', m.weight, '0.1')}</td>
+      <td class="mat-vyber">–</td>
+      <td class="mat-celkem">–</td>
+      <td>${num('minQuantity', m.minQuantity)}</td>
+      <td>${num('maxQuantity', m.maxQuantity)}</td>
+      <td>${num('minEnemyLevel', m.minEnemyLevel)}</td>
+      <td>${num('maxEnemyLevel', m.maxEnemyLevel)}</td>
+      <td>${chk('normalEnemyEnabled', m.normalEnemyEnabled)}</td>
+      <td>${chk('bossEnabled', m.bossEnabled)}</td>
+      <td>${chk('expeditionEnabled', m.expeditionEnabled)}</td>
+      <td>${chk('dungeonEnabled', m.dungeonEnabled)}</td>
+    </tr>`;
+  }).join('');
+
+  obsah().innerHTML = `
+    <h1 class="adm-nadpis">Materiály — drop surovin</h1>
+    <div class="adm-poznamka">
+      Dvoustupňový hod: (1) globální šance rozhodne, jestli materiál padne, (2) pak
+      se vybere podle <b>vah</b> ze zapnutého poolu. Váha ≠ procento — je to
+      relativní preference. „Výběr %" je pravděpodobnost uvnitř poolu, „Na zabití %"
+      ≈ globální šance × výběr. Ukládá se do DB a platí <b>živě</b> (bez restartu).
+    </div>
+    <div class="adm-panel">
+      <label class="adm-pole" style="max-width:280px">
+        <span>Globální šance na materiál (%)</span>
+        <input type="number" id="matGlobal" min="0" max="100" step="1" value="${d.globalMaterialDropChance}">
+        <small class="adm-slabe">verze konfigurace: ${esc(d.verze)}</small>
+      </label>
+    </div>
+    <div class="adm-tabulka-obal"><table class="adm-tabulka mat-tab">
+      <thead><tr>
+        <th>Materiál</th><th>Zap.</th><th>Váha</th><th>Výběr %</th><th>Na zabití %</th>
+        <th>Min ks</th><th>Max ks</th><th>Min úr.</th><th>Max úr.</th>
+        <th>Běžný</th><th>Boss</th><th>Výprava</th><th>Bludiště</th>
+      </tr></thead>
+      <tbody>${radky}</tbody>
+    </table></div>
+    <div class="adm-akce">
+      <button class="adm-btn hlavni" id="matUloz">Uložit</button>
+      <button class="adm-btn" id="matReset">Zrušit změny</button>
+    </div>`;
+
+  obsah().querySelectorAll('.mat-tab input').forEach(i => i.addEventListener('input', materialyPrepocet));
+  document.getElementById('matGlobal').addEventListener('input', materialyPrepocet);
+  materialyPrepocet();
+
+  document.getElementById('matReset').addEventListener('click', sekceMaterialy);
+  document.getElementById('matUloz').addEventListener('click', async () => {
+    const global = Number(document.getElementById('matGlobal').value);
+    const materialy = [...obsah().querySelectorAll('tr[data-mat]')].map(r => ({
+      id: r.dataset.mat,
+      enabled: r.querySelector('[data-k="enabled"]').checked,
+      weight: Number(r.querySelector('[data-k="weight"]').value),
+      minQuantity: Number(r.querySelector('[data-k="minQuantity"]').value),
+      maxQuantity: Number(r.querySelector('[data-k="maxQuantity"]').value),
+      minEnemyLevel: Number(r.querySelector('[data-k="minEnemyLevel"]').value),
+      maxEnemyLevel: Number(r.querySelector('[data-k="maxEnemyLevel"]').value),
+      normalEnemyEnabled: r.querySelector('[data-k="normalEnemyEnabled"]').checked,
+      bossEnabled: r.querySelector('[data-k="bossEnabled"]').checked,
+      expeditionEnabled: r.querySelector('[data-k="expeditionEnabled"]').checked,
+      dungeonEnabled: r.querySelector('[data-k="dungeonEnabled"]').checked,
+    }));
+    // potvrzení u velké změny globální šance
+    const rozdil = Math.abs(global - matCfg.globalMaterialDropChance);
+    if (rozdil >= 20 && !confirm(`Měníš globální šanci o ${rozdil} bodů (${matCfg.globalMaterialDropChance} → ${global} %). Pokračovat?`)) return;
+    const r = await zavolej(() => API.materialySaveConfig({ globalMaterialDropChance: global, materialy }));
+    if (r) { hlaska('Uloženo — platí živě (verze ' + r.verze + ')'); sekceMaterialy(); }
+  });
+}
+
+// ============================================================
 //  STÁJ
 // ============================================================
 const STAJ_POPISKY = {
@@ -997,7 +1101,7 @@ async function stahni(url, jmeno) {
 // ============================================================
 //  VYKRESLENÍ DO HRY
 // ============================================================
-const SEKCE = { prehled: sekcePrehled, hraci: sekceHraci, paladin: sekcePaladin, arena: sekceArena, aukce: sekceAukce, staj: sekceStaj, vypravy: sekceVypravy, simulator: sekceSimulator, logy: sekceLogy };
+const SEKCE = { prehled: sekcePrehled, hraci: sekceHraci, paladin: sekcePaladin, arena: sekceArena, aukce: sekceAukce, staj: sekceStaj, vypravy: sekceVypravy, materialy: sekceMaterialy, simulator: sekceSimulator, logy: sekceLogy };
 
 // Kostra panelu. Vrací HTML, které si hra vloží do svého pohledu.
 function spravaHTML() {
@@ -1011,6 +1115,7 @@ function spravaHTML() {
       <a class="adm-polozka" data-sekce="aukce">Aukční síň</a>
       <a class="adm-polozka" data-sekce="staj">Stáj</a>
       <a class="adm-polozka" data-sekce="vypravy">Výpravy</a>
+      <a class="adm-polozka" data-sekce="materialy">Materiály</a>
       <a class="adm-polozka" data-sekce="simulator">Balanční simulátor</a>
       <a class="adm-polozka" data-sekce="logy">Historie zásahů</a>
     </nav>

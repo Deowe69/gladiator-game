@@ -51,6 +51,28 @@ function vyhodnot(agg, prahy = {}) {
       bezArena / Object.keys(agg.archetypy).length > P.podilBezArena)
     pridej('nizka', 'arena_podvyuziti', `${bezArena} archetypů vůbec nechodí do arény`, { bezArena });
 
+  // --- materiály ---
+  const mat = agg.materialy;
+  if (mat && mat.celkem > 0) {
+    // jeden materiál dominuje poolu
+    const totals = Object.entries(mat.naMaterial).map(([id, m2]) => [id, m2.total]);
+    const nejvic = totals.reduce((a, b) => (b[1] > a[1] ? b : a), ['', 0]);
+    if (nejvic[1] / mat.celkem > 0.5)
+      pridej('nizka', 'material_dominuje', `Materiál „${nejvic[0]}" tvoří ${(nejvic[1] / mat.celkem * 100).toFixed(0)} % všech dropů`, {});
+    // drahokamy moc často / skoro nikdy
+    if (mat.podilDrahokamu > 0.05)
+      pridej('stredni', 'drahokamy_caste', `Drahokamy jsou ${(mat.podilDrahokamu * 100).toFixed(1)} % dropů (přísně vzácné bývá <2 %)`, {});
+    for (const gid of ['ruby', 'sapphire', 'emerald', 'diamond']) {
+      const t = mat.naMaterial[gid] && mat.naMaterial[gid].total;
+      if (t === 0) pridej('nizka', 'drahokam_nepada', `Drahokam „${gid}" za celý běh nepadl ani jednou`, {});
+    }
+    // inflace/hlad — extrémně mnoho / málo materiálů na aktivní den
+    if (mat.naAktivniDenCelkem > 60)
+      pridej('stredni', 'material_inflace', `~${mat.naAktivniDenCelkem.toFixed(0)} materiálů na aktivní den — možná inflace`, {});
+    if (mat.naAktivniDenCelkem > 0 && mat.naAktivniDenCelkem < 1)
+      pridej('nizka', 'material_hlad', `Jen ~${mat.naAktivniDenCelkem.toFixed(2)} materiálů na aktivní den — možná hlad`, {});
+  }
+
   return upoz;
 }
 

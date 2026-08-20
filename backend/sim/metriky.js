@@ -84,6 +84,43 @@ function agreguj(historie) {
     global: naSkupinu(vsePostavy),
     archetypy,
     stropy: bojoveStropy(vsePostavy),
+    materialy: agregujMaterialy(vsePostavy),
+  };
+}
+
+// Agregace materiálů: po materiálu (rozdělení + total + na aktivní den),
+// podle zdroje, běžné vs. vzácné, míra drahokamů.
+const MATERIALY_MOD = require('../config/materialy');
+const DRAHE = new Set(['gold', 'ruby', 'sapphire', 'emerald', 'diamond']);
+const DRAHOKAMY = new Set(['ruby', 'sapphire', 'emerald', 'diamond']);
+function agregujMaterialy(postavy) {
+  const ids = MATERIALY_MOD.VYCHOZI_MATERIALY.map(m => m.id);
+  const naMaterial = {};
+  let dnyCelkem = 0, soubojeCelkem = 0, celkemVse = 0, bezneVse = 0, drahokamyVse = 0;
+  const zdroje = {};
+  for (const p of postavy) {
+    dnyCelkem += p.m.aktivnichDnu || 0;
+    soubojeCelkem += p.m.souboje || 0;
+    for (const [z, n] of Object.entries(p.m.materialZdroj || {})) zdroje[z] = (zdroje[z] || 0) + n;
+  }
+  for (const id of ids) {
+    const perHrac = postavy.map(p => (p.m.materialy && p.m.materialy[id]) || 0);
+    const total = perHrac.reduce((a, b) => a + b, 0);
+    celkemVse += total;
+    if (DRAHE.has(id)) { if (DRAHOKAMY.has(id)) drahokamyVse += total; } else bezneVse += total;
+    naMaterial[id] = {
+      total,
+      rozdeleni: rozdeleni(perHrac),
+      naAktivniDen: dnyCelkem ? total / dnyCelkem : 0,
+      naSouboj: soubojeCelkem ? total / soubojeCelkem : 0,
+      naHodinu: dnyCelkem ? total / (dnyCelkem * 4) : 0,   // ~4 h aktivní hry/den
+    };
+  }
+  return {
+    naMaterial, zdroje,
+    celkem: celkemVse, bezne: bezneVse, drahe: celkemVse - bezneVse, drahokamy: drahokamyVse,
+    podilDrahokamu: celkemVse ? drahokamyVse / celkemVse : 0,
+    naAktivniDenCelkem: dnyCelkem ? celkemVse / dnyCelkem : 0,
   };
 }
 

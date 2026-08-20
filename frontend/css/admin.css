@@ -312,3 +312,11 @@
 .vyp-ok{color:#9ee0a4;font-size:12.5px}
 .vyp-chyba{color:#f0a0a0;font-weight:700}
 .vyp-img-stav{font-weight:700}
+
+/* ---- materiály ---- */
+.mat-tab th{font-size:11px;white-space:nowrap}
+.mat-tab .mat-in{width:62px;padding:3px 5px;font-size:12px}
+.mat-tab input[type=checkbox]{transform:scale(1.15)}
+.mat-tab .mat-vyber,.mat-tab .mat-celkem{font-variant-numeric:tabular-nums;color:#e6c58a;text-align:right}
+.mat-tab tr.mat-vzacny .adm-zvyraz{color:#f0b0c8}
+.mat-tab tr.mat-vyp{opacity:.5}

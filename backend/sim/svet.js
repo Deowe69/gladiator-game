@@ -10,6 +10,20 @@ const P    = require('./pravidla');
 const post = require('./postava');
 const { proud } = require('./nahoda');
 const { PODLE_ID } = require('./archetypy');
+const MATERIALY = require('../config/materialy');
+
+// Konfigurace materiálů pro běh (STEJNÁ služba jako ostrá hra). Výchozí z
+// kódu; lze předat živou konfiguraci přes opts.materialConfig.
+let MAT_CFG = null;
+
+// Hod materiálu po vyhraném souboji — deterministicky ze semínka běhu.
+function rollMat(p, level, zdroj, boss, r) {
+  if (!MAT_CFG) return;
+  const drop = MATERIALY.hodMaterial(MAT_CFG, { level, zdroj, boss }, () => r.dalsi());
+  if (!drop) return;
+  p.m.materialy[drop.id] = (p.m.materialy[drop.id] || 0) + drop.mnozstvi;
+  p.m.materialZdroj[zdroj] = (p.m.materialZdroj[zdroj] || 0) + drop.mnozstvi;
+}
 
 // „Referenční" (netrénovaný) protivník na dané úrovni — měřítko pro PvE.
 // Kdo trénuje, poráží ho s přehledem; kdo ne, je zhruba na 50 %.
@@ -46,6 +60,8 @@ function pveSouboj(p, druh, r) {
     const o = P.odmenaZaSouboj(p.uroven, poradi, druh);
     post.pridejZlato(p, o.zlato);
     post.pridejXp(p, o.exp);
+    // materiál — nezávislý hod (nezávisí na zlatě/XP ani vybavení)
+    rollMat(p, p.uroven, druh === 'dungeon' ? 'dungeon' : 'expedition', poradi >= 3, r);
   } else {
     p.m.prohry++;
   }
@@ -73,6 +89,7 @@ function arenaSouboj(p, souperi, r) {
     const od = P.odmenaZaSouboj(p.uroven, 0, 'arena');
     post.pridejZlato(p, od.zlato);
     post.pridejXp(p, od.exp);
+    rollMat(p, p.uroven, 'normal', false, r);
   }
 }
 
@@ -82,8 +99,9 @@ function pocet(rozsah, r) {
 }
 
 // Odehraj celou historii. `populace`: [{ archetyp:'aktivni', pocet:20 }, …]
-function simulujHistorii({ dni, populace, seminko }) {
+function simulujHistorii({ dni, populace, seminko, materialConfig }) {
   const r = proud(seminko);
+  MAT_CFG = materialConfig || MATERIALY.vychoziKonfigurace();   // stejná služba jako hra
 
   // vytvoř postavy
   const hraci = [];

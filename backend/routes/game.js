@@ -1,10 +1,19 @@
+const crypto = require('crypto');
 const express = require('express');
 const pool = require('../config/db');
 const { authenticateToken } = require('../middleware/auth');
 const { nactiNastaveni, stavPaladina } = require('./paladin');
 const { odmenaZaSouboj, sBonusem } = require('../config/odmeny');
+const MATERIALY = require('../config/materialy');
+const { nactiKonfiguraci: nactiMaterialy } = require('../materialy/nastaveni');
 
 const router = express.Router();
+
+// Bezpečný náhodný zdroj [0,1) — kryptografický, NEodvoditelný z klientského
+// semínka. Používá se pro server-authoritative drop materiálů.
+function nahodaBezpecna() {
+  return crypto.randomBytes(4).readUInt32BE(0) / 4294967296;
+}
 
 /**
  * Zapíše, co se ve hře stalo.
@@ -272,7 +281,7 @@ router.post('/reward', authenticateToken, async (req, res) => {
     await klient.query('BEGIN');
 
     const { rows: postavy } = await klient.query(
-      'SELECT id, level, gold, experience FROM characters WHERE user_id = $1 FOR UPDATE',
+      'SELECT id, level, gold, experience, materials FROM characters WHERE user_id = $1 FOR UPDATE',
       [req.user.id]
     );
     if (!postavy.length) { await klient.query('ROLLBACK'); return res.status(404).json({ error: 'Character not found' }); }
@@ -297,6 +306,30 @@ router.post('/reward', authenticateToken, async (req, res) => {
                          bonus:  { zlato: zlato.bonus,  exp: exp.bonus },
                          paladin: stav.aktivni, urovenLokace, poradi });
 
+    // --- DROP MATERIÁLU (nezávislý na vybavení, server-authoritative) ---
+    // Vlastní hod, oddělený od zlata/XP i od vybavení. Vše rozhoduje server
+    // přes centrální službu a bezpečný RNG; klient nemůže ovlivnit výsledek.
+    let material = null;
+    try {
+      const cfg = await nactiMaterialy();
+      const zdroj = druh === 'dungeon' ? 'dungeon' : (druh === 'exped' ? 'expedition' : 'normal');
+      const boss = !!(req.body && req.body.boss);
+      const urovenNepritele = Math.max(1, Math.min(MATERIALY.STROP_UROVNE, Math.round(urovenLokace + (poradi || 0))));
+      const drop = MATERIALY.hodMaterial(cfg, { level: urovenNepritele, zdroj, boss }, nahodaBezpecna);
+      if (drop) {
+        // atomický přírůstek do JSONB inventáře surovin
+        await klient.query(
+          `UPDATE characters
+              SET materials = jsonb_set(
+                    COALESCE(materials, '{}'::jsonb), ARRAY[$1],
+                    to_jsonb(COALESCE((materials ->> $1)::int, 0) + $2))
+            WHERE id = $3`,
+          [drop.id, drop.mnozstvi, postava.id]
+        );
+        material = drop;
+      }
+    } catch (e) { console.error('[material] drop selhal (přeskočeno):', e.message); }
+
     await klient.query('COMMIT');
 
     // Zaklad, bonus a vysledek zvlast - at je v logu videt, odkud
@@ -312,6 +345,7 @@ router.post('/reward', authenticateToken, async (req, res) => {
       ok: true, druh, paladin: stav.aktivni,
       zlato, exp,                       // kazde s poli zaklad/bonus/celkem
       gold: nove[0].gold, experience: nove[0].experience,
+      material,                         // { id, mnozstvi } nebo null (nezávislé na vybavení)
     });
   } catch (err) {
     await klient.query('ROLLBACK').catch(() => {});

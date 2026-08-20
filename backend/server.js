@@ -10,6 +10,7 @@ const { VYCHOZI: ARENA_VYCHOZI } = require('./config/arena');
 const { VYCHOZI: AUKCE_VYCHOZI } = require('./config/aukce');
 const { VYCHOZI: STAJ_VYCHOZI } = require('./config/staj');
 const { VYCHOZI: REGION_VYCHOZI, VYCHOZI_REGION } = require('./config/regiony');
+const MATERIALY = require('./config/materialy');
 const authRoutes = require('./routes/auth');
 const characterRoutes = require('./routes/character');
 const paladinRoutes = require('./routes/paladin');
@@ -23,6 +24,7 @@ const aukceRoutes = require('./routes/aukce');
 const { spustAukcniSluzbu } = require('./aukce/sluzba');
 const stajRoutes = require('./routes/staj');
 const regionRoutes = require('./routes/region');
+const materialyRoutes = require('./routes/materialy');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -44,6 +46,7 @@ app.use('/api/sim', simRoutes);
 app.use('/api/aukce', aukceRoutes);
 app.use('/api/staj', stajRoutes);
 app.use('/api/region', regionRoutes);
+app.use('/api/materialy', materialyRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -105,6 +108,9 @@ async function initDB() {
 
     // Cestovatel: aktivní region (civilizace). Cestování nic jiného nemaže.
     await pool.query(`ALTER TABLE characters ADD COLUMN IF NOT EXISTS aktivni_region TEXT DEFAULT '${VYCHOZI_REGION}';`);
+
+    // Materiály (suroviny) hráče — server-authoritative inventář.
+    await pool.query(`ALTER TABLE characters ADD COLUMN IF NOT EXISTS materials JSONB DEFAULT '{}'::jsonb;`);
 
     // Nastaveni Paladina. Drzi se v databazi, aby slo menit z adminu
     // bez zasahu do kodu.
@@ -433,6 +439,48 @@ async function initDB() {
       await pool.query(
         'INSERT INTO region_config (klic, hodnota) VALUES ($1, $2) ON CONFLICT (klic) DO NOTHING',
         [klic, hodnota]
+      );
+    }
+
+    // ---------- MATERIÁLY (drop surovin) ----------
+    // Globální šance (klic/hodnota, rozšiřitelné) + per-materiál konfigurace.
+    // Defaulty z kódu; admin je tu přepíše a platí živě.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS material_global (
+        klic    TEXT PRIMARY KEY,
+        hodnota NUMERIC NOT NULL
+      );
+    `);
+    await pool.query(
+      `INSERT INTO material_global (klic, hodnota) VALUES ('global_drop_chance', $1)
+       ON CONFLICT (klic) DO NOTHING`,
+      [MATERIALY.VYCHOZI_GLOBAL.globalMaterialDropChance]
+    );
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS material_config (
+        id                  TEXT PRIMARY KEY,
+        enabled             BOOLEAN NOT NULL DEFAULT TRUE,
+        weight              NUMERIC NOT NULL DEFAULT 1,
+        min_qty             INTEGER NOT NULL DEFAULT 1,
+        max_qty             INTEGER NOT NULL DEFAULT 1,
+        min_level           INTEGER NOT NULL DEFAULT 1,
+        max_level           INTEGER NOT NULL DEFAULT 500,
+        normal_enabled      BOOLEAN NOT NULL DEFAULT TRUE,
+        boss_enabled        BOOLEAN NOT NULL DEFAULT TRUE,
+        dungeon_enabled     BOOLEAN NOT NULL DEFAULT TRUE,
+        expedition_enabled  BOOLEAN NOT NULL DEFAULT TRUE
+      );
+    `);
+    for (const mat of MATERIALY.VYCHOZI_MATERIALY) {
+      await pool.query(
+        `INSERT INTO material_config
+           (id, enabled, weight, min_qty, max_qty, min_level, max_level,
+            normal_enabled, boss_enabled, dungeon_enabled, expedition_enabled)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         ON CONFLICT (id) DO NOTHING`,
+        [mat.id, mat.enabled, mat.weight, mat.minQuantity, mat.maxQuantity,
+         mat.minEnemyLevel, mat.maxEnemyLevel,
+         mat.normalEnemyEnabled, mat.bossEnabled, mat.dungeonEnabled, mat.expeditionEnabled]
       );
     }
 

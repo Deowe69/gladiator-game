@@ -117,6 +117,11 @@ class API {
   static async stajConfig()             { return this.request('/staj/config'); }
   static async stajSaveConfig(config)   { return this.request('/staj/config', 'PUT', { config }); }
 
+  // --- materiály ---
+  static async materialyMoje()          { return this.request('/materialy/moje'); }
+  static async materialyConfig()        { return this.request('/materialy/config'); }
+  static async materialySaveConfig(cfg) { return this.request('/materialy/config', 'PUT', cfg); }
+
   // --- cestovatel / regiony ---
   static async regionState()            { return this.request('/region/state'); }
   static async regionTravel(region)     { return this.request('/region/travel', 'POST', { region }); }

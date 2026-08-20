@@ -26,6 +26,7 @@ function novaPostava(id, jmeno, archetyp) {
     m: {
       souboje: 0, vyhry: 0, prohry: 0,
       pveVyhry: 0, pvpBoje: 0, pvpVyhry: 0,
+      materialy: {}, materialZdroj: {},   // {id: počet}, {zdroj: počet}
       zlatoZiskano: 0, zlatoDoTreninku: 0, zlatoDoVybaveni: 0, zlatoPromrhano: 0,
       xpZiskano: 0, treninku: 0, urovniZa: 0,
       aktivnichDnu: 0,
