@@ -2742,6 +2742,11 @@ function monsterPortrait(m, cls) {
 // seznam lokací do levého menu (druhá záložka s mapou)
 function expedMenuHTML() {
   return EXPEDITIONS.map(e => {
+    // Cestovatel není lokace výprav — otevírá vlastní pohled (regiony).
+    if (e.id === 'cestovatel') {
+      return `<a class="sub-item ${posledniPohled === 'cestovatel' ? 'active' : ''}"
+                 onclick="openView('cestovatel')" title="Cestování mezi regiony">${e.name}</a>`;
+    }
     const locked = character && character.level < e.minLevel;
     return `<a class="sub-item ${locked ? 'locked' : ''} ${e.id === currentExped ? 'active' : ''}"
                onclick="${locked ? '' : `openExped('${e.id}')`}"
